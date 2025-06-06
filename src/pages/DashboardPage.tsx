@@ -1,20 +1,71 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Terminal, Users, Database, Activity, RefreshCw } from 'lucide-react';
+import { Terminal, Users, Database, Activity, RefreshCw, Trophy, Wallet, Mail, Shield, MessageSquare } from 'lucide-react';
 import { useBetting } from '../context/BettingContext';
 import { useWeb3 } from '../context/Web3Context';
+import { useDarePoints } from '../context/DarePointsContext';
 import { Bet } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import BetCard from '../components/bet/BetCard';
 import { toast } from 'react-toastify';
+import DareDevilChatModal from '../components/chat/DareDevilChatModal';
 
 const DashboardPage: React.FC = () => {
   const { userBets, loadingBets, loadingMatches, settleBet, refreshMatches, refreshBets, debugCache } = useBetting();
   const { account } = useWeb3();
+  const { userBalance, transactions } = useDarePoints();
   const [isSettling, setIsSettling] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [forceRender, setForceRender] = useState<boolean>(false);
+  const [showRewardsPanel, setShowRewardsPanel] = useState<boolean>(false);
+  const [emailAddress, setEmailAddress] = useState<string>('');
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [showDareDevilChat, setShowDareDevilChat] = useState<boolean>(false);
   const hasFetchedRef = useRef<boolean>(false);
+  
+  // Encrypt IP address for display (not actual encryption)
+  const getEncryptedIP = () => {
+    return "2**.***.***.**8"; // Placeholder for UI purposes
+  };
+
+  // Truncate wallet address for display
+  const truncateAddress = (address: string) => {
+    if (!address) return '';
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+  
+  // Calculate transaction totals
+  const calculateTransactionTotals = () => {
+    let totalEarned = 0;
+    let totalSpent = 0;
+    
+    transactions.forEach(tx => {
+      if (tx.amount > 0) {
+        totalEarned += tx.amount;
+      } else {
+        totalSpent += Math.abs(tx.amount);
+      }
+    });
+    
+    return { totalEarned, totalSpent };
+  };
+  
+  const { totalEarned, totalSpent } = calculateTransactionTotals();
+  
+  // Handle email verification
+  const handleVerifyEmail = () => {
+    if (!emailAddress || !emailAddress.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    
+    setIsVerifying(true);
+    // Simulate verification process
+    setTimeout(() => {
+      setIsVerifying(false);
+      toast.success('Verification email sent. Please check your inbox.');
+    }, 1500);
+  };
   
   // Refresh data only once when component mounts
   useEffect(() => {
@@ -115,7 +166,7 @@ const DashboardPage: React.FC = () => {
       <div className="space-y-6">
         {/* Header with title and banner (keep this to maintain consistent UI layout) */}
         <div className="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
-          <div className="bg-console-blue/90 p-2 text-black flex items-center justify-between">
+          <div className="bg-console-blue/90 p-2 flex items-center justify-between">
             <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ BET_TERMINAL ]</div>
             <div className="flex items-center gap-4">
               <button 
@@ -159,9 +210,15 @@ const DashboardPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header with title and banner */}
       <div className="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
-        <div className="bg-console-blue/90 p-2 text-black flex items-center justify-between">
+        <div className="bg-console-blue/90 p-2 flex items-center justify-between">
           <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ BET_TERMINAL ]</div>
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-console-black/30 px-2 py-1 border-1 border-console-blue-dim text-xs text-console-white font-mono">
+                <span>$DARE: </span>
+                <span className="text-[#E5FF03]">{userBalance}</span>
+              </div>
+            </div>
             <button
               onClick={handleManualRefresh}
               disabled={isRefreshing}
@@ -192,9 +249,9 @@ const DashboardPage: React.FC = () => {
       </div>
       
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <Link 
-                  to="/matches" 
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Link 
+          to="/matches" 
           className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-4 hover:shadow-glow transition-all flex flex-col items-center justify-center gap-2"
         >
           <Activity className="h-6 w-6 text-console-blue-bright" />
@@ -204,10 +261,10 @@ const DashboardPage: React.FC = () => {
         <Link 
           to="/chat" 
           className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-[#00A4FF] shadow-terminal p-4 hover:shadow-glow transition-all flex flex-col items-center justify-center gap-2"
-                >
+        >
           <Users className="h-6 w-6 text-[#00A4FF]" />
           <span className="text-console-white font-mono">GLOBAL CHAT</span>
-                </Link>
+        </Link>
         
         <div className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-[#00A4FF] shadow-glow p-4 flex flex-col items-center justify-center gap-2">
           <div className="relative">
@@ -217,10 +274,150 @@ const DashboardPage: React.FC = () => {
                 {userBetsToDisplay.length}
               </div>
             )}
-              </div>
+          </div>
           <span className="text-console-white font-mono">MY BETS</span>
         </div>
+        
+        {/* DareDevil Chat Button */}
+        <button
+          onClick={() => setShowDareDevilChat(true)}
+          className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-red-600 shadow-glow-red p-4 hover:shadow-glow-red transition-all flex flex-col items-center justify-center gap-2"
+        >
+          <div className="relative">
+            <MessageSquare className="h-6 w-6 text-red-500" />
+            <div className="absolute -top-2 -right-2 bg-red-600 text-white h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold">
+              AI
+            </div>
+          </div>
+          <span className="text-console-white font-mono">CONSULT DAREDEVIL</span>
+        </button>
+        
+        {/* Single consolidated DARE Points button */}
+        <button 
+          onClick={() => setShowRewardsPanel(!showRewardsPanel)}
+          className={`bg-console-gray-terminal/70 backdrop-blur-xs border-1 col-span-2 md:col-span-4 border-[#E5FF03] ${showRewardsPanel ? 'shadow-yellow-glow' : 'shadow-terminal'} p-4 hover:shadow-yellow-glow transition-all flex flex-col items-center justify-center gap-2`}
+        >
+          <div className="relative">
+            <Trophy className="h-6 w-6 text-[#E5FF03]" />
+            <div className="absolute -top-2 -right-2 bg-[#E5FF03] text-black h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold">
+              $
+            </div>
+          </div>
+          <span className="text-console-white font-mono">$DARE POINTS DASHBOARD</span>
+        </button>
       </div>
+      
+      {/* $DARE Points Dashboard Panel - shown only when activated */}
+      {showRewardsPanel && (
+        <div className="bg-console-gray-terminal/60 backdrop-blur-xs border-1 border-[#E5FF03] shadow-yellow-glow mb-6">
+          <div className="p-4 flex items-center justify-between">
+            <div className="flex items-center">
+              <Trophy className="h-5 w-5 text-[#E5FF03] mr-2" />
+              <h2 className="text-console-white font-mono text-lg">$DARE POINTS DASHBOARD</h2>
+            </div>
+            
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <div className="px-3 py-1 bg-black/50 border-1 border-[#E5FF03] text-[#E5FF03]">
+                BALANCE: {userBalance} $DARE
+              </div>
+            </div>
+          </div>
+          
+          <div className="h-0.5 w-full bg-[#E5FF03]/30"></div>
+          
+          <div className="p-6 grid md:grid-cols-2 gap-6">
+            {/* User Info Section */}
+            <div className="bg-console-black/50 backdrop-blur-xs p-4 border-1 border-console-blue">
+              <h3 className="text-console-white font-mono mb-4 border-b border-console-blue pb-2">USER INFORMATION</h3>
+              
+              <div className="space-y-4">
+                {/* Wallet Address */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-console-white-dim font-mono text-sm">
+                    <Wallet className="h-4 w-4 text-console-blue-bright" />
+                    <span>WALLET ADDRESS</span>
+                  </div>
+                  <div className="bg-console-black/70 p-2 border-1 border-console-blue text-console-white font-mono text-sm">
+                    {account ? truncateAddress(account) : 'WALLET NOT CONNECTED'}
+                  </div>
+                </div>
+                
+                {/* Encrypted IP */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-console-white-dim font-mono text-sm">
+                    <Shield className="h-4 w-4 text-console-blue-bright" />
+                    <span>ENCRYPTED IP</span>
+                  </div>
+                  <div className="bg-console-black/70 p-2 border-1 border-console-blue text-console-white font-mono text-sm">
+                    {getEncryptedIP()}
+                  </div>
+                </div>
+                
+                {/* Email Verification */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-console-white-dim font-mono text-sm">
+                    <Mail className="h-4 w-4 text-console-blue-bright" />
+                    <span>EMAIL ADDRESS</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      placeholder="ENTER_YOUR_EMAIL"
+                      value={emailAddress}
+                      onChange={(e) => setEmailAddress(e.target.value)}
+                      className="bg-console-black/70 p-2 border-1 border-console-blue text-console-white font-mono text-sm flex-grow focus:outline-none focus:border-[#E5FF03]"
+                    />
+                    <button
+                      onClick={handleVerifyEmail}
+                      disabled={isVerifying || !emailAddress}
+                      className="bg-[#E5FF03] text-black px-3 py-2 font-mono text-sm disabled:opacity-50"
+                    >
+                      {isVerifying ? 'VERIFYING...' : 'VERIFY'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Points Info & Rewards */}
+            <div className="bg-console-black/50 backdrop-blur-xs p-4 border-1 border-console-blue">
+              <h3 className="text-console-white font-mono mb-4 border-b border-console-blue pb-2">REWARDS SYSTEM</h3>
+              
+              <div className="space-y-4">
+                <div className="text-center p-4 bg-console-black/30 border-1 border-[#E5FF03]">
+                  <div className="text-3xl font-mono text-[#E5FF03] mb-2">{userBalance} $DARE</div>
+                  <div className="text-console-white-dim text-sm">CURRENT BALANCE</div>
+                </div>
+                
+                <div className="font-mono text-console-white-dim text-sm space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span>TOTAL EARNED:</span>
+                    <span className="text-[#E5FF03]">{totalEarned} $DARE</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>TOTAL SPENT:</span>
+                    <span className="text-[#E5FF03]">{totalSpent} $DARE</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>NEXT REWARD IN:</span>
+                    <span className="text-console-white">5 BETS</span>
+                  </div>
+                </div>
+                
+                <div className="mt-4 pt-4 border-t border-console-blue/30">
+                  <h4 className="text-console-white font-mono mb-2">HOW TO EARN $DARE POINTS</h4>
+                  <ul className="list-disc list-inside text-console-white-dim font-mono text-sm space-y-1">
+                    <li>Place a bet: +10 $DARE</li>
+                    <li>Win a bet: +50 $DARE</li>
+                    <li>Refer a friend: +100 $DARE</li>
+                    <li>Daily login: +5 $DARE</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Bets Content */}
       <div className="bg-console-gray-terminal/60 backdrop-blur-xs border-1 border-console-blue shadow-terminal">
@@ -257,9 +454,15 @@ const DashboardPage: React.FC = () => {
                 isSettling={isSettling === bet.id} 
               />
             ))}
-        </div>
+          </div>
         )}
       </div>
+      
+      {/* DareDevil Chat Modal */}
+      <DareDevilChatModal 
+        isOpen={showDareDevilChat} 
+        onClose={() => setShowDareDevilChat(false)} 
+      />
     </div>
   );
 };

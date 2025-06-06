@@ -30,6 +30,59 @@ A modern NBA betting platform with a cyberpunk terminal aesthetic, providing odd
    npm install
    ```
 
+### Supabase Setup (Optional)
+
+The application uses Supabase for authentication and database storage. To enable this functionality:
+
+1. Create a Supabase account at [https://supabase.com](https://supabase.com) and start a new project
+   
+2. Create the required tables in Supabase:
+
+   - Create a `user_profiles` table with the following columns:
+     - `id` (uuid, primary key)
+     - `user_id` (uuid, foreign key to auth.users, not null)
+     - `email` (text)
+     - `wallet_address` (text)
+     - `created_at` (timestamp with time zone, default: now())
+     - `updated_at` (timestamp with time zone, default: now())
+
+3. Create a `.env` file in the project root with the following variables:
+   ```
+   VITE_SUPABASE_URL=your_supabase_project_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+   
+   You can find these values in your Supabase dashboard under Project Settings > API.
+
+4. Set up Row Level Security (RLS) policies for the `user_profiles` table:
+   
+   ```sql
+   -- Enable read access for authenticated users to their own profile
+   CREATE POLICY "Users can view their own profile"
+   ON user_profiles
+   FOR SELECT
+   USING (auth.uid() = user_id);
+   
+   -- Enable insert access for authenticated users
+   CREATE POLICY "Users can insert their own profile"
+   ON user_profiles
+   FOR INSERT
+   WITH CHECK (auth.uid() = user_id);
+   
+   -- Enable update access for authenticated users to their own profile
+   CREATE POLICY "Users can update their own profile"
+   ON user_profiles
+   FOR UPDATE
+   USING (auth.uid() = user_id);
+   ```
+
+5. Enable Email Auth in Supabase:
+   - Go to Authentication > Providers
+   - Enable Email provider
+   - Configure any additional settings as needed
+
+If Supabase is not configured, the application will fall back to using local storage for demonstration purposes.
+
 ### Running the Application
 
 Start the development server:

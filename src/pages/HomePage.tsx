@@ -18,14 +18,9 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 pt-6">
+    <div className="space-y-6">
       {/* Original Image Banner Section - brought back */}
       <section className="w-full bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
-        <div className="bg-console-blue/90 p-2 text-black flex items-center justify-between">
-          <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ TERMINAL_MODE ]</div>
-          <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ TIME: {getTerminalTime()} ]</div>
-        </div>
-        
         {/* Full-width image container */}
         <div className="relative w-full border-b-1 border-console-blue bg-console-blue/10 backdrop-blur-xs overflow-hidden">
           <div className="relative max-w-6xl mx-auto">
@@ -42,11 +37,6 @@ const HomePage: React.FC = () => {
       
       {/* Daredevil Banner - Added from photo */}
       <section className="w-full bg-console-blue-bright/90 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
-        <div className="bg-console-blue/90 p-2 text-black flex items-center justify-between">
-          <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ TERMINAL_MODE ]</div>
-          <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ TIME: {getTerminalTime()} ]</div>
-        </div>
-        
         {/* Full-width image container */}
         <div className="relative w-full border-b-1 border-console-blue bg-console-blue-bright/80 backdrop-blur-xs overflow-hidden">
           <div className="relative max-w-6xl mx-auto">

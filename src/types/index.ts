@@ -70,7 +70,7 @@ export interface Message {
   betId?: string;
   matchId?: string;
   global?: boolean;
-  sender: string;
+  sender: string; // can be a user address, 'system', or 'daredevil'
   content: string;
   timestamp: string;
 }

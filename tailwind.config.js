@@ -35,7 +35,10 @@ export default {
       boxShadow: {
         'terminal': '0 0 10px rgba(0, 51, 255, 0.5), inset 0 0 10px rgba(0, 51, 255, 0.2)',
         'button': '0 0 5px #0033ff, inset 0 0 2px #0033ff',
-        'glow': '0 0 15px rgba(0, 102, 255, 0.7)'
+        'glow': '0 0 15px rgba(0, 102, 255, 0.7)',
+        'glow-red': '0 0 15px rgba(220, 38, 38, 0.7), inset 0 0 5px rgba(220, 38, 38, 0.3)',
+        'input-glow-red': '0 0 8px rgba(220, 38, 38, 0.5)',
+        'yellow-glow': '0 0 15px rgba(229, 255, 3, 0.5), inset 0 0 5px rgba(229, 255, 3, 0.2)'
       },
       backgroundImage: {
         'terminal-grid': 'linear-gradient(rgba(0, 102, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 102, 255, 0.1) 1px, transparent 1px)',

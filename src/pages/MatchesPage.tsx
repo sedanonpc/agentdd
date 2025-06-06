@@ -223,11 +223,6 @@ const MatchesPage: React.FC = () => {
       
       {/* Daredevil Banner - Added from photo */}
       <section className="w-full bg-console-blue-bright/90 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
-        <div className="bg-console-blue/90 p-2 text-black flex items-center justify-between">
-          <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ TERMINAL_MODE ]</div>
-          <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ TIME: {getTerminalTime()} ]</div>
-        </div>
-        
         {/* Full-width image container */}
         <div className="relative w-full border-b-1 border-console-blue bg-console-blue-bright/80 backdrop-blur-xs overflow-hidden">
           <div className="relative max-w-6xl mx-auto">

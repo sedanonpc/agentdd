@@ -116,15 +116,17 @@ const ChatPage: React.FC = () => {
   
   if (!betId && !showGlobalChat) {
     return (
-      <div className="flex flex-col items-center py-16">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold">No Chat Selected</h2>
-          <button
-            onClick={switchToGlobalChat}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
-          >
-            Go to Global Chat
-          </button>
+      <div className="space-y-6">
+        <div className="flex flex-col items-center py-16">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold">No Chat Selected</h2>
+            <button
+              onClick={switchToGlobalChat}
+              className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
+            >
+              Go to Global Chat
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -132,18 +134,20 @@ const ChatPage: React.FC = () => {
   
   if (betId && !bet && !showGlobalChat) {
     return (
-      <div className="flex flex-col items-center py-16">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold">Bet Not Found</h2>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">
-            The bet you're looking for doesn't exist or has been removed.
-          </p>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
-          >
-            Go to Dashboard
-          </button>
+      <div className="space-y-6">
+        <div className="flex flex-col items-center py-16">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold">Bet Not Found</h2>
+            <p className="text-slate-600 dark:text-slate-400 mt-2">
+              The bet you're looking for doesn't exist or has been removed.
+            </p>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
+            >
+              Go to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -241,96 +245,98 @@ const ChatPage: React.FC = () => {
   };
   
   return (
-    <div className="h-[calc(100vh-12rem)] flex flex-col">
-      {/* Chat Header */}
-      <div className="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal flex items-center gap-4">
-        <div className="bg-console-blue/90 p-3 text-console-white flex items-center">
-          <Terminal className="h-5 w-5 mr-2" />
-          <div className="text-xs font-mono tracking-wide">
-            [ SESSION: {getSessionID()} ]
+    <div className="space-y-6">
+      <div className="h-[calc(100vh-12rem)] flex flex-col">
+        {/* Chat Header */}
+        <div className="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal flex items-center gap-4">
+          <div className="bg-console-blue/90 p-3 text-console-white flex items-center">
+            <Terminal className="h-5 w-5 mr-2" />
+            <div className="text-xs font-mono tracking-wide">
+              [ SESSION: {getSessionID()} ]
+            </div>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-4 ml-2">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="text-console-white-dim hover:text-console-white flex items-center gap-1"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span className="font-mono text-xs">BACK</span>
-          </button>
           
-          <div className="h-4 w-[1px] bg-console-blue/50"></div>
-          
-          <button
-            onClick={switchToGlobalChat}
-            className={`flex items-center gap-1 px-3 py-1 font-mono text-xs ${
-              showGlobalChat 
-                ? 'bg-console-blue text-console-white' 
-                : 'text-console-white-dim hover:text-console-white'
-            }`}
-          >
-            <Users className="h-4 w-4" />
-            <span>GLOBAL_CHAT</span>
-          </button>
-          
-          {betId && (
+          <div className="flex items-center gap-4 ml-2">
             <button
-              onClick={switchToBetChat}
+              onClick={() => navigate('/dashboard')}
+              className="text-console-white-dim hover:text-console-white flex items-center gap-1"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span className="font-mono text-xs">BACK</span>
+            </button>
+            
+            <div className="h-4 w-[1px] bg-console-blue/50"></div>
+            
+            <button
+              onClick={switchToGlobalChat}
               className={`flex items-center gap-1 px-3 py-1 font-mono text-xs ${
-                !showGlobalChat 
+                showGlobalChat 
                   ? 'bg-console-blue text-console-white' 
                   : 'text-console-white-dim hover:text-console-white'
               }`}
             >
-              <MessageSquare className="h-4 w-4" />
-              <span>BET_CHAT</span>
+              <Users className="h-4 w-4" />
+              <span>GLOBAL_CHAT</span>
             </button>
-          )}
-          
-          {/* DareDevil status indicator */}
-          <div className="ml-auto mr-2 flex items-center">
-            <div className={`h-2 w-2 rounded-full ${isDareDevilTyping ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
-            <span className="ml-2 text-xs font-mono text-console-white-dim">DAREDEVIL {isDareDevilTyping ? 'ANALYZING' : 'ONLINE'}</span>
+            
+            {betId && (
+              <button
+                onClick={switchToBetChat}
+                className={`flex items-center gap-1 px-3 py-1 font-mono text-xs ${
+                  !showGlobalChat 
+                    ? 'bg-console-blue text-console-white' 
+                    : 'text-console-white-dim hover:text-console-white'
+                }`}
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span>BET_CHAT</span>
+              </button>
+            )}
+            
+            {/* DareDevil status indicator */}
+            <div className="ml-auto mr-2 flex items-center">
+              <div className={`h-2 w-2 rounded-full ${isDareDevilTyping ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
+              <span className="ml-2 text-xs font-mono text-console-white-dim">DAREDEVIL {isDareDevilTyping ? 'ANALYZING' : 'ONLINE'}</span>
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* Chat Title */}
-      <div className="bg-console-gray-terminal/60 backdrop-blur-xs p-3 border-t-0 border-x-1 border-console-blue">
-        <h2 className="font-mono text-console-white">
-          {showGlobalChat 
-            ? 'GLOBAL_CHAT: ALL_USERS'
-            : `BET_CHAT: ${bet?.amount} ETH - ${bet?.description}`
-          }
-        </h2>
-      </div>
-      
-      {/* Chat Messages */}
-      <div className="flex-grow bg-slate-50 dark:bg-slate-900 p-4 overflow-y-auto border-1 border-console-blue border-t-0">
-        {renderMessages()}
-      </div>
-      
-      {/* Message Input */}
-      <div className="bg-console-gray-terminal/80 backdrop-blur-xs rounded-b-lg border-1 border-console-blue border-t-0 shadow-terminal p-4">
-        <form onSubmit={handleSendMessage} className="flex gap-2">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="TYPE_MESSAGE..."
-            disabled={!isConnected}
-            className="flex-grow bg-console-black/70 backdrop-blur-xs border-1 border-console-blue px-3 py-2 text-console-white font-mono focus:outline-none focus:shadow-button disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-          <button
-            type="submit"
-            disabled={!newMessage.trim() || !isConnected}
-            className="bg-console-blue/90 backdrop-blur-xs border-1 border-console-blue text-console-white font-mono px-4 py-2 hover:shadow-button transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <Send className="h-5 w-5" />
-            <span>SEND</span>
-          </button>
-        </form>
+        
+        {/* Chat Title */}
+        <div className="bg-console-gray-terminal/60 backdrop-blur-xs p-3 border-t-0 border-x-1 border-console-blue">
+          <h2 className="font-mono text-console-white">
+            {showGlobalChat 
+              ? 'GLOBAL_CHAT: ALL_USERS'
+              : `BET_CHAT: ${bet?.amount} ETH - ${bet?.description}`
+            }
+          </h2>
+        </div>
+        
+        {/* Chat Messages */}
+        <div className="flex-grow bg-slate-50 dark:bg-slate-900 p-4 overflow-y-auto border-1 border-console-blue border-t-0">
+          {renderMessages()}
+        </div>
+        
+        {/* Message Input */}
+        <div className="bg-console-gray-terminal/80 backdrop-blur-xs rounded-b-lg border-1 border-console-blue border-t-0 shadow-terminal p-4">
+          <form onSubmit={handleSendMessage} className="flex gap-2">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="TYPE_MESSAGE..."
+              disabled={!isConnected}
+              className="flex-grow bg-console-black/70 backdrop-blur-xs border-1 border-console-blue px-3 py-2 text-console-white font-mono focus:outline-none focus:shadow-button disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            <button
+              type="submit"
+              disabled={!newMessage.trim() || !isConnected}
+              className="bg-console-blue/90 backdrop-blur-xs border-1 border-console-blue text-console-white font-mono px-4 py-2 hover:shadow-button transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Send className="h-5 w-5" />
+              <span>SEND</span>
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { DollarSign, ChevronRight, X, Zap } from 'lucide-react';
+import { DollarSign, ChevronRight, X, Zap, Trophy, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Match } from '../../types';
 import { useBetting } from '../../context/BettingContext';
 import { useWeb3 } from '../../context/Web3Context';
+import { useDarePoints } from '../../context/DarePointsContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 
 interface MatchBettingFormProps {
@@ -15,9 +16,10 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
   const navigate = useNavigate();
   const { createNewBet } = useBetting();
   const { isConnected } = useWeb3();
+  const { userBalance, deductPoints } = useDarePoints();
   
   const [selectedTeam, setSelectedTeam] = useState<string>(match.home_team.id);
-  const [betAmount, setBetAmount] = useState<string>('0.01');
+  const [betAmount, setBetAmount] = useState<string>('100');
   const [description, setDescription] = useState<string>('');
   const [isCreatingBet, setIsCreatingBet] = useState(false);
   
@@ -58,12 +60,34 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
     if (!match || !selectedTeam || !betAmount) {
       return;
     }
+
+    // Check if user has enough $DARE points
+    const betAmountNumber = parseInt(betAmount);
+    if (betAmountNumber > userBalance) {
+      alert('Insufficient $DARE points balance');
+      return;
+    }
     
     setIsCreatingBet(true);
     try {
+      // First create the bet in the betting system
       const newBet = await createNewBet(match.id, selectedTeam, betAmount, description);
+      
       if (newBet) {
-        navigate('/dashboard');
+        // Then deduct DARE points from user balance and deposit to reward pool
+        const success = await deductPoints(
+          betAmountNumber,
+          newBet.id,
+          `Bet on ${match.home_team.name} vs ${match.away_team.name}`
+        );
+        
+        if (success) {
+          navigate('/dashboard');
+        } else {
+          throw new Error('Failed to process DARE points transaction');
+        }
+      } else {
+        throw new Error('Failed to create bet');
       }
     } catch (error) {
       console.error('Failed to create bet:', error);
@@ -105,6 +129,15 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Balance Display */}
+            <div className="flex items-center justify-between bg-console-gray-terminal/40 p-3 border-1 border-[#E5FF03]">
+              <div className="flex items-center">
+                <Trophy className="h-5 w-5 text-[#E5FF03] mr-2" />
+                <span className="text-console-white font-mono text-sm">YOUR BALANCE:</span>
+              </div>
+              <div className="text-[#E5FF03] font-mono text-lg">{userBalance} $DARE</div>
+            </div>
+            
             {/* Team Selection */}
             <div>
               <label className="block text-console-white-dim font-mono text-sm mb-2">
@@ -153,23 +186,49 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
               </div>
             </div>
             
-            {/* Bet Amount */}
+            {/* $DARE Points Bet Amount */}
             <div>
               <label htmlFor="betAmount" className="block text-console-white-dim font-mono text-sm mb-2">
-                BET_AMOUNT (ETH):
+                BET_AMOUNT ($DARE POINTS):
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <DollarSign className="h-5 w-5 text-console-blue" />
+                  <Trophy className="h-5 w-5 text-[#E5FF03]" />
                 </div>
                 <input
                   type="number"
                   id="betAmount"
                   value={betAmount}
                   onChange={(e) => setBetAmount(e.target.value)}
-                  min="0.001"
-                  step="0.001"
-                  className="pl-10 block w-full bg-console-black/70 backdrop-blur-xs border-1 border-console-blue px-3 py-2 text-console-white font-mono focus:outline-none focus:border-console-blue-bright"
+                  min="10"
+                  step="10"
+                  className="pl-10 block w-full bg-console-black/70 backdrop-blur-xs border-1 border-[#E5FF03] px-3 py-2 text-console-white font-mono focus:outline-none focus:border-[#E5FF03]"
+                />
+              </div>
+              <div className="mt-1 flex justify-between text-xs font-mono">
+                <span className="text-console-white-dim">MIN: 10 $DARE</span>
+                <span className={parseInt(betAmount) > userBalance ? 'text-red-500' : 'text-[#E5FF03]'}>
+                  {parseInt(betAmount) > userBalance ? 'INSUFFICIENT BALANCE' : 'AVAILABLE: ' + userBalance + ' $DARE'}
+                </span>
+              </div>
+            </div>
+            
+            {/* ETH Bet Amount (Disabled) */}
+            <div>
+              <label htmlFor="ethAmount" className="block text-console-white-dim font-mono text-sm mb-2 flex items-center">
+                BET WITH CRYPTO:
+                <span className="ml-2 bg-gray-800 text-yellow-400 text-xs px-2 py-0.5 rounded">COMING SOON</span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <DollarSign className="h-5 w-5 text-gray-500" />
+                </div>
+                <input
+                  type="text"
+                  id="ethAmount"
+                  disabled
+                  placeholder="COMING SOON"
+                  className="pl-10 block w-full bg-console-black/40 backdrop-blur-xs border-1 border-gray-700 px-3 py-2 text-gray-500 font-mono cursor-not-allowed"
                 />
               </div>
             </div>
@@ -203,7 +262,7 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
         
         <button
           onClick={handleCreateBet}
-          disabled={!isConnected || isCreatingBet}
+          disabled={!isConnected || isCreatingBet || parseInt(betAmount) > userBalance}
           className="bg-[#E5FF03]/90 backdrop-blur-xs border-1 border-[#E5FF03] px-4 py-2 text-black font-mono hover:shadow-button transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {isCreatingBet ? (
@@ -214,7 +273,7 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
           ) : (
             <>
               <Zap className="h-4 w-4" />
-              <span>PLACE_BET</span>
+              <span>PLACE_BET WITH $DARE</span>
             </>
           )}
         </button>
