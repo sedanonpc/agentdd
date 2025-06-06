@@ -63,7 +63,11 @@ function App() {
                   <main className="container mx-auto px-4 pt-20 pb-20">
                   <Routes>
                     <Route path="/" element={<HomePage />} />
-                    <Route path="/matches" element={<MatchesPage />} />
+                    <Route path="/matches" element={
+                      <ProtectedRoute>
+                        <MatchesPage />
+                      </ProtectedRoute>
+                    } />
                     <Route path="/accept-bet" element={<AcceptBetPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route 

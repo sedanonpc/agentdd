@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useWeb3 } from '../context/Web3Context';
 import { Lock, Mail, Wallet, AlertTriangle, Info, Smartphone } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
 
@@ -14,8 +15,10 @@ const LoginPage: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [checkingConnection, setCheckingConnection] = useState(false);
   
-  const { loginWithEmail, registerWithEmail, loginWithWallet, isSupabaseAvailable } = useAuth();
+  const { loginWithEmail, registerWithEmail, loginWithWallet, isSupabaseAvailable, isAuthenticated } = useAuth();
+  const { account, isConnected } = useWeb3();
   const navigate = useNavigate();
 
   // Check if user is on mobile device
@@ -26,6 +29,42 @@ const LoginPage: React.FC = () => {
     
     checkMobileDevice();
   }, []);
+
+  // Auto-redirect if authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/matches');
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Continuously check for wallet connection
+  useEffect(() => {
+    if (isMobile && localStorage.getItem('pendingMobileConnection') === 'true') {
+      setCheckingConnection(true);
+      
+      // Poll for authentication status
+      const checkConnectionInterval = setInterval(() => {
+        // If connected and authenticated, navigate to matches page
+        if (isConnected && account) {
+          console.log("MetaMask connection detected, redirecting...");
+          navigate('/matches');
+          clearInterval(checkConnectionInterval);
+        }
+      }, 1000);
+      
+      return () => {
+        clearInterval(checkConnectionInterval);
+      };
+    }
+  }, [isMobile, isConnected, account, navigate]);
+
+  // Check if connected when component mounts
+  useEffect(() => {
+    if (isConnected && account) {
+      console.log("Already connected to wallet, redirecting...");
+      navigate('/matches');
+    }
+  }, [isConnected, account, navigate]);
 
   // Add debugging effect
   useEffect(() => {
@@ -130,7 +169,14 @@ const LoginPage: React.FC = () => {
     
     try {
       await loginWithWallet();
-      navigate('/dashboard');
+      
+      if (isMobile) {
+        // For mobile, we'll let the polling mechanism handle redirection
+        setCheckingConnection(true);
+      } else {
+        // For desktop, navigate immediately on success
+        navigate('/matches');
+      }
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message || 'Wallet connection failed');
@@ -200,6 +246,9 @@ const LoginPage: React.FC = () => {
             <div className="text-sm text-console-white-dim">
               <p className="font-bold text-console-blue-bright mb-1">MOBILE WALLET CONNECTION</p>
               <p>You'll be redirected to the MetaMask app. After connecting, return here to complete login.</p>
+              {checkingConnection && (
+                <p className="text-green-400 mt-2 animate-pulse">Checking for wallet connection...</p>
+              )}
             </div>
           </div>
         )}
@@ -208,11 +257,12 @@ const LoginPage: React.FC = () => {
         <div className="flex flex-col space-y-4 mb-8">
           <button
             onClick={handleWalletLogin}
-            disabled={isLoading}
+            disabled={isLoading || checkingConnection}
             className="bg-console-blue/90 backdrop-blur-xs text-console-white font-mono uppercase tracking-wider px-4 py-3 shadow-button hover:shadow-glow transition-all duration-300 flex items-center justify-center"
           >
             <Wallet className="mr-2 h-5 w-5" />
-            <span className="mr-1">&gt;</span> {isMobile ? "OPEN_METAMASK" : "CONNECT_WALLET"}
+            <span className="mr-1">&gt;</span> 
+            {checkingConnection ? "CONNECTING..." : (isMobile ? "OPEN_METAMASK" : "CONNECT_WALLET")}
           </button>
           
           <div className="flex items-center my-4">
