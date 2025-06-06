@@ -116,4 +116,6 @@ agentdd.vercel.app
 ## Deployment Status
 
 - Latest updates include UI improvements with fixed navbar layout
+- Added fallback.html for error handling in Vercel deployments
+- Fixed Git configuration to ensure correct user attribution
 - Deployed and maintained by sedanoNPC 
