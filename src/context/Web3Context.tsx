@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ethers } from 'ethers';
 
+// Add TypeScript declaration for window.ethereum
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 interface Web3ContextType {
   account: string | null;
   provider: ethers.BrowserProvider | null;
@@ -20,8 +27,24 @@ export const Web3Provider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
   const [balance, setBalance] = useState<string>('0');
   const [chainId, setChainId] = useState<number | null>(null);
+  const [isRedirectedFromMetaMask, setIsRedirectedFromMetaMask] = useState<boolean>(false);
+
+  // Helper function to detect if we're in the MetaMask mobile browser
+  const isMetaMaskBrowser = () => {
+    return navigator.userAgent.includes('MetaMaskMobile');
+  };
 
   useEffect(() => {
+    // Check if the user was redirected from MetaMask
+    const checkForRedirect = () => {
+      // This is a simple check to see if the user might have returned from MetaMask
+      // You can enhance this with more robust checking if needed
+      if (document.referrer.includes('metamask') || isMetaMaskBrowser()) {
+        setIsRedirectedFromMetaMask(true);
+      }
+    };
+    
+    checkForRedirect();
     checkIfWalletIsConnected();
     
     if (window.ethereum) {
@@ -83,8 +106,23 @@ export const Web3Provider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const connectWallet = async () => {
     try {
+      // Check if we're on a mobile device
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isInMetaMaskBrowser = isMetaMaskBrowser();
+      
       if (!window.ethereum) {
-        alert('Please install MetaMask to use this dApp!');
+        if (isMobile && !isInMetaMaskBrowser) {
+          // For mobile, create a deep link to the MetaMask app
+          const metamaskDeepLink = 'https://metamask.app.link/dapp/' + window.location.href.replace(/^https?:\/\//, '');
+          
+          // Ask the user if they want to open MetaMask
+          if (confirm('Please open this dApp in the MetaMask mobile browser or click OK to open MetaMask now.')) {
+            window.location.href = metamaskDeepLink;
+          }
+        } else {
+          // For desktop, show the standard message
+          alert('Please install MetaMask to use this dApp!');
+        }
         return;
       }
 
@@ -108,6 +146,13 @@ export const Web3Provider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setBalance('0');
     setChainId(null);
   };
+
+  // Try to automatically connect if user was redirected from MetaMask
+  useEffect(() => {
+    if (isRedirectedFromMetaMask && window.ethereum && !account) {
+      connectWallet();
+    }
+  }, [isRedirectedFromMetaMask]);
 
   return (
     <Web3Context.Provider
