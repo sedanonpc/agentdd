@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: './',
   // Ensure ESM modules are properly handled
   resolve: {
     dedupe: ['react', 'react-dom'],
