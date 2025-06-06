@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, Wallet, AlertTriangle, Info } from 'lucide-react';
+import { Lock, Mail, Wallet, AlertTriangle, Info, Smartphone } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
 
 const LoginPage: React.FC = () => {
@@ -13,9 +13,19 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   const { loginWithEmail, registerWithEmail, loginWithWallet, isSupabaseAvailable } = useAuth();
   const navigate = useNavigate();
+
+  // Check if user is on mobile device
+  useEffect(() => {
+    const checkMobileDevice = () => {
+      setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+    };
+    
+    checkMobileDevice();
+  }, []);
 
   // Add debugging effect
   useEffect(() => {
@@ -183,6 +193,17 @@ const LoginPage: React.FC = () => {
           </div>
         )}
         
+        {/* Mobile wallet info message */}
+        {isMobile && (
+          <div className="mb-6 bg-blue-900/30 border border-console-blue p-3 flex items-start">
+            <Smartphone className="h-5 w-5 text-console-blue mr-2 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-console-white-dim">
+              <p className="font-bold text-console-blue-bright mb-1">MOBILE WALLET CONNECTION</p>
+              <p>You'll be redirected to the MetaMask app. After connecting, return here to complete login.</p>
+            </div>
+          </div>
+        )}
+        
         {/* Auth Method Selection */}
         <div className="flex flex-col space-y-4 mb-8">
           <button
@@ -191,7 +212,7 @@ const LoginPage: React.FC = () => {
             className="bg-console-blue/90 backdrop-blur-xs text-console-white font-mono uppercase tracking-wider px-4 py-3 shadow-button hover:shadow-glow transition-all duration-300 flex items-center justify-center"
           >
             <Wallet className="mr-2 h-5 w-5" />
-            <span className="mr-1">&gt;</span> CONNECT_WALLET
+            <span className="mr-1">&gt;</span> {isMobile ? "OPEN_METAMASK" : "CONNECT_WALLET"}
           </button>
           
           <div className="flex items-center my-4">

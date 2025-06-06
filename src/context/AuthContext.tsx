@@ -102,17 +102,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Update user when wallet connection changes
   useEffect(() => {
-    if (authMethod === 'wallet') {
-      if (isConnected && account) {
+    if (isConnected && account) {
+      // User connected their wallet
+      if (authMethod === 'wallet' || authMethod === null) {
+        // Set or update the user with wallet info
         setUser({
           id: account,
           walletAddress: account
         });
-      } else {
-        // Wallet disconnected
-        setUser(null);
-        setAuthMethod(null);
+        setAuthMethod('wallet');
+      } else if (authMethod === 'email' && user) {
+        // User already logged in with email, update their wallet address
+        setUser({
+          ...user,
+          walletAddress: account
+        });
       }
+    } else if (authMethod === 'wallet' && !isConnected) {
+      // Wallet disconnected
+      setUser(null);
+      setAuthMethod(null);
     }
   }, [isConnected, account, authMethod]);
 
