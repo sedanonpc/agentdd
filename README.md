@@ -107,4 +107,13 @@ The application uses simulated NBA match data that closely resembles real-world 
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## About
+
+agentdd.vercel.app 
+
+## Deployment Status
+
+- Latest updates include UI improvements with fixed navbar layout
+- Deployed and maintained by sedanoNPC 
