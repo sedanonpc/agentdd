@@ -61,7 +61,7 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       setLoadingMatches(true);
       
-      console.log('Refreshing matches...');
+      console.log('=== BETTING CONTEXT: Starting to refresh matches... ===');
       
       // Try to get matches from The Odds API first
       let fetchedMatches: Match[] = [];
@@ -69,38 +69,56 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       let isLiveDataValue = false;
       
       try {
-        console.log('Attempting to fetch from The Odds API...');
+        console.log('=== BETTING CONTEXT: Attempting to fetch from The Odds API... ===');
         const oddsApiResponse = await fetchNBAMatches();
         fetchedMatches = oddsApiResponse.matches;
         
         if (fetchedMatches && fetchedMatches.length > 0) {
-          console.log(`Fetched ${fetchedMatches.length} matches from The Odds API`);
+          console.log(`=== BETTING CONTEXT: Fetched ${fetchedMatches.length} matches from The Odds API ===`);
+          console.log('First match:', fetchedMatches[0] ? 
+            `${fetchedMatches[0].away_team.name} vs ${fetchedMatches[0].home_team.name}` : 'No matches');
+          
           dataSourceValue = oddsApiResponse.dataSource || 'the_odds_api';
           isLiveDataValue = oddsApiResponse.isLive;
+          
+          console.log(`=== BETTING CONTEXT: Data source: ${dataSourceValue}, Is live: ${isLiveDataValue} ===`);
         } else {
-          console.log('No matches returned from The Odds API, trying Yahoo Sports...');
+          console.log('=== BETTING CONTEXT: No matches returned from The Odds API, trying Yahoo Sports... ===');
         }
       } catch (apiError) {
-        console.error('Error fetching from The Odds API:', apiError);
-        console.log('Falling back to Yahoo Sports...');
+        console.error('=== BETTING CONTEXT: Error fetching from The Odds API ===', apiError);
+        console.log('=== BETTING CONTEXT: Falling back to Yahoo Sports... ===');
       }
       
       // If no matches found, try mock data as fallback
       if (!fetchedMatches || fetchedMatches.length === 0) {
         try {
-          console.log('Using mock match data as final fallback');
+          console.log('=== BETTING CONTEXT: Using mock match data as final fallback ===');
           fetchedMatches = [...MOCK_MATCHES];
           dataSourceValue = 'mock';
           isLiveDataValue = false;
           
           if (fetchedMatches.length === 0) {
-            console.error('Even mock data fetch failed!');
+            console.error('=== BETTING CONTEXT: Even mock data fetch failed! ===');
           } else {
-            console.log(`Loaded ${fetchedMatches.length} mock matches`);
+            console.log(`=== BETTING CONTEXT: Loaded ${fetchedMatches.length} mock matches ===`);
+            console.log('First mock match:', fetchedMatches[0] ? 
+              `${fetchedMatches[0].away_team.name} vs ${fetchedMatches[0].home_team.name}` : 'No matches');
           }
         } catch (mockError) {
-          console.error('Error using mock matches:', mockError);
+          console.error('=== BETTING CONTEXT: Error using mock matches ===', mockError);
         }
+      }
+      
+      // Debug the fetched matches
+      if (fetchedMatches && fetchedMatches.length > 0) {
+        fetchedMatches.forEach((match, index) => {
+          console.log(`=== BETTING CONTEXT: Match ${index + 1} ===`);
+          console.log(`ID: ${match.id}`);
+          console.log(`Teams: ${match.away_team.name} vs ${match.home_team.name}`);
+          console.log(`Time: ${match.commence_time}`);
+          console.log(`Has bookmakers: ${match.bookmakers && match.bookmakers.length > 0 ? 'Yes' : 'No'}`);
+        });
       }
       
       // Set the data source values
@@ -112,14 +130,14 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         matchCacheRef.current.set(match.id, match);
       });
       
-      console.log(`Match cache now contains ${matchCacheRef.current.size} matches`);
+      console.log(`=== BETTING CONTEXT: Match cache now contains ${matchCacheRef.current.size} matches ===`);
       
       // Update the matches state
       setMatches(fetchedMatches);
       
       // Log some details about the fetched matches for debugging
       if (fetchedMatches.length > 0) {
-        console.log('Sample match:', {
+        console.log('=== BETTING CONTEXT: Sample match ===', {
           id: fetchedMatches[0].id,
           teams: `${fetchedMatches[0].home_team.name} vs ${fetchedMatches[0].away_team.name}`,
           hasBookmakers: !!fetchedMatches[0].bookmakers?.length,
@@ -127,7 +145,7 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
       }
     } catch (error) {
-      console.error('Error refreshing matches:', error);
+      console.error('=== BETTING CONTEXT: Error refreshing matches ===', error);
       setIsLiveData(false);
       setDataSource('mock');
       
@@ -135,16 +153,18 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       try {
         const mockData = [...MOCK_MATCHES];
         setMatches(mockData);
+        console.log('=== BETTING CONTEXT: Loaded emergency mock data ===');
         
         // Update the cache
         mockData.forEach((match: Match) => {
           matchCacheRef.current.set(match.id, match);
         });
       } catch (mockError) {
-        console.error('Even mock data failed to load:', mockError);
+        console.error('=== BETTING CONTEXT: Even mock data failed to load ===', mockError);
       }
     } finally {
       setLoadingMatches(false);
+      console.log('=== BETTING CONTEXT: Finished refreshing matches ===');
     }
   }, []);
 

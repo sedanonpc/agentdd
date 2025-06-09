@@ -438,24 +438,55 @@ const MatchCard: React.FC<MatchCardProps> = ({
 }) => {
   const getMainOdds = (match: Match) => {
     try {
-    if (!match.bookmakers || match.bookmakers.length === 0) {
-      return { home: null, away: null };
-    }
-    
-    const mainBookmaker = match.bookmakers[0];
-    const h2hMarket = mainBookmaker.markets.find(m => m.key === 'h2h');
-    
-    if (!h2hMarket) {
-      return { home: null, away: null };
-    }
-    
-    const homeOutcome = h2hMarket.outcomes.find(o => o.name === match.home_team.name);
-    const awayOutcome = h2hMarket.outcomes.find(o => o.name === match.away_team.name);
-    
-    return {
-      home: homeOutcome ? homeOutcome.price : null,
-      away: awayOutcome ? awayOutcome.price : null
-    };
+      if (!match.bookmakers || match.bookmakers.length === 0) {
+        return { home: null, away: null };
+      }
+      
+      const mainBookmaker = match.bookmakers[0];
+      const h2hMarket = mainBookmaker.markets.find(m => m.key === 'h2h');
+      
+      if (!h2hMarket) {
+        return { home: null, away: null };
+      }
+      
+      // Log the team names and available outcomes for debugging
+      console.log('=== MATCH CARD DEBUG: Team names vs outcomes ===');
+      console.log('Home team:', match.home_team.name);
+      console.log('Away team:', match.away_team.name);
+      console.log('Available outcomes:', h2hMarket.outcomes.map(o => o.name));
+      
+      // First try exact match
+      let homeOutcome = h2hMarket.outcomes.find(o => o.name === match.home_team.name);
+      let awayOutcome = h2hMarket.outcomes.find(o => o.name === match.away_team.name);
+      
+      // If exact match fails, try contains match (case insensitive)
+      if (!homeOutcome) {
+        homeOutcome = h2hMarket.outcomes.find(o => 
+          o.name.toLowerCase().includes(match.home_team.name.toLowerCase()) ||
+          match.home_team.name.toLowerCase().includes(o.name.toLowerCase())
+        );
+        console.log('Using fuzzy match for home team:', homeOutcome?.name);
+      }
+      
+      if (!awayOutcome) {
+        awayOutcome = h2hMarket.outcomes.find(o => 
+          o.name.toLowerCase().includes(match.away_team.name.toLowerCase()) ||
+          match.away_team.name.toLowerCase().includes(o.name.toLowerCase())
+        );
+        console.log('Using fuzzy match for away team:', awayOutcome?.name);
+      }
+      
+      // If we still have no matches, just take the first two outcomes in order
+      if (!homeOutcome && !awayOutcome && h2hMarket.outcomes.length >= 2) {
+        console.log('Using fallback outcome assignment');
+        homeOutcome = h2hMarket.outcomes[0];
+        awayOutcome = h2hMarket.outcomes[1];
+      }
+      
+      return {
+        home: homeOutcome ? homeOutcome.price : null,
+        away: awayOutcome ? awayOutcome.price : null
+      };
     } catch (e) {
       console.error('Error getting odds:', e);
       return { home: null, away: null };

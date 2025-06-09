@@ -101,3 +101,26 @@ export interface Escrow {
   status: 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'REFUNDED';
   timestamp: number;
 }
+
+// Standings Types
+export type ClinchedStatus = 'playoff' | 'division' | 'homeCourt' | null;
+
+export interface StandingsTeam {
+  name: string;
+  wins: number;
+  losses: number;
+  winPercentage: number;
+  last10: string;
+  streak: string;
+  clinched: ClinchedStatus;
+}
+
+export interface Division {
+  name: string;
+  teams: StandingsTeam[];
+}
+
+export interface Conference {
+  name: string;
+  divisions: Division[];
+}
