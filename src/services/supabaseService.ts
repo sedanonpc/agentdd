@@ -175,14 +175,33 @@ export const signUpWithEmail = async (email: string, password: string) => {
     password,
   });
   
-  if (error) throw error;
+  // Special handling for existing user error
+  if (error) {
+    // Log the error for debugging
+    console.error('Registration error:', error);
+    
+    // Check if this is an existing user error
+    if (error.message?.includes('User already registered')) {
+      // Try to sign in instead
+      console.log('User already exists, attempting sign in...');
+      const signInResult = await signInWithEmail(email, password);
+      return signInResult;
+    }
+    
+    throw error;
+  }
   
   // If successful, create a user profile record
   if (data.user) {
-    await createUserProfile(data.user.id, {
-      email: data.user.email,
-      dare_points: 500, // Initialize new users with 500 DARE points
-    });
+    try {
+      await createUserProfile(data.user.id, {
+        email: data.user.email,
+        dare_points: 500, // Initialize new users with 500 DARE points
+      });
+    } catch (profileError) {
+      // If profile creation fails, but auth succeeded, just log error
+      console.error('Error creating user profile:', profileError);
+    }
   }
   
   return data;

@@ -151,13 +151,20 @@ const LoginPage: React.FC = () => {
     
     try {
       await registerWithEmail(email, password);
+      // If we get here, registration or automatic login was successful
       navigate('/dashboard');
     } catch (error) {
       if (error instanceof Error) {
-        setError(error.message || 'Registration failed');
+        // Provide a more descriptive error message
+        if (error.message.includes('User already registered')) {
+          setError('Account already exists. Try logging in instead.');
+        } else {
+          setError(error.message || 'Registration failed');
+        }
       } else {
         setError('Registration failed');
       }
+      console.error('Registration error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -270,6 +277,13 @@ const LoginPage: React.FC = () => {
             <span className="mx-4 text-console-white-dim text-sm">OR</span>
             <div className="flex-grow h-px bg-console-blue-dim"></div>
           </div>
+          
+          {/* Added feature access notification */}
+          <div className="mb-4 bg-console-blue/20 border border-console-blue p-3 text-center">
+            <p className="text-console-white-dim text-sm">
+              <span className="text-console-blue-bright font-bold">NOTE:</span> Both wallet and email login provide full access to all features, including betting.
+            </p>
+          </div>
         </div>
         
         {/* Email Auth Tabs */}
@@ -332,8 +346,12 @@ const LoginPage: React.FC = () => {
             </div>
             
             {error && (
-              <div className="text-red-500 text-sm font-mono mt-2">
-                ERROR: {error}
+              <div className="bg-red-900/30 border border-red-500 p-3 text-red-400 text-sm font-mono mt-2 flex items-start">
+                <AlertTriangle className="h-4 w-4 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">ERROR: </span>
+                  {error}
+                </div>
               </div>
             )}
             
@@ -396,8 +414,12 @@ const LoginPage: React.FC = () => {
             </div>
             
             {error && (
-              <div className="text-red-500 text-sm font-mono mt-2">
-                ERROR: {error}
+              <div className="bg-red-900/30 border border-red-500 p-3 text-red-400 text-sm font-mono mt-2 flex items-start">
+                <AlertTriangle className="h-4 w-4 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">ERROR: </span>
+                  {error}
+                </div>
               </div>
             )}
             

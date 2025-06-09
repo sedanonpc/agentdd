@@ -5,6 +5,7 @@ import { Match } from '../../types';
 import { useBetting } from '../../context/BettingContext';
 import { useWeb3 } from '../../context/Web3Context';
 import { useDarePoints } from '../../context/DarePointsContext';
+import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { toast } from 'react-toastify';
 
@@ -17,6 +18,7 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
   const navigate = useNavigate();
   const { createNewBet } = useBetting();
   const { isConnected } = useWeb3();
+  const { isAuthenticated, authMethod } = useAuth();
   const { userBalance } = useDarePoints();
   
   const [selectedTeam, setSelectedTeam] = useState<string>(match.home_team.id);
@@ -53,8 +55,8 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
   const odds = getMainOdds(match);
   
   const handleCreateBet = async () => {
-    if (!isConnected) {
-      toast.error('Please connect your wallet first');
+    if (!isAuthenticated) {
+      toast.error('Please sign in first to place bets');
       return;
     }
     
@@ -116,19 +118,28 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
       </div>
       
       <div className="p-6 bg-console-black/70 backdrop-blur-xs">
-        {!isConnected ? (
+        {!isAuthenticated ? (
           <div className="py-8">
             <div className="bg-console-blue/20 backdrop-blur-xs border-1 border-console-blue p-4 text-center max-w-md mx-auto">
               <p className="text-console-white-dim font-mono mb-2">
-                WALLET CONNECTION REQUIRED TO PLACE BETS
+                SIGN IN REQUIRED TO PLACE BETS
               </p>
               <p className="text-console-white-muted font-mono text-sm">
-                CONNECT WALLET TO CONTINUE
+                SIGN IN WITH EMAIL OR CONNECT WALLET TO CONTINUE
               </p>
             </div>
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Auth Method Display */}
+            {authMethod && (
+              <div className="bg-console-blue/10 border border-console-blue px-3 py-2 text-center">
+                <p className="text-xs text-console-white-dim font-mono">
+                  SIGNED IN VIA: <span className="text-console-blue-bright font-bold">{authMethod.toUpperCase()}</span>
+                </p>
+              </div>
+            )}
+            
             {/* Balance Display */}
             <div className="flex items-center justify-between bg-console-gray-terminal/40 p-3 border-1 border-[#E5FF03]">
               <div className="flex items-center">
@@ -262,7 +273,7 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
         
         <button
           onClick={handleCreateBet}
-          disabled={!isConnected || isCreatingBet || parseInt(betAmount) > userBalance}
+          disabled={!isAuthenticated || isCreatingBet || parseInt(betAmount) > userBalance}
           className="bg-[#E5FF03]/90 backdrop-blur-xs border-1 border-[#E5FF03] px-4 py-2 text-black font-mono hover:shadow-button transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {isCreatingBet ? (

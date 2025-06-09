@@ -43,7 +43,7 @@ const debounce = (fn: Function, ms = 300) => {
 export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { account, isConnected } = useWeb3();
   const { deductPoints, addPoints, createBetEscrow, acceptBetEscrow, settleBetEscrow, refundBetEscrow, getEscrowByBet } = useDarePoints();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loadingMatches, setLoadingMatches] = useState<boolean>(false);
   const [userBets, setUserBets] = useState<Bet[]>([]);
@@ -55,6 +55,16 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   
   // Ref to keep a cache of all matches we've seen
   const matchCacheRef = useRef<Map<string, Match>>(new Map());
+
+  // Helper function to get current user ID (either from wallet or email)
+  const getCurrentUserId = (): string | null => {
+    // Use user.id from AuthContext if available (works for both wallet and email login)
+    if (user?.id) {
+      return user.id;
+    }
+    // Fallback to wallet account if available but no user.id
+    return account;
+  };
 
   // Use useCallback to memoize these functions and prevent unnecessary rerenders
   const refreshMatches = useCallback(async () => {
@@ -185,7 +195,8 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const refreshBets = useCallback(async () => {
-    if (!account) {
+    const userId = getCurrentUserId();
+    if (!userId) {
       setUserBets([]);
       setLoadingBets(false);
       return;
@@ -194,8 +205,8 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       setLoadingBets(true);
       
-      // Fetch the user's bets
-      const fetchedBets = await getBetsByUser(account);
+      // Fetch the user's bets using userId instead of account
+      const fetchedBets = await getBetsByUser(userId);
       
       // Process all bets to ensure they have is_mock property
       const processedBets = fetchedBets.map(bet => ({
@@ -215,14 +226,14 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setLoadingBets(false);
     }
-  }, [account]);
+  }, [user, account]);
 
   // Initial data loading
   useEffect(() => {
     if (!isInitialized) {
       const initializeData = async () => {
         await refreshMatches();
-        if (isConnected) {
+        if (isAuthenticated) {
           await refreshBets();
         }
         setIsInitialized(true);
@@ -230,18 +241,19 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       initializeData();
     }
-  }, [isConnected, refreshMatches, refreshBets, isInitialized]);
+  }, [isAuthenticated, refreshMatches, refreshBets, isInitialized]);
 
-  // Refresh data when account changes
+  // Refresh data when user changes
   useEffect(() => {
-    if (isInitialized && isConnected) {
+    if (isInitialized && isAuthenticated) {
       refreshBets();
     }
-  }, [isConnected, account, isInitialized, refreshBets]);
+  }, [isAuthenticated, user, account, isInitialized, refreshBets]);
 
   const createNewBet = async (matchId: string, teamId: string, amount: number, description: string): Promise<Bet | null> => {
-    if (!account) {
-      toast.error('Please connect your wallet first');
+    const userId = getCurrentUserId();
+    if (!userId) {
+      toast.error('Please sign in to place a bet');
       return null;
     }
     
@@ -254,10 +266,10 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return null;
       }
       
-      // Create a new bet object
+      // Create a new bet object with userId instead of account
       const newBet: Bet = {
         id: `bet_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-        creator: account,
+        creator: userId,
         matchId,
         teamId,
         amount: numericAmount,
@@ -486,8 +498,9 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Accept a bet
   const acceptBet = async (bet: Bet): Promise<boolean> => {
-    if (!account) {
-      toast.error('Please connect your wallet first');
+    const userId = getCurrentUserId();
+    if (!userId) {
+      toast.error('Please sign in to accept a bet');
       return false;
     }
     
@@ -496,14 +509,14 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return false;
     }
     
-    if (account.toLowerCase() === bet.creator.toLowerCase()) {
+    if (userId.toLowerCase() === bet.creator.toLowerCase()) {
       toast.error('You cannot accept your own bet');
       return false;
     }
     
     try {
       // Don't allow accepting mock bets if we have a real account
-      if (isMockBet(bet) && account) {
+      if (isMockBet(bet) && userId) {
         toast.error('Demo bets cannot be accepted by real accounts');
         return false;
       }
@@ -528,7 +541,7 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const escrowId = typeof escrow === 'string' ? escrow : escrow.id;
       
       // Update the bet in the local state
-      const acceptedBet = await acceptBetService(bet.id, account, escrowId);
+      const acceptedBet = await acceptBetService(bet.id, userId, escrowId);
       
       if (!acceptedBet) {
         toast.error('Failed to accept bet');
@@ -538,7 +551,7 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Update the bet in Supabase
       const updatedBet = {
         ...bet,
-        acceptor: account,
+        acceptor: userId,
         status: BetStatus.ACTIVE,
         escrowId: escrowId
       };
