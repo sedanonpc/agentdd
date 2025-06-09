@@ -32,9 +32,9 @@ export default {
         }
       },
       fontFamily: {
-        mono: ['Chakra Petch', 'VT323', 'Monaco', 'Consolas', 'monospace'],
-        display: ['Chakra Petch', 'Orbitron', 'Audiowide', 'monospace'],
-        sans: ['Chakra Petch', 'system-ui', 'sans-serif'],
+        mono: ['Chakra Petch', 'monospace'],
+        display: ['Chakra Petch', 'monospace'],
+        sans: ['Chakra Petch', 'sans-serif'],
       },
       boxShadow: {
         'terminal': '0 0 10px rgba(0, 51, 255, 0.5), inset 0 0 10px rgba(0, 51, 255, 0.2)',
@@ -85,7 +85,15 @@ export default {
       },
       backdropBlur: {
         'xs': '2px',
+      },
+      spacing: {
+        '128': '32rem',
       }
+    },
+    fontFamily: {
+      sans: ['Chakra Petch', 'sans-serif'],
+      mono: ['Chakra Petch', 'monospace'],
+      display: ['Chakra Petch', 'monospace'],
     },
   },
   plugins: [],
