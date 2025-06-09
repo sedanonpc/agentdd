@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import Navbar from './components/layout/Navbar';
@@ -10,12 +10,16 @@ import DashboardPage from './pages/DashboardPage';
 import ChatPage from './pages/ChatPage';
 import AcceptBetPage from './pages/AcceptBetPage';
 import LoginPage from './pages/LoginPage';
+import LeaderboardPage from './pages/Leaderboard';
 import { Web3Provider } from './context/Web3Context';
 import { AuthProvider } from './context/AuthContext';
 import { BettingProvider } from './context/BettingContext';
 import { ChatProvider } from './context/ChatContext';
 import { DarePointsProvider } from './context/DarePointsContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import { setupDatabase } from './services/setupDatabaseService';
+import { isSupabaseConfigured } from './services/supabaseService';
+import { ConsoleThemeProvider } from './theme/muiTheme';
 
 // Load custom fonts
 const loadFonts = () => {
@@ -45,72 +49,102 @@ function App() {
     };
   }, []);
 
+  // Setup database schema when app initializes
+  useEffect(() => {
+    const initializeDatabase = async () => {
+      try {
+        if (isSupabaseConfigured()) {
+          await setupDatabase();
+        } else {
+          console.warn('Supabase not configured - skipping database setup');
+          toast.info('Running in local mode - data will not be saved to the cloud');
+        }
+      } catch (error) {
+        console.error('Database initialization error:', error);
+        toast.warning('Could not connect to the database - some features may be unavailable');
+      }
+    };
+    
+    initializeDatabase();
+  }, []);
+
   return (
     <Web3Provider>
       <AuthProvider>
-        <BettingProvider>
-          <DarePointsProvider>
+        <DarePointsProvider>
+          <BettingProvider>
             <ChatProvider>
-              <div className="min-h-screen font-mono text-console-white bg-console-black bg-terminal-grid bg-grid relative">
-                {/* Scanline effect - positioned below content but above background */}
-                <div className="pointer-events-none fixed inset-0 h-full w-full animate-terminal-scan opacity-10 z-[5] bg-gradient-to-b from-transparent via-console-blue-glow to-transparent"></div>
-                
-                {/* Terminal glow effect - always at the bottom layer */}
-                <div className="pointer-events-none fixed inset-0 h-full w-full opacity-20 bg-console-blue-dark z-[1]"></div>
-                
-                {/* Content container - ensures content is above effects but below navbar */}
-                <div className="relative z-[10]">
-                  <main className="container mx-auto px-4 pt-20 pb-20">
-                  <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/matches" element={
-                      <ProtectedRoute>
-                        <MatchesPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/accept-bet" element={<AcceptBetPage />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route 
-                      path="/dashboard" 
-                      element={
+              <ConsoleThemeProvider>
+                <div className="min-h-screen font-mono text-console-white bg-console-black bg-terminal-grid bg-grid relative">
+                  {/* Scanline effect - positioned below content but above background */}
+                  <div className="pointer-events-none fixed inset-0 h-full w-full animate-terminal-scan opacity-10 z-[5] bg-gradient-to-b from-transparent via-console-blue-glow to-transparent"></div>
+                  
+                  {/* Terminal glow effect - always at the bottom layer */}
+                  <div className="pointer-events-none fixed inset-0 h-full w-full opacity-20 bg-console-blue-dark z-[1]"></div>
+                  
+                  {/* Content container - ensures content is above effects but below navbar */}
+                  <div className="relative z-[10]">
+                    <main className="container mx-auto px-4 pt-20 pb-20">
+                    <Routes>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/matches" element={
                         <ProtectedRoute>
-                          <DashboardPage />
+                          <MatchesPage />
                         </ProtectedRoute>
-                      } 
-                    />
+                      } />
+                      <Route path="/accept-bet" element={<AcceptBetPage />} />
+                      <Route path="/login" element={<LoginPage />} />
+                      <Route 
+                        path="/dashboard" 
+                        element={
+                          <ProtectedRoute>
+                            <DashboardPage />
+                          </ProtectedRoute>
+                        } 
+                      />
                       <Route 
                         path="/chat" 
                         element={
                           <ProtectedRoute>
                             <ChatPage />
-                        </ProtectedRoute>
-                      } 
+                          </ProtectedRoute>
+                        } 
+                      />
+                      <Route 
+                        path="/chat/:betId" 
+                        element={
+                          <ProtectedRoute>
+                            <ChatPage />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      <Route 
+                        path="/leaderboard" 
+                        element={<LeaderboardPage />} 
+                      />
+                    </Routes>
+                  </main>
+                    
+                    {/* Navbar is positioned with highest z-index to be on top */}
+                    <Navbar />
+                    
+                    <ToastContainer 
+                      position="bottom-right" 
+                      theme="dark"
+                      toastClassName="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue text-console-white shadow-terminal"
+                      progressClassName="bg-console-blue-bright"
+                      limit={3}
+                      newestOnTop={true}
+                      closeOnClick
+                      autoClose={3000}
+                      pauseOnHover
                     />
-                    <Route 
-                      path="/chat/:betId" 
-                      element={
-                        <ProtectedRoute>
-                          <ChatPage />
-                        </ProtectedRoute>
-                      } 
-                    />
-                  </Routes>
-                </main>
-                  
-                  {/* Navbar is positioned with highest z-index to be on top */}
-                  <Navbar />
-                  
-                  <ToastContainer 
-                    position="bottom-right" 
-                    theme="dark"
-                    toastClassName="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue text-console-white shadow-terminal"
-                    progressClassName="bg-console-blue-bright"
-                  />
+                  </div>
                 </div>
-              </div>
+              </ConsoleThemeProvider>
             </ChatProvider>
-          </DarePointsProvider>
-        </BettingProvider>
+          </BettingProvider>
+        </DarePointsProvider>
       </AuthProvider>
     </Web3Provider>
   );

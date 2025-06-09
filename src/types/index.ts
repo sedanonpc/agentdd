@@ -58,10 +58,15 @@ export interface Bet {
   acceptor?: string;
   matchId: string;
   teamId: string;
-  amount: string;
+  amount: number;
+  escrowId?: string;
   status: BetStatus;
   timestamp: number;
   description?: string;
+  transactionId?: string;
+  chatId?: string;
+  winnerId?: string;
+  is_mock?: boolean; // Flag to identify mock data
 }
 
 // Chat Types
@@ -82,4 +87,17 @@ export interface MatchAnalysis {
   awayTeamWinProbability: number;
   keyFactors: string[];
   recommendation?: string;
+}
+
+// Escrow Types
+export interface Escrow {
+  id: string;
+  betId: string;
+  creatorId: string;
+  acceptorId?: string;
+  totalAmount: number;
+  creatorAmount: number;
+  acceptorAmount: number;
+  status: 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'REFUNDED';
+  timestamp: number;
 }

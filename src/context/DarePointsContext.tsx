@@ -13,6 +13,17 @@ import {
   addBetWinPoints,
   awardPoints
 } from '../services/darePointsService';
+import {
+  getAllEscrows,
+  getEscrowById,
+  getEscrowByBetId,
+  createEscrow,
+  addAcceptorToEscrow,
+  completeEscrow,
+  refundEscrow,
+  getTotalEscrowAmount
+} from '../services/escrowService';
+import { Escrow } from '../types';
 
 // Define the structure for the Reward Pool
 interface RewardPool {
@@ -26,11 +37,18 @@ interface DarePointsContextType {
   loadingBalance: boolean;
   rewardPool: RewardPool;
   transactions: DareTransaction[];
-  deductPoints: (amount: number, betId: string, description: string) => Promise<boolean>;
+  escrowedPoints: number;
+  deductPoints: (amount: number, betId: string, description: string, silent?: boolean) => Promise<boolean>;
   addPoints: (amount: number, type: 'BET_WON' | 'REWARD', description: string, betId?: string) => Promise<boolean>;
   getTransactionHistory: () => DareTransaction[];
   getRewardPoolInfo: () => RewardPool;
   exportTransactions: () => string; // Export transactions as JSON string
+  createBetEscrow: (betId: string, amount: number, silent?: boolean) => Promise<Escrow | null>;
+  acceptBetEscrow: (escrowId: string, amount: number) => Promise<Escrow | null>;
+  settleBetEscrow: (escrowId: string, winnerId: string) => Promise<boolean>;
+  refundBetEscrow: (escrowId: string) => Promise<boolean>;
+  getEscrowInfo: (escrowId: string) => Escrow | null;
+  getEscrowByBet: (betId: string) => Escrow | null;
 }
 
 // Create the context
@@ -46,6 +64,7 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
   const [loadingBalance, setLoadingBalance] = useState<boolean>(true);
   const [transactions, setTransactions] = useState<DareTransaction[]>([]);
   const [rewardPool, setRewardPool] = useState<RewardPool>({ totalPoints: 0, transactions: [] });
+  const [escrowedPoints, setEscrowedPoints] = useState<number>(0);
 
   // Load user balance and transactions when user changes
   useEffect(() => {
@@ -64,6 +83,22 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
     loadRewardPoolData();
   }, []);
 
+  // Set up a real-time polling for balance updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Update the balance every 10 seconds to ensure it's current
+    const intervalId = setInterval(() => {
+      refreshUserBalance(user.id);
+    }, 10000);
+
+    // Update escrowed points
+    updateEscrowedPoints();
+
+    // Clean up on unmount
+    return () => clearInterval(intervalId);
+  }, [user?.id]);
+
   // Load user data
   const loadUserData = async (userId: string) => {
     setLoadingBalance(true);
@@ -75,11 +110,53 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
       // Get transaction history
       const userTransactions = getUserTransactions(userId);
       setTransactions(userTransactions);
+
+      // Update escrowed points
+      updateEscrowedPoints();
     } catch (error) {
       console.error('Error loading user data:', error);
       toast.error('Failed to load user data');
     } finally {
       setLoadingBalance(false);
+    }
+  };
+
+  // Refresh just the user balance
+  const refreshUserBalance = async (userId: string) => {
+    try {
+      const balance = await getUserDarePoints(userId);
+      setUserBalance(balance);
+    } catch (error) {
+      console.error('Error refreshing balance:', error);
+    }
+  };
+
+  // Update escrowed points
+  const updateEscrowedPoints = () => {
+    if (!user?.id) return;
+    
+    try {
+      // Get all escrows from service
+      const allEscrows = getAllEscrows();
+      
+      // Calculate user's escrowed points
+      const userEscrowedPoints = allEscrows
+        .filter(escrow => 
+          (escrow.creatorId === user.id || escrow.acceptorId === user.id) && 
+          (escrow.status === 'PENDING' || escrow.status === 'ACTIVE')
+        )
+        .reduce((total, escrow) => {
+          if (escrow.creatorId === user.id) {
+            return total + escrow.creatorAmount;
+          } else if (escrow.acceptorId === user.id) {
+            return total + escrow.acceptorAmount;
+          }
+          return total;
+        }, 0);
+      
+      setEscrowedPoints(userEscrowedPoints);
+    } catch (error) {
+      console.error('Error updating escrowed points:', error);
     }
   };
 
@@ -109,19 +186,19 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   // Deduct points for placing a bet
-  const deductPoints = async (amount: number, betId: string, description: string): Promise<boolean> => {
+  const deductPoints = async (amount: number, betId: string, description: string, silent: boolean = false): Promise<boolean> => {
     if (!user?.id) {
-      toast.error('Please sign in to place bets');
+      if (!silent) toast.error('Please sign in to place bets');
       return false;
     }
 
     if (amount <= 0) {
-      toast.error('Amount must be greater than 0');
+      if (!silent) toast.error('Amount must be greater than 0');
       return false;
     }
 
     if (userBalance < amount) {
-      toast.error('Insufficient balance');
+      if (!silent) toast.error('Insufficient balance');
       return false;
     }
 
@@ -133,25 +210,14 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
         // Update local state
         setUserBalance(prev => prev - amount);
         
-        // Update reward pool
-        const poolTransaction: DareTransaction = {
-          id: Date.now().toString(),
-          timestamp: Date.now(),
-          userId: user.id,
-          amount: amount,
-          type: 'DEPOSIT',
-          description: `Deposit from bet: ${betId}`,
-          betId,
-          status: 'COMPLETED'
-        };
+        // Skip creating escrow if silent (it will be created separately in bet acceptance flow)
+        if (!silent) {
+          // Create escrow for the bet
+          await createBetEscrow(betId, amount);
+        }
         
-        const newRewardPool = {
-          totalPoints: rewardPool.totalPoints + amount,
-          transactions: [...rewardPool.transactions, poolTransaction]
-        };
-        
-        setRewardPool(newRewardPool);
-        saveRewardPoolData(newRewardPool);
+        // Update escrowed points
+        updateEscrowedPoints();
         
         // Get updated transactions
         const updatedTransactions = getUserTransactions(user.id);
@@ -163,7 +229,7 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
       return false;
     } catch (error) {
       console.error('Error deducting points:', error);
-      toast.error('Failed to process transaction');
+      if (!silent) toast.error('Failed to process transaction');
       return false;
     }
   };
@@ -200,31 +266,12 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
         // Update local state
         setUserBalance(prev => prev + amount);
         
-        // Update reward pool for bet wins (taken from pool)
-        if (type === 'BET_WON') {
-          const poolTransaction: DareTransaction = {
-            id: Date.now().toString(),
-            timestamp: Date.now(),
-            userId: user.id,
-            amount: -amount,
-            type: 'WITHDRAWAL',
-            description: `Reward to user: ${user.id}`,
-            betId,
-            status: 'COMPLETED'
-          };
-          
-          const newRewardPool = {
-            totalPoints: Math.max(0, rewardPool.totalPoints - amount),
-            transactions: [...rewardPool.transactions, poolTransaction]
-          };
-          
-          setRewardPool(newRewardPool);
-          saveRewardPoolData(newRewardPool);
-        }
-        
         // Get updated transactions
         const updatedTransactions = getUserTransactions(user.id);
         setTransactions(updatedTransactions);
+        
+        // Update escrowed points
+        updateEscrowedPoints();
         
         return true;
       }
@@ -252,17 +299,190 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
     return JSON.stringify(transactions, null, 2);
   };
 
+  // Create a new escrow for a bet
+  const createBetEscrow = async (betId: string, amount: number, silent: boolean = false): Promise<Escrow | null> => {
+    if (!user?.id) {
+      if (!silent) toast.error('You must be logged in to create an escrow');
+      return null;
+    }
+    
+    if (userBalance < amount) {
+      if (!silent) toast.error(`Insufficient balance. You need ${amount} $DARE points to create this escrow.`);
+      return null;
+    }
+    
+    try {
+      // Call the createEscrow function with the required parameters
+      const escrow = createEscrow(betId, user.id, amount);
+      
+      // Update UI with toast only if not silent
+      if (!silent) {
+        toast.success(`Successfully created escrow for ${amount} $DARE points`);
+      }
+      
+      // Update escrowed points
+      updateEscrowedPoints();
+      
+      return escrow;
+    } catch (error) {
+      console.error('Error creating bet escrow:', error);
+      if (!silent) toast.error('Failed to create escrow. Please try again.');
+      return null;
+    }
+  };
+
+  // Accept a bet and add to escrow
+  const acceptBetEscrow = async (escrowId: string, amount: number): Promise<Escrow | null> => {
+    if (!user?.id) return null;
+    
+    try {
+      // First deduct points from user
+      const success = await deductPoints(amount, escrowId, '', true);
+      
+      if (success) {
+        // Update local state
+        setUserBalance(prev => prev - amount);
+        
+        // Add to escrow
+        const updatedEscrow = addAcceptorToEscrow(escrowId, user.id, amount);
+        
+        // Update escrowed points
+        updateEscrowedPoints();
+        
+        return updatedEscrow;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error accepting bet escrow:', error);
+      return null;
+    }
+  };
+
+  // Settle a bet escrow
+  const settleBetEscrow = async (escrowId: string, winnerId: string): Promise<boolean> => {
+    try {
+      const escrow = getEscrowById(escrowId);
+      
+      if (!escrow) {
+        console.error('Escrow not found');
+        return false;
+      }
+      
+      // Complete the escrow
+      const completedEscrow = completeEscrow(escrowId, winnerId);
+      
+      if (!completedEscrow) {
+        console.error('Failed to complete escrow');
+        return false;
+      }
+      
+      // Award the total amount to the winner
+      const success = await awardPoints(
+        winnerId,
+        completedEscrow.totalAmount,
+        `Won bet ${completedEscrow.betId}`
+      );
+      
+      if (success && winnerId === user?.id) {
+        // Update local state if current user is the winner
+        setUserBalance(prev => prev + completedEscrow.totalAmount);
+      }
+      
+      // Update escrowed points
+      updateEscrowedPoints();
+      
+      return success;
+    } catch (error) {
+      console.error('Error settling bet escrow:', error);
+      return false;
+    }
+  };
+
+  // Refund a bet escrow
+  const refundBetEscrow = async (escrowId: string): Promise<boolean> => {
+    try {
+      const escrow = getEscrowById(escrowId);
+      
+      if (!escrow) {
+        console.error('Escrow not found');
+        return false;
+      }
+      
+      // Refund the escrow
+      const refundedEscrow = refundEscrow(escrowId);
+      
+      if (!refundedEscrow) {
+        console.error('Failed to refund escrow');
+        return false;
+      }
+      
+      // Refund the creator
+      if (escrow.creatorId) {
+        await awardPoints(
+          escrow.creatorId,
+          escrow.creatorAmount,
+          `Refund from bet ${escrow.betId}`
+        );
+        
+        if (escrow.creatorId === user?.id) {
+          // Update local state if current user is the creator
+          setUserBalance(prev => prev + escrow.creatorAmount);
+        }
+      }
+      
+      // Refund the acceptor if exists
+      if (escrow.acceptorId && escrow.acceptorAmount > 0) {
+        await awardPoints(
+          escrow.acceptorId,
+          escrow.acceptorAmount,
+          `Refund from bet ${escrow.betId}`
+        );
+        
+        if (escrow.acceptorId === user?.id) {
+          // Update local state if current user is the acceptor
+          setUserBalance(prev => prev + escrow.acceptorAmount);
+        }
+      }
+      
+      // Update escrowed points
+      updateEscrowedPoints();
+      
+      return true;
+    } catch (error) {
+      console.error('Error refunding bet escrow:', error);
+      return false;
+    }
+  };
+
+  // Get escrow by ID
+  const getEscrowInfo = (escrowId: string): Escrow | null => {
+    return getEscrowById(escrowId);
+  };
+
+  // Get escrow by bet ID
+  const getEscrowByBet = (betId: string): Escrow | null => {
+    return getEscrowByBetId(betId);
+  };
+
   // Context value
   const contextValue: DarePointsContextType = {
     userBalance,
     loadingBalance,
     rewardPool,
     transactions,
+    escrowedPoints,
     deductPoints,
     addPoints,
     getTransactionHistory,
     getRewardPoolInfo,
-    exportTransactions
+    exportTransactions,
+    createBetEscrow,
+    acceptBetEscrow,
+    settleBetEscrow,
+    refundBetEscrow,
+    getEscrowInfo,
+    getEscrowByBet
   };
 
   return (

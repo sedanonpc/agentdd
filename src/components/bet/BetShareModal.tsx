@@ -102,10 +102,10 @@ const BetShareModal: React.FC<BetShareModalProps> = ({ bet, onClose }) => {
   };
   
   // Calculate potential winnings based on bet amount and odds
-  const calculatePotentialWinnings = (amount: string, odds: number | null): string => {
+  const calculatePotentialWinnings = (amount: string | number, odds: number | null): string => {
     if (!odds) return 'N/A';
     
-    const betAmount = parseFloat(amount);
+    const betAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     if (isNaN(betAmount)) return 'N/A';
     
     // Decimal odds: potential winnings = stake * odds - stake
@@ -215,6 +215,14 @@ const BetShareModal: React.FC<BetShareModalProps> = ({ bet, onClose }) => {
   const awayTeamOdds = match ? getTeamOdds(match.away_team.name) : null;
   const oddsTrend = getOddsTrend(homeTeamOdds, awayTeamOdds);
   
+  // Helper function to convert amount for display
+  const convertAmount = (amount: number | string): string => {
+    return typeof amount === 'number' ? amount.toString() : amount;
+  };
+  
+  // Calculate potential winnings
+  const potentialWinnings = teamOdds ? calculatePotentialWinnings(convertAmount(bet.amount), teamOdds) : 'N/A';
+  
   // Determine if the bet's team is favorite or underdog
   const betTeamStatus = 
     match && oddsTrend && teamName === match.home_team.name ? oddsTrend.home :
@@ -223,15 +231,15 @@ const BetShareModal: React.FC<BetShareModalProps> = ({ bet, onClose }) => {
   
   const modalContent = (
     <div 
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] px-4 overflow-y-auto"
+      className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] px-4 overflow-y-auto"
       onClick={handleOutsideClick}
     >
-      <div className="w-full max-w-md bg-console-gray-terminal border-1 border-console-blue shadow-terminal my-8 animate-fadeIn">
+      <div className="w-full max-w-md bg-console-gray-terminal border-1 border-console-blue shadow-terminal my-4 animate-fadeIn">
         {/* Header */}
-        <div className="sticky top-0 bg-console-blue/90 p-3 flex justify-between items-center">
+        <div className="sticky top-0 bg-console-blue/90 p-2 flex justify-between items-center z-50 border-b border-console-blue">
           <div className="flex items-center gap-2">
             <Share2 className="h-4 w-4 text-white" />
-            <h2 className="text-white font-mono text-sm">SHARE BET INVITATION</h2>
+            <h2 className="text-white font-mono text-sm font-bold">SHARE BET INVITATION</h2>
           </div>
           <button 
             onClick={onClose}
@@ -242,141 +250,153 @@ const BetShareModal: React.FC<BetShareModalProps> = ({ bet, onClose }) => {
         </div>
         
         {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Bet details */}
-          <div className="bg-console-black/50 border-1 border-console-blue p-4">
-            <h3 className="text-[#E5FF03] font-mono text-5xl mb-3">YOU'VE BEEN INVITED TO BET!</h3>
-            <div className="space-y-3 text-console-white font-mono text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-console-white-dim">Amount:</span>
-                <span className="text-[#E5FF03]">{bet.amount} ETH</span>
-              </div>
-              
-              {match && (
-                <>
-                  <div className="flex justify-between items-center">
-                    <span className="text-console-white-dim">Match:</span>
-                    <span className="text-console-white-bright">{match.home_team.name} vs {match.away_team.name}</span>
+        <div className="p-3 space-y-3">
+          {/* Unified Bet Details and QR Code */}
+          <div className="bg-console-black/70 border-1 border-console-blue p-3 rounded">
+            <div className="pt-2 pb-3">
+              <h3 className="text-[#E5FF03] font-mono text-4xl sm:text-5xl md:text-4xl font-bold text-center tracking-wide leading-tight">
+                INVITE YOUR<br className="md:hidden" /> FRIENDS TO BET!
+              </h3>
+            </div>
+            
+            {/* Matchup details at the top */}
+            {match && (
+              <div className="mb-3 bg-console-blue/10 p-2 border-1 border-console-blue/30 rounded">
+                <div className="text-center mb-1">
+                  <div className="text-white font-mono text-base font-bold">
+                    {match.home_team.name} vs {match.away_team.name}
                   </div>
-                  
-                  {/* Add match date and time */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-console-white-dim flex items-center gap-1">
-                      <Calendar className="h-3 w-3" /> Date:
-                    </span>
-                    <span className="text-console-white-bright">{formatDate(match.commence_time)}</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-console-white-dim flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> Time:
-                    </span>
-                    <span className="text-console-white-bright">{formatTime(match.commence_time)}</span>
-                  </div>
-                </>
-              )}
-              
-              {/* Team with status indicator */}
-              <div className="flex justify-between items-center">
-                <span className="text-console-white-dim">Team:</span>
-                <div className="flex items-center gap-2">
-                  {betTeamStatus === 'favorite' && <ArrowDown className="h-3 w-3 text-green-500" />}
-                  {betTeamStatus === 'underdog' && <ArrowUp className="h-3 w-3 text-red-500" />}
-                  <span className="text-[#00A4FF]">{teamName}</span>
-                </div>
-              </div>
-              
-              {/* Add odds */}
-              {teamOdds && (
-                <div className="flex justify-between items-center">
-                  <span className="text-console-white-dim">Odds:</span>
-                  <div className={`px-2 py-0.5 rounded ${
-                    betTeamStatus === 'favorite' ? 'bg-green-900/30 text-green-400' : 
-                    betTeamStatus === 'underdog' ? 'bg-red-900/30 text-red-400' : 
-                    'bg-console-blue/20 text-console-blue-bright'
-                  }`}>
-                    {formatDecimalOdds(teamOdds)} ({decimalToAmerican(teamOdds)})
+                  <div className="flex items-center justify-center gap-1 text-console-white-dim text-xs mt-0.5">
+                    <Calendar className="h-3 w-3" /> 
+                    <span>{formatDate(match.commence_time)}</span>
+                    <span className="mx-1">•</span>
+                    <Clock className="h-3 w-3" /> 
+                    <span>{formatTime(match.commence_time)}</span>
                   </div>
                 </div>
-              )}
-              
-              {/* Add potential winnings */}
-              {teamOdds && (
-                <div className="flex justify-between items-center">
-                  <span className="text-console-white-dim flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3 text-green-500" /> Potential Win:
+                
+                <div className="flex justify-center gap-6 mt-1">
+                  {homeTeamOdds && (
+                    <div className="text-center">
+                      <div className="text-console-white-dim text-xs">
+                        {match.home_team.name}
+                      </div>
+                      <div className={`px-2 py-0.5 rounded mt-0.5 text-center ${
+                        oddsTrend?.home === 'favorite' ? 'bg-green-900/30 text-green-400' : 
+                        oddsTrend?.home === 'underdog' ? 'bg-red-900/30 text-red-400' : 
+                        'bg-console-blue/20 text-console-blue-bright'
+                      } font-mono text-xs`}>
+                        {formatDecimalOdds(homeTeamOdds)} ({decimalToAmerican(homeTeamOdds)})
+                      </div>
+                    </div>
+                  )}
+                  
+                  {awayTeamOdds && (
+                    <div className="text-center">
+                      <div className="text-console-white-dim text-xs">
+                        {match.away_team.name}
+                      </div>
+                      <div className={`px-2 py-0.5 rounded mt-0.5 text-center ${
+                        oddsTrend?.away === 'favorite' ? 'bg-green-900/30 text-green-400' : 
+                        oddsTrend?.away === 'underdog' ? 'bg-red-900/30 text-red-400' : 
+                        'bg-console-blue/20 text-console-blue-bright'
+                      } font-mono text-xs`}>
+                        {formatDecimalOdds(awayTeamOdds)} ({decimalToAmerican(awayTeamOdds)})
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Two-column layout for desktop, stack on mobile */}
+            <div className="flex flex-col md:flex-row md:gap-3">
+              {/* Left column - Bet details */}
+              <div className="md:w-1/2 space-y-2 text-console-white font-mono text-sm mb-3 md:mb-0">
+                <div className="flex justify-between items-center p-1.5 bg-console-black/30 rounded">
+                  <span className="text-console-white-dim font-medium">Amount:</span>
+                  <div className="bg-[#E5FF03]/10 px-3 py-1.5 rounded-md border-1 border-[#E5FF03]/70 shadow-[0_0_10px_rgba(229,255,3,0.6)] animate-pulse">
+                    <span className="text-[#E5FF03] font-bold text-2xl md:text-3xl">{String(bet.amount)} <span className="text-lg md:text-xl">$DARE points</span></span>
+                  </div>
+                </div>
+                
+                {/* Team with status indicator */}
+                <div className="flex justify-between items-center p-1.5 bg-console-black/30 rounded">
+                  <span className="text-console-white-dim font-medium">Your Selected Team:</span>
+                  <div className="flex items-center gap-2">
+                    {betTeamStatus === 'favorite' && <ArrowDown className="h-3 w-3 text-green-500" />}
+                    {betTeamStatus === 'underdog' && <ArrowUp className="h-3 w-3 text-red-500" />}
+                    <span className="text-[#00A4FF] font-bold">{teamName}</span>
+                  </div>
+                </div>
+                
+                {/* Add odds */}
+                {teamOdds && (
+                  <div className="flex justify-between items-center p-1.5 bg-console-black/30 rounded">
+                    <span className="text-console-white-dim font-medium">Odds:</span>
+                    <div className={`px-2 py-0.5 rounded ${
+                      betTeamStatus === 'favorite' ? 'bg-green-900/30 text-green-400' : 
+                      betTeamStatus === 'underdog' ? 'bg-red-900/30 text-red-400' : 
+                      'bg-console-blue/20 text-console-blue-bright'
+                    } font-mono`}>
+                      {formatDecimalOdds(teamOdds)} ({decimalToAmerican(teamOdds)})
+                    </div>
+                  </div>
+                )}
+                
+                {/* Add local timestamp */}
+                <div className="flex justify-between items-center p-1.5 bg-console-black/30 rounded">
+                  <span className="text-console-white-dim font-medium flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> Timestamp:
                   </span>
-                  <span className="text-green-500">+{calculatePotentialWinnings(bet.amount, teamOdds)} ETH</span>
+                  <span className="text-console-white-bright text-xs">
+                    {new Date().toLocaleString()}
+                  </span>
                 </div>
-              )}
+                
+                {/* Message - Make it stand out with larger text */}
+                {bet.description && (
+                  <div className="mt-2 p-2 bg-console-blue/10 border-1 border-console-blue/30 rounded">
+                    <div className="text-center">
+                      <span className="text-console-white-dim font-medium text-xs block">Message:</span>
+                      <div className="text-console-white-bright italic text-sm font-medium">{bet.description}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
               
-              {bet.description && (
-                <div className="mt-2 pt-2 border-t border-console-blue/50">
-                  <span className="text-console-white-dim">Message:</span>
-                  <div className="text-console-white-bright italic mt-1">"{bet.description}"</div>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* QR Code with enhanced details */}
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="w-full max-w-xs">
-              <div 
-                id="bet-qr-code" 
-                className="bg-console-black p-6 shadow-terminal border-1 border-console-blue rounded-lg overflow-hidden relative"
-              >
-                {/* Add enhanced details around the QR code */}
-                <div className="mb-4 text-center">
-                  <h4 className="text-[#E5FF03] font-mono text-sm mb-2">SCAN TO ACCEPT BET</h4>
-                  {match && (
-                    <div className="text-console-white-bright font-mono text-xs">
-                      {match.home_team.name} vs {match.away_team.name}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex justify-center">
-                  <QRCodeSVG 
-                    value={shareUrl} 
-                    size={200} 
-                    level="H"
-                    bgColor="#121212"
-                    fgColor="#00A4FF"
-                    className="rounded-md"
-                    imageSettings={{
-                      src: '/logo.svg',
-                      excavate: true,
-                      width: 40,
-                      height: 40
-                    }}
-                  />
-                </div>
-                
-                {/* Display bet amount and team below QR */}
-                <div className="mt-4 bg-console-blue/10 p-3 rounded-md border-1 border-console-blue/30">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-console-white-dim font-mono text-xs">Amount:</span>
-                    <span className="text-[#E5FF03] font-mono text-sm font-bold">{bet.amount} ETH</span>
+              {/* Right column - QR Code (Maximize size) */}
+              <div className="md:w-1/2 flex flex-col items-center justify-center">
+                <div 
+                  id="bet-qr-code" 
+                  className="w-full bg-console-black/30 p-2 shadow-inner border-1 border-console-blue/30 rounded-lg overflow-hidden relative"
+                >
+                  <div className="mb-1 text-center">
+                    <h4 className="text-[#E5FF03] font-mono text-sm font-bold">SCAN TO ACCEPT</h4>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-console-white-dim font-mono text-xs">Team:</span>
-                    <span className="text-[#00A4FF] font-mono text-sm">{teamName}</span>
+                  
+                  <div className="flex justify-center">
+                    <QRCodeSVG 
+                      value={shareUrl} 
+                      size={180} 
+                      level="H"
+                      bgColor="#FFFFFF"
+                      fgColor="#000000"
+                      className="rounded-md"
+                      imageSettings={{
+                        src: '/logo.svg',
+                        excavate: true,
+                        width: 30,
+                        height: 30
+                      }}
+                    />
                   </div>
-                  {teamOdds && (
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-console-white-dim font-mono text-xs">Odds:</span>
-                      <span className="text-console-white-bright font-mono text-xs">
-                        {formatDecimalOdds(teamOdds)} ({decimalToAmerican(teamOdds)})
-                      </span>
-                    </div>
-                  )}
+                  
+                  <div className="text-console-white-dim font-mono text-xs text-center mt-1">
+                    <div className="text-[#00A4FF] text-xs font-bold">All match details included</div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="text-console-white-dim font-mono text-xs text-center">
-              <div>Scan this QR code to accept the bet</div>
-              <div className="text-[#00A4FF] text-xs mt-1">All match details included</div>
             </div>
           </div>
           
@@ -386,28 +406,28 @@ const BetShareModal: React.FC<BetShareModalProps> = ({ bet, onClose }) => {
               type="text" 
               value={shareUrl}
               readOnly
-              className="w-full bg-console-black/70 border-1 border-console-blue p-3 pr-12 text-console-white-dim font-mono text-xs"
+              className="w-full bg-console-black/70 border-1 border-console-blue p-2 pr-10 text-console-white-dim font-mono text-xs rounded"
             />
             <button
               onClick={handleCopyUrl}
               className="absolute right-2 top-1/2 transform -translate-y-1/2 text-console-white hover:text-[#00A4FF] transition-colors"
             >
-              {copied ? <Check className="h-5 w-5 text-green-500" /> : <Copy className="h-5 w-5" />}
+              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
             </button>
           </div>
           
           {/* Actions */}
-          <div className="flex justify-between items-center gap-4">
+          <div className="flex justify-between items-center gap-3">
             <button
               onClick={handleDownloadQr}
-              className="flex-1 bg-console-gray-dark border-1 border-console-blue p-3 text-console-white font-mono text-sm hover:bg-console-gray transition-colors flex items-center justify-center gap-2"
+              className="flex-1 bg-console-gray-dark border-1 border-console-blue p-2 text-console-white font-mono text-sm font-bold hover:bg-console-gray transition-colors flex items-center justify-center gap-2 rounded"
             >
               <Download className="h-4 w-4" />
               <span>DOWNLOAD QR</span>
             </button>
             <button
               onClick={onClose}
-              className="flex-1 bg-[#00A4FF]/90 border-1 border-[#00A4FF] p-3 text-white font-mono text-sm hover:shadow-glow transition-all"
+              className="flex-1 bg-[#00A4FF]/90 border-1 border-[#00A4FF] p-2 text-white font-mono text-sm font-bold hover:shadow-glow transition-all rounded"
             >
               DONE
             </button>

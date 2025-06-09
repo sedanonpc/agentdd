@@ -6,6 +6,7 @@ import { useBetting } from '../../context/BettingContext';
 import { useWeb3 } from '../../context/Web3Context';
 import { useDarePoints } from '../../context/DarePointsContext';
 import LoadingSpinner from '../common/LoadingSpinner';
+import { toast } from 'react-toastify';
 
 interface MatchBettingFormProps {
   match: Match;
@@ -16,7 +17,7 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
   const navigate = useNavigate();
   const { createNewBet } = useBetting();
   const { isConnected } = useWeb3();
-  const { userBalance, deductPoints } = useDarePoints();
+  const { userBalance } = useDarePoints();
   
   const [selectedTeam, setSelectedTeam] = useState<string>(match.home_team.id);
   const [betAmount, setBetAmount] = useState<string>('100');
@@ -53,44 +54,43 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
   
   const handleCreateBet = async () => {
     if (!isConnected) {
-      alert('Please connect your wallet first');
+      toast.error('Please connect your wallet first');
       return;
     }
     
     if (!match || !selectedTeam || !betAmount) {
+      toast.error('Please complete all required fields');
       return;
     }
 
     // Check if user has enough $DARE points
     const betAmountNumber = parseInt(betAmount);
+    if (isNaN(betAmountNumber) || betAmountNumber <= 0) {
+      toast.error('Please enter a valid bet amount');
+      return;
+    }
+    
     if (betAmountNumber > userBalance) {
-      alert('Insufficient $DARE points balance');
+      toast.error('Insufficient $DARE points balance');
       return;
     }
     
     setIsCreatingBet(true);
     try {
-      // First create the bet in the betting system
-      const newBet = await createNewBet(match.id, selectedTeam, betAmount, description);
+      // Create the bet in the betting system
+      // The createNewBet function will handle deducting points and showing success toast
+      const newBet = await createNewBet(match.id, selectedTeam, betAmountNumber, description);
       
       if (newBet) {
-        // Then deduct DARE points from user balance and deposit to reward pool
-        const success = await deductPoints(
-          betAmountNumber,
-          newBet.id,
-          `Bet on ${match.home_team.name} vs ${match.away_team.name}`
-        );
-        
-        if (success) {
-          navigate('/dashboard');
-        } else {
-          throw new Error('Failed to process DARE points transaction');
-        }
+        // Toast notification is handled in the createNewBet function
+        // Just navigate to dashboard
+        navigate('/dashboard');
       } else {
         throw new Error('Failed to create bet');
       }
     } catch (error) {
       console.error('Failed to create bet:', error);
+      toast.error('Failed to create bet. Please try again.');
     } finally {
       setIsCreatingBet(false);
     }
@@ -252,7 +252,7 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
       </div>
       
       {/* Action Buttons */}
-      <div className="p-4 bg-console-gray/90 backdrop-blur-xs border-t-1 border-console-blue flex justify-between">
+      <div className="bg-console-gray-terminal/50 backdrop-blur-xs p-4 flex justify-between">
         <button
           onClick={onClose}
           className="bg-console-black/70 backdrop-blur-xs border-1 border-console-blue px-4 py-2 text-console-white-dim font-mono hover:text-console-white transition-colors"

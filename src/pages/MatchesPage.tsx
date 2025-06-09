@@ -143,21 +143,24 @@ const MatchesPage: React.FC = () => {
     let iconColor = 'text-yellow-400';
     let label = 'OFFLINE';
     let icon = <WifiOff className="w-3 h-3" />;
+    let tooltip = 'Using mock data - no live connection';
 
     if (isLiveData) {
       if (dataSource === 'the_odds_api') {
         iconColor = 'text-green-400';
         label = 'API DATA';
         icon = <Wifi className="w-3 h-3" />;
+        tooltip = 'Connected to The Odds API - live data';
       } else if (dataSource === 'yahoo') {
         iconColor = 'text-blue-400';
         label = 'YAHOO DATA';
         icon = <Database className="w-3 h-3" />;
+        tooltip = 'Connected to Yahoo Sports - live data';
       }
     }
 
     return (
-      <div className={`flex items-center gap-1 ${iconColor}`}>
+      <div className={`flex items-center gap-1 ${iconColor} cursor-help`} title={tooltip}>
         {icon}
         <span className="text-xs font-mono tracking-wide">{label}</span>
       </div>
@@ -214,6 +217,13 @@ const MatchesPage: React.FC = () => {
                     <WifiOff className="h-4 w-4 mr-2" />
                     <span>MOCK_DATA_MODE: Displaying simulated NBA matches</span>
                   </>
+                )}
+              </div>
+              <div className="mt-2 text-xs text-console-white-dim font-mono">
+                {matches.length > 0 ? (
+                  <>DISPLAYING {matches.length} {isLiveData ? 'LIVE' : 'MOCK'} MATCHES</>
+                ) : (
+                  <>NO MATCHES AVAILABLE</>
                 )}
               </div>
             </div>

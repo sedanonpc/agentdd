@@ -44,18 +44,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsSupabaseAvailable(isSupabaseConfigured());
   }, []);
 
-  // Immediately authenticate user when wallet gets connected
-  useEffect(() => {
-    if (isConnected && account && !user) {
-      console.log("Wallet connected - setting up auth user automatically");
-      setUser({
-        id: account,
-        walletAddress: account
-      });
-      setAuthMethod('wallet');
-    }
-  }, [isConnected, account, user]);
-
   // Check for existing session on load
   useEffect(() => {
     const checkSession = async () => {
@@ -217,8 +205,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(true);
       await connectWallet();
       
-      // The account state update will trigger useEffect to handle the user creation
-      // No need to manually set the user here
+      if (account) {
+        if (isSupabaseAvailable && authMethod === 'email' && user) {
+          // If user is already logged in via email, link the wallet to their account
+          await linkWalletToUser(user.id, account);
+          
+          // Update the user state
+          setUser({
+            ...user,
+            walletAddress: account
+          });
+        } else {
+          // Just log in with wallet
+          setUser({
+            id: account,
+            walletAddress: account
+          });
+          setAuthMethod('wallet');
+        }
+      }
     } catch (error) {
       console.error('Wallet login failed:', error);
       throw error;

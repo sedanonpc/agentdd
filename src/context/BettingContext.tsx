@@ -1,11 +1,16 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { useWeb3 } from './Web3Context';
+import { useDarePoints } from './DarePointsContext';
+import { useAuth } from './AuthContext';
 import { Match, Bet, BetStatus } from '../types';
 import { fetchNBAMatches } from '../services/oddsApi';
-import { createBet, getBetsByUser, getAllBets } from '../services/bettingService';
+import { createBet, getBetsByUser, getAllBets, acceptBet as acceptBetService, settleBet as settleBetService, cancelBet } from '../services/bettingService';
 import { INITIAL_MOCK_BETS } from '../data/mockBets';
 import { MOCK_MATCHES } from '../data/mockMatches';
+import * as betStorageService from '../services/betStorageService';
+import { storeBet, updateBet } from '../services/betStorageService';
+import { updateDarePoints } from '../services/supabaseService';
 
 interface BettingContextType {
   matches: Match[];
@@ -14,14 +19,14 @@ interface BettingContextType {
   loadingBets: boolean;
   isLiveData: boolean;
   dataSource: string;
-  createNewBet: (matchId: string, teamId: string, amount: string, description: string) => Promise<Bet | null>;
+  createNewBet: (matchId: string, teamId: string, amount: number, description: string) => Promise<Bet | null>;
   settleBet: (betId: string) => Promise<boolean>;
   refreshMatches: () => Promise<void>;
   refreshBets: () => Promise<void>;
   getMatchById: (id: string) => Match | undefined;
   getBetById: (id: string) => Bet | undefined;
   debugCache: () => void;
-  acceptBet: (bet: Bet) => Promise<void>;
+  acceptBet: (bet: Bet) => Promise<boolean>;
 }
 
 const BettingContext = createContext<BettingContextType | undefined>(undefined);
@@ -35,89 +40,162 @@ const debounce = (fn: Function, ms = 300) => {
   };
 };
 
-export const BettingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { account, isConnected } = useWeb3();
+  const { deductPoints, addPoints, createBetEscrow, acceptBetEscrow, settleBetEscrow, refundBetEscrow, getEscrowByBet } = useDarePoints();
+  const { user } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
-  const [loadingMatches, setLoadingMatches] = useState<boolean>(true); // Start with loading state
+  const [loadingMatches, setLoadingMatches] = useState<boolean>(false);
   const [userBets, setUserBets] = useState<Bet[]>([]);
-  const [loadingBets, setLoadingBets] = useState<boolean>(true); // Start with loading state
+  const [loadingBets, setLoadingBets] = useState<boolean>(false);
   const [isLiveData, setIsLiveData] = useState<boolean>(false);
-  const [dataSource, setDataSource] = useState<string>('mock'); // Default to mock
+  const [dataSource, setDataSource] = useState<string>('Loading...');
+  const [lastBetsLoadTime, setLastBetsLoadTime] = useState<number>(0);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   
-  // Create a ref to store a cache of all matches we've ever seen
-  // This helps ensure that even if a match is no longer in the current matches list,
-  // we can still access its data for bets
+  // Ref to keep a cache of all matches we've seen
   const matchCacheRef = useRef<Map<string, Match>>(new Map());
 
   // Use useCallback to memoize these functions and prevent unnecessary rerenders
   const refreshMatches = useCallback(async () => {
-    // Remove the guard clause that prevents concurrent refreshes
-    // if (loadingMatches) return; // Prevent concurrent refreshes
-    
-    setLoadingMatches(true);
     try {
-      const { matches: fetchedMatches, isLive, dataSource: source } = await fetchNBAMatches();
+      setLoadingMatches(true);
       
-      // Add all fetched matches to our cache
-      fetchedMatches.forEach(match => {
+      console.log('Refreshing matches...');
+      
+      // Try to get matches from The Odds API first
+      let fetchedMatches: Match[] = [];
+      let dataSourceValue = 'mock';
+      let isLiveDataValue = false;
+      
+      try {
+        console.log('Attempting to fetch from The Odds API...');
+        const oddsApiResponse = await fetchNBAMatches();
+        fetchedMatches = oddsApiResponse.matches;
+        
+        if (fetchedMatches && fetchedMatches.length > 0) {
+          console.log(`Fetched ${fetchedMatches.length} matches from The Odds API`);
+          dataSourceValue = oddsApiResponse.dataSource || 'the_odds_api';
+          isLiveDataValue = oddsApiResponse.isLive;
+        } else {
+          console.log('No matches returned from The Odds API, trying Yahoo Sports...');
+        }
+      } catch (apiError) {
+        console.error('Error fetching from The Odds API:', apiError);
+        console.log('Falling back to Yahoo Sports...');
+      }
+      
+      // If no matches found, try mock data as fallback
+      if (!fetchedMatches || fetchedMatches.length === 0) {
+        try {
+          console.log('Using mock match data as final fallback');
+          fetchedMatches = [...MOCK_MATCHES];
+          dataSourceValue = 'mock';
+          isLiveDataValue = false;
+          
+          if (fetchedMatches.length === 0) {
+            console.error('Even mock data fetch failed!');
+          } else {
+            console.log(`Loaded ${fetchedMatches.length} mock matches`);
+          }
+        } catch (mockError) {
+          console.error('Error using mock matches:', mockError);
+        }
+      }
+      
+      // Set the data source values
+      setDataSource(dataSourceValue);
+      setIsLiveData(isLiveDataValue);
+      
+      // Update the cache with all matches - crucially important for bet display
+      fetchedMatches.forEach((match: Match) => {
         matchCacheRef.current.set(match.id, match);
       });
       
-      // Only update if the data actually changed
-      if (JSON.stringify(fetchedMatches) !== JSON.stringify(matches)) {
+      console.log(`Match cache now contains ${matchCacheRef.current.size} matches`);
+      
+      // Update the matches state
       setMatches(fetchedMatches);
-        setIsLiveData(isLive);
-        setDataSource(source || 'unknown'); // Update the data source
+      
+      // Log some details about the fetched matches for debugging
+      if (fetchedMatches.length > 0) {
+        console.log('Sample match:', {
+          id: fetchedMatches[0].id,
+          teams: `${fetchedMatches[0].home_team.name} vs ${fetchedMatches[0].away_team.name}`,
+          hasBookmakers: !!fetchedMatches[0].bookmakers?.length,
+          source: dataSourceValue
+        });
       }
     } catch (error) {
-      console.error('Error fetching matches:', error);
-      toast.error('Failed to load NBA matches');
+      console.error('Error refreshing matches:', error);
       setIsLiveData(false);
-      setDataSource('error');
+      setDataSource('mock');
+      
+      // Try to load mock data as a last resort
+      try {
+        const mockData = [...MOCK_MATCHES];
+        setMatches(mockData);
+        
+        // Update the cache
+        mockData.forEach((match: Match) => {
+          matchCacheRef.current.set(match.id, match);
+        });
+      } catch (mockError) {
+        console.error('Even mock data failed to load:', mockError);
+      }
     } finally {
       setLoadingMatches(false);
     }
-  }, [matches]); // Remove loadingMatches from dependencies
+  }, []);
+
+  // Add this function to identify mock bets
+  const isMockBet = (bet: Bet): boolean => {
+    // Check if bet already has is_mock flag
+    if (bet.is_mock !== undefined) {
+      return bet.is_mock;
+    }
+    
+    // Check for mock bet ID pattern (starts with 'mock_')
+    if (bet.id.startsWith('mock_')) {
+      return true;
+    }
+    
+    // Fallback: Return false for any bet without a clear indication
+    return false;
+  };
 
   const refreshBets = useCallback(async () => {
-    // Only refresh if there's an account connected
     if (!account) {
       setUserBets([]);
       setLoadingBets(false);
       return;
     }
-    
-    if (loadingBets) return; // Prevent concurrent refreshes
-    
-    // Make sure we have matches data first
-    if (matches.length === 0 && !loadingMatches) {
-      await refreshMatches();
-    }
-    
-    setLoadingBets(true);
+
     try {
-      // Fetch all bets
-      const allBets = await getAllBets();
+      setLoadingBets(true);
       
-      // Filter user bets
-      const userBetsData = allBets.filter(
-        bet => bet.creator === account || bet.acceptor === account
-      );
+      // Fetch the user's bets
+      const fetchedBets = await getBetsByUser(account);
       
-      console.log(`Found ${userBetsData.length} bets for user ${account}`);
+      // Process all bets to ensure they have is_mock property
+      const processedBets = fetchedBets.map(bet => ({
+        ...bet,
+        is_mock: isMockBet(bet)
+      }));
       
-      // Only update if the data actually changed
-      if (JSON.stringify(userBetsData) !== JSON.stringify(userBets)) {
-        setUserBets(userBetsData);
-      }
+      setUserBets(processedBets);
+      
+      // Log the debug info
+      console.log(`Refreshed bets, total: ${processedBets.length}, mock: ${processedBets.filter(b => b.is_mock).length}`);
+      
+      // Update the load time
+      setLastBetsLoadTime(Date.now());
     } catch (error) {
-      console.error('Error fetching bets:', error);
-      toast.error('Failed to load bets');
+      console.error('Error refreshing bets:', error);
     } finally {
       setLoadingBets(false);
     }
-  }, [account, matches.length, loadingMatches, loadingBets, refreshMatches, userBets]);
+  }, [account]);
 
   // Initial data loading
   useEffect(() => {
@@ -141,30 +219,124 @@ export const BettingProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   }, [isConnected, account, isInitialized, refreshBets]);
 
-  const createNewBet = async (matchId: string, teamId: string, amount: string, description: string): Promise<Bet | null> => {
+  const createNewBet = async (matchId: string, teamId: string, amount: number, description: string): Promise<Bet | null> => {
     if (!account) {
       toast.error('Please connect your wallet first');
       return null;
     }
     
     try {
-      const match = matches.find(m => m.id === matchId);
-      if (!match) {
-        toast.error('Match not found');
+      // Ensure amount is a number
+      const numericAmount = Number(amount);
+      
+      if (isNaN(numericAmount) || numericAmount <= 0) {
+        toast.error('Invalid bet amount');
         return null;
       }
       
-      const newBet = await createBet(account, matchId, teamId, amount, description);
+      // Create a new bet object
+      const newBet: Bet = {
+        id: `bet_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        creator: account,
+        matchId,
+        teamId,
+        amount: numericAmount,
+        status: BetStatus.OPEN,
+        timestamp: Date.now(),
+        description: description || undefined
+      };
       
-      // Manually update the state to ensure the bet appears immediately
-      setUserBets(prevUserBets => [...prevUserBets, newBet]);
+      // Deduct DARE points from the user's balance - silently to avoid duplicate notifications
+      const deductResult = await deductPoints(numericAmount, newBet.id, `Created bet on match ${matchId}`, true);
       
-      // Refresh all bets to ensure everything is in sync
-      // Use debounce to prevent rapid state changes
-      debounce(() => refreshBets(), 500)();
+      if (!deductResult) {
+        toast.error('Failed to deduct DARE points');
+        return null;
+      }
       
-      toast.success('Bet created successfully!');
-      return newBet;
+      // Create escrow for the bet - silently to avoid duplicate notifications
+      const escrow = await createBetEscrow(newBet.id, numericAmount, true);
+      
+      if (!escrow) {
+        toast.error('Failed to create escrow');
+        return null;
+      }
+      
+      // Add escrow ID to the bet before creating it
+      newBet.escrowId = escrow.id;
+      
+      // Save the bet using the service
+      const createdBet = await createBet(
+        newBet.creator,
+        newBet.matchId,
+        newBet.teamId,
+        newBet.amount,
+        newBet.description || '',
+        escrow.id // Pass the escrow ID as an argument
+      );
+      
+      if (!createdBet) {
+        toast.error('Failed to create bet');
+        return null;
+      }
+      
+      // Make sure the escrow ID is included in the created bet
+      createdBet.escrowId = escrow.id;
+      
+      // Log the bet before storing
+      console.log('Storing bet in Supabase:', createdBet);
+      
+      // Store the bet in Supabase
+      const storeResult = await storeBet(createdBet);
+      
+      if (!storeResult) {
+        console.error('Failed to store bet in Supabase, but bet was created locally');
+      } else {
+        console.log('Successfully stored bet in Supabase!');
+        
+        // Try to update the user's DARE points in Supabase to match their wallet's record
+        // This helps keep the leaderboard up-to-date
+        try {
+          if (user?.id) {
+            await updateDarePoints(user.id, 0); // Update with 0 to sync the current balance
+            console.log('Updated user DARE points in Supabase for leaderboard');
+          }
+        } catch (pointsError) {
+          console.error('Failed to update user DARE points for leaderboard:', pointsError);
+        }
+      }
+      
+      toast.success('Bet created successfully');
+      
+      // Add the bet to the local state
+      setUserBets(prevBets => [...prevBets, createdBet]);
+      
+      // Refresh bets list
+      refreshBets();
+      
+      // Dispatch an event to notify other components that a bet was created
+      try {
+        // Standard event dispatch
+        window.dispatchEvent(new CustomEvent('bet-created', { detail: createdBet }));
+        console.log('Event dispatched: bet-created');
+        
+        // Dispatch a second backup event with different payload format for better compatibility
+        const simpleEvent = new CustomEvent('bet-refresh-required', { 
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(simpleEvent);
+        
+        // Force refresh on other components if needed
+        if (typeof refreshBets === 'function') {
+          setTimeout(refreshBets, 500);  // Delayed refresh
+        }
+      } catch (eventError) {
+        console.error('Error dispatching events:', eventError);
+        // Silent fail - the regular polling will still update eventually
+      }
+      
+      return createdBet;
     } catch (error) {
       console.error('Error creating bet:', error);
       toast.error('Failed to create bet');
@@ -173,17 +345,76 @@ export const BettingProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const settleBet = async (betId: string): Promise<boolean> => {
-    if (!account) {
-      toast.error('Please connect your wallet first');
-      return false;
-    }
-    
     try {
-      // Implementation would call smart contract function
-      // For MVP, just simulate success
-      toast.success('Bet settled successfully!');
-      debounce(() => refreshBets(), 500)();
+      const bet = userBets.find(b => b.id === betId);
+      
+      if (!bet) {
+        toast.error('Bet not found');
+        return false;
+      }
+      
+      if (bet.status !== BetStatus.ACTIVE) {
+        toast.error('Only active bets can be settled');
+        return false;
+      }
+      
+      // Get the match associated with this bet
+      const match = getMatchById(bet.matchId);
+      
+      if (!match) {
+        toast.error('Match not found for this bet');
+        return false;
+      }
+      
+      // Only allow settlement if the match has a winner
+      if (!match.completed) {
+        toast.error('Match has not been completed yet');
+        return false;
+      }
+      
+      // For demonstration, use the creator as the winner
+      // In a real app, you would check the match results to determine the winner
+      const winnerId = bet.creator;
+      
+      if (!winnerId) {
+        toast.error('Unable to determine winner');
+        return false;
+      }
+      
+      // Get the escrow for this bet
+      const escrow = await getEscrowByBet(bet.id);
+      
+      if (!escrow) {
+        toast.error('Escrow not found for this bet');
+        return false;
+      }
+      
+      // Settle the bet's escrow
+      const settleEscrowResult = await settleBetEscrow(escrow.id, winnerId);
+      
+      if (!settleEscrowResult) {
+        toast.error('Failed to settle bet escrow');
+        return false;
+      }
+      
+      // Call the service to settle the bet
+      const settledBet = await settleBetService(bet.id, winnerId);
+      
+      if (!settledBet) {
+        toast.error('Failed to settle bet');
+        return false;
+      }
+      
+      // Update the bet in Supabase
+      await updateBet(settledBet);
+      
+      toast.success(`Bet settled - Winner: ${winnerId}`);
+      
+      // Refresh bets list
+      refreshBets();
+      
       return true;
+      
     } catch (error) {
       console.error('Error settling bet:', error);
       toast.error('Failed to settle bet');
@@ -234,20 +465,112 @@ export const BettingProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   // Accept a bet
-  const acceptBet = async (bet: Bet): Promise<void> => {
-    // In a real app, this would interact with a smart contract
-    // For now, we'll just update the local state
+  const acceptBet = async (bet: Bet): Promise<boolean> => {
+    if (!account) {
+      toast.error('Please connect your wallet first');
+      return false;
+    }
+    
+    if (bet.status !== BetStatus.OPEN) {
+      toast.error('This bet is no longer open for acceptance');
+      return false;
+    }
+    
+    if (account.toLowerCase() === bet.creator.toLowerCase()) {
+      toast.error('You cannot accept your own bet');
+      return false;
+    }
+    
     try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Don't allow accepting mock bets if we have a real account
+      if (isMockBet(bet) && account) {
+        toast.error('Demo bets cannot be accepted by real accounts');
+        return false;
+      }
       
-      // Add the bet to the user's bets
-      setUserBets(prevBets => [...prevBets, bet]);
+      // Deduct points from the user accepting the bet
+      const deductResult = await deductPoints(bet.amount, bet.id, `Accepted bet ${bet.id}`, true);
       
-      return Promise.resolve();
+      if (!deductResult) {
+        toast.error('Failed to deduct DARE points');
+        return false;
+      }
+      
+      // Create escrow for the acceptor
+      const escrow = bet.escrowId || await createBetEscrow(bet.id, bet.amount, true);
+      
+      if (!escrow) {
+        toast.error('Failed to create escrow');
+        return false;
+      }
+      
+      // Get the escrow ID based on whether it's a string or an object
+      const escrowId = typeof escrow === 'string' ? escrow : escrow.id;
+      
+      // Update the bet in the local state
+      const acceptedBet = await acceptBetService(bet.id, account, escrowId);
+      
+      if (!acceptedBet) {
+        toast.error('Failed to accept bet');
+        return false;
+      }
+      
+      // Update the bet in Supabase
+      const updatedBet = {
+        ...bet,
+        acceptor: account,
+        status: BetStatus.ACTIVE,
+        escrowId: escrowId
+      };
+      
+      const updateResult = await updateBet(updatedBet);
+      
+      if (!updateResult) {
+        console.error('Failed to update bet in Supabase, but bet was accepted locally');
+      } else {
+        // Try to update the user's DARE points in Supabase for the leaderboard
+        try {
+          if (user?.id) {
+            await updateDarePoints(user.id, 0); // Update with 0 to sync the current balance
+            console.log('Updated user DARE points in Supabase for leaderboard');
+          }
+        } catch (pointsError) {
+          console.error('Failed to update user DARE points for leaderboard:', pointsError);
+        }
+      }
+      
+      toast.success('Bet accepted successfully');
+      
+      // Refresh bets to reflect the changes
+      refreshBets();
+      
+      // Dispatch an event to notify other components that a bet was accepted
+      try {
+        // Standard event dispatch
+        window.dispatchEvent(new CustomEvent('bet-accepted', { detail: bet.id }));
+        console.log('Event dispatched: bet-accepted');
+        
+        // Dispatch a second backup event with different payload format for better compatibility
+        const simpleEvent = new CustomEvent('bet-refresh-required', { 
+          bubbles: true,
+          cancelable: true
+        });
+        window.dispatchEvent(simpleEvent);
+        
+        // Force refresh on other components if needed
+        if (typeof refreshBets === 'function') {
+          setTimeout(refreshBets, 500);  // Delayed refresh
+        }
+      } catch (eventError) {
+        console.error('Error dispatching events:', eventError);
+        // Silent fail - the regular polling will still update eventually
+      }
+      
+      return true;
     } catch (error) {
       console.error('Error accepting bet:', error);
-      throw error;
+      toast.error('Failed to accept bet');
+      return false;
     }
   };
 
@@ -257,16 +580,16 @@ export const BettingProvider: React.FC<{ children: ReactNode }> = ({ children })
         loadingMatches,
         userBets,
         loadingBets,
-    isLiveData,
-    dataSource,
+        isLiveData,
+        dataSource,
         createNewBet,
         settleBet,
         refreshMatches,
         refreshBets,
         getMatchById,
-    getBetById,
-    debugCache,
-    acceptBet
+        getBetById,
+        debugCache,
+        acceptBet
   };
 
   return (

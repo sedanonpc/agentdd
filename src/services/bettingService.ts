@@ -1,5 +1,6 @@
 import { Bet, BetStatus } from '../types';
 import { INITIAL_MOCK_BETS } from '../data/mockBets';
+import { v4 as uuidv4 } from 'uuid';
 
 // Function to generate a unique transaction ID
 const generateTransactionId = (): string => {
@@ -11,6 +12,12 @@ const generateTransactionId = (): string => {
 // Initialize the mock database with our seed data
 let MOCK_BETS: Bet[] = [...INITIAL_MOCK_BETS];
 
+// Convert old mock bets from string amounts to number
+MOCK_BETS = MOCK_BETS.map(bet => ({
+  ...bet,
+  amount: typeof bet.amount === 'string' ? parseInt(bet.amount, 10) : bet.amount
+}));
+
 // Log the initial state for debugging
 console.log('Initialized mock bets:', MOCK_BETS.length);
 
@@ -18,22 +25,28 @@ export const createBet = async (
   creator: string,
   matchId: string,
   teamId: string,
-  amount: string,
-  description: string
+  amount: number,
+  description: string,
+  escrowId?: string
 ): Promise<Bet> => {
+  // Generate a unique ID for the bet
+  const betId = uuidv4();
+  
+  // Ensure amount is a number
+  const numericAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;
+  
   // In a real implementation, this would create a smart contract transaction
   const newBet: Bet = {
-    id: Date.now().toString(),
+    id: betId,
     matchId,
     creator,
-    amount,
+    amount: numericAmount,
     teamId,
     description,
     status: BetStatus.OPEN,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    chatId: Date.now().toString(),
-    transactionId: generateTransactionId() // Generate a unique transaction ID
+    timestamp: Date.now(),
+    transactionId: generateTransactionId(), // Generate a unique transaction ID
+    escrowId: escrowId // Store the escrow ID if provided
   };
   
   // Add to mock database
@@ -49,7 +62,7 @@ export const createBet = async (
 
 export const getBetsByUser = async (userAddress: string): Promise<Bet[]> => {
   const userBets = MOCK_BETS.filter(
-    bet => bet.creator === userAddress || bet.taker === userAddress
+    bet => bet.creator === userAddress || bet.acceptor === userAddress
   );
   
   console.log(`Found ${userBets.length} bets for user ${userAddress}`);
@@ -71,7 +84,7 @@ export const getAllBets = async (): Promise<Bet[]> => {
   });
 };
 
-export const acceptBet = async (betId: string, takerAddress: string): Promise<Bet> => {
+export const acceptBet = async (betId: string, takerAddress: string, escrowId: string): Promise<Bet> => {
   // Find the bet
   const betIndex = MOCK_BETS.findIndex(bet => bet.id === betId);
   
@@ -82,9 +95,10 @@ export const acceptBet = async (betId: string, takerAddress: string): Promise<Be
   // Update the bet
   const updatedBet = {
     ...MOCK_BETS[betIndex],
-    taker: takerAddress,
+    acceptor: takerAddress,
+    escrowId,
     status: BetStatus.ACTIVE,
-    updatedAt: new Date().toISOString()
+    timestamp: Date.now()
   };
   
   MOCK_BETS[betIndex] = updatedBet;
@@ -98,7 +112,7 @@ export const acceptBet = async (betId: string, takerAddress: string): Promise<Be
   });
 };
 
-export const settleBet = async (betId: string): Promise<Bet> => {
+export const settleBet = async (betId: string, winnerId: string): Promise<Bet> => {
   // Find the bet
   const betIndex = MOCK_BETS.findIndex(bet => bet.id === betId);
   
@@ -110,12 +124,39 @@ export const settleBet = async (betId: string): Promise<Bet> => {
   const updatedBet = {
     ...MOCK_BETS[betIndex],
     status: BetStatus.COMPLETED,
-    updatedAt: new Date().toISOString()
+    timestamp: Date.now(),
+    winnerId // Add the winner ID to the bet record
   };
   
   MOCK_BETS[betIndex] = updatedBet;
   
-  console.log(`Bet ${betId} settled`);
+  console.log(`Bet ${betId} settled, winner: ${winnerId}`);
+  
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(updatedBet);
+    }, 1000); // Simulate network delay
+  });
+};
+
+export const cancelBet = async (betId: string): Promise<Bet> => {
+  // Find the bet
+  const betIndex = MOCK_BETS.findIndex(bet => bet.id === betId);
+  
+  if (betIndex === -1) {
+    throw new Error('Bet not found');
+  }
+  
+  // Update the bet
+  const updatedBet = {
+    ...MOCK_BETS[betIndex],
+    status: BetStatus.CANCELLED,
+    timestamp: Date.now()
+  };
+  
+  MOCK_BETS[betIndex] = updatedBet;
+  
+  console.log(`Bet ${betId} cancelled`);
   
   return new Promise((resolve) => {
     setTimeout(() => {

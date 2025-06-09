@@ -1,15 +1,106 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Activity, User, Database, MessageSquare, Terminal, LogOut, Trophy, RefreshCw, Star } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useDarePoints } from '../../context/DarePointsContext';
 import DarePointsDisplay from '../../components/DarePointsDisplay';
+import { getUsersByDarePoints, LeaderboardEntry } from '../../services/betStorageService';
+import { getMockLeaderboardEntries } from '../../mockSupabase';
 
 const Navbar: React.FC = () => {
   const { user, authMethod, isAuthenticated, logout } = useAuth();
   const { userBalance } = useDarePoints();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(false);
+  const [userRank, setUserRank] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Monitor window size for responsive design
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    
+    // Set initial state
+    checkMobile();
+    
+    // Add event listener
+    window.addEventListener('resize', checkMobile);
+    
+    // Clean up
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Fetch user's rank based on $DARE points
+  const fetchUserRank = useCallback(async () => {
+    if (!user || !isAuthenticated) {
+      setUserRank(null);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Get leaderboard data
+      let leaderboardData: LeaderboardEntry[] = [];
+      try {
+        leaderboardData = await getUsersByDarePoints(100);
+        
+        // If no real data, add mock data in development mode
+        if (leaderboardData.length === 0 && import.meta.env.DEV) {
+          leaderboardData = getMockLeaderboardEntries();
+        }
+      } catch (error) {
+        console.error('Error fetching leaderboard data:', error);
+        // Fallback to mock data in development mode
+        if (import.meta.env.DEV) {
+          leaderboardData = getMockLeaderboardEntries();
+        }
+      }
+
+      // Find user's position in the leaderboard
+      if (leaderboardData.length > 0) {
+        // For wallet users, match by wallet address
+        if (authMethod === 'wallet' && user.walletAddress) {
+          const index = leaderboardData.findIndex(entry => 
+            entry.wallet_address && 
+            entry.wallet_address.toLowerCase() === user.walletAddress?.toLowerCase()
+          );
+          if (index !== -1) {
+            setUserRank(index + 1);
+          } else {
+            // If user not found in leaderboard but has points, estimate rank based on points
+            const estimatedRank = leaderboardData.filter(entry => 
+              (entry.dare_points || 0) > userBalance
+            ).length + 1;
+            setUserRank(estimatedRank);
+          }
+        } 
+        // For email users, match by user ID or estimate by points
+        else if (user.id) {
+          const index = leaderboardData.findIndex(entry => entry.user_id === user.id);
+          if (index !== -1) {
+            setUserRank(index + 1);
+          } else {
+            // Estimate rank based on points
+            const estimatedRank = leaderboardData.filter(entry => 
+              (entry.dare_points || 0) > userBalance
+            ).length + 1;
+            setUserRank(estimatedRank);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error determining user rank:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, isAuthenticated, userBalance, authMethod]);
+
+  // Fetch rank on mount and when user balance changes
+  useEffect(() => {
+    fetchUserRank();
+  }, [fetchUserRank, userBalance]);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -26,6 +117,7 @@ const Navbar: React.FC = () => {
   const navLinks = [
     { path: '/', label: 'TERMINAL', icon: Terminal },
     { path: '/matches', label: 'MATCHES', icon: Activity },
+    { path: '/leaderboard', label: 'RANKS', icon: Trophy },
     { path: '/dashboard', label: 'DASHBOARD', icon: Database, requiresAuth: true },
     { path: '/chat', label: 'COMMS', icon: MessageSquare, requiresAuth: true },
   ];
@@ -37,9 +129,17 @@ const Navbar: React.FC = () => {
 
   // Simulate a refresh action
   const handleRefresh = () => {
-    // We could add actual refresh functionality here
+    // Refresh rank and other data
+    fetchUserRank();
     console.log('Refreshing...');
     window.location.reload();
+  };
+
+  // Get filtered links - we want to show ALL links on mobile, with smaller icons
+  const getFilteredLinks = () => {
+    return navLinks.filter(link => 
+      !link.requiresAuth || (link.requiresAuth && isAuthenticated)
+    );
   };
 
   return (
@@ -52,13 +152,13 @@ const Navbar: React.FC = () => {
             <div className="text-xs text-console-white font-mono tracking-wide">[ BET_TERMINAL ]</div>
           </div>
           
-          {/* Center: Score and Refresh Button - aligned exactly as in screenshot */}
+          {/* Center: Rank and Refresh Button - aligned exactly as in screenshot */}
           <div className="flex items-center gap-6">
-            {/* Score */}
+            {/* Rank */}
             <div className="flex items-center gap-1">
               <Star className="h-3 w-3 text-[#E5FF03]" />
               <div className="text-xs text-console-white font-mono">
-                SCORE: <span className="text-[#E5FF03]">500</span>
+                RANK: <span className="text-[#E5FF03]">{isAuthenticated ? (isLoading ? '...' : userRank || '?') : '-'}</span>
               </div>
             </div>
             
@@ -72,13 +172,13 @@ const Navbar: React.FC = () => {
             </button>
           </div>
           
-          {/* Right: User and $DARE */}
-          <div className="flex items-center">
+          {/* Right: User and $DARE - improved spacing to prevent overlap */}
+          <div className="flex items-center space-x-3">
             {isAuthenticated ? (
-              <div className="flex items-center">
+              <>
                 {/* User Name */}
-                <div className="h-full flex items-center">
-                  <span className="text-xs text-console-white font-mono">
+                <div className="flex items-center">
+                  <span className="text-xs text-console-white font-mono truncate max-w-[80px]">
                     {authMethod === 'wallet' && user?.walletAddress 
                       ? formatAddress(user.walletAddress) 
                       : user?.email?.split('@')[0] || 'admin'}
@@ -86,19 +186,19 @@ const Navbar: React.FC = () => {
                 </div>
                 
                 {/* DARE Points - styled to match the screenshot */}
-                <div className="ml-4 flex items-center">
-                  <span className="text-xs text-console-white-dim font-mono">$DARE: </span>
+                <div className="flex items-center">
+                  <span className="text-xs text-console-white-dim font-mono">$DARE:</span>
                   <span className="ml-1 text-xs text-[#E5FF03] font-mono">{userBalance}</span>
                 </div>
                 
                 {/* Logout Button */}
                 <button
                   onClick={handleLogout}
-                  className="ml-4 px-3 text-console-white hover:text-[#E5FF03] transition-colors"
+                  className="text-console-white hover:text-[#E5FF03] transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>
-              </div>
+              </>
             ) : (
               <Link
                 to="/login"
@@ -111,32 +211,34 @@ const Navbar: React.FC = () => {
         </div>
       </div>
       
-      {/* Bottom Navigation - fixed at the bottom */}
+      {/* Bottom Navigation - fixed at the bottom, with adjustments for mobile */}
       <nav className="fixed bottom-0 left-0 right-0 bg-console-blue/90 backdrop-blur-xs border-t border-console-blue flex justify-around items-center h-16 z-[100] shadow-terminal">
-        {navLinks
-          .filter(link => !link.requiresAuth || (link.requiresAuth && isAuthenticated))
-          .map((link) => {
-            const Icon = link.icon;
-            const isActive = location.pathname === link.path;
-            
-            return (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`flex flex-col items-center justify-center py-2 px-4 ${
-                  isActive 
-                    ? 'text-console-white animate-pulse-blue' 
-                    : 'text-console-white-muted hover:text-console-white-dim transition-colors'
-                }`}
-              >
-                <Icon className={`h-5 w-5 ${isActive ? 'text-console-blue-bright' : ''}`} />
-                <span className="text-xs mt-1 font-display tracking-wide">{link.label}</span>
-                {isActive && (
-                  <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-console-blue-glow shadow-glow"></span>
-                )}
-              </Link>
-            );
-          })}
+        {getFilteredLinks().map((link) => {
+          const Icon = link.icon;
+          const isActive = location.pathname === link.path;
+          const linkCount = getFilteredLinks().length;
+          
+          return (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={`flex flex-col items-center justify-center py-2 ${isMobile ? 'px-2' : 'px-4'} ${
+                isActive 
+                  ? 'text-console-white animate-pulse-blue' 
+                  : 'text-console-white-muted hover:text-console-white-dim transition-colors'
+              }`}
+              style={{ width: isMobile ? `${100 / linkCount}%` : 'auto' }}
+            >
+              <Icon className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} ${isActive ? 'text-console-blue-bright' : ''}`} />
+              <span className={`text-xs mt-1 font-display tracking-wide ${isMobile && linkCount > 4 ? 'text-[10px]' : ''}`}>
+                {link.label}
+              </span>
+              {isActive && (
+                <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-console-blue-glow shadow-glow"></span>
+              )}
+            </Link>
+          );
+        })}
       </nav>
     </>
   );

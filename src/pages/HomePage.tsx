@@ -136,12 +136,12 @@ const HomePage: React.FC = () => {
           <div className="flex items-center justify-center md:justify-start">
             <Terminal className="text-console-blue-bright h-8 w-8 mr-3" />
             <h1 className="text-3xl md:text-4xl font-display uppercase text-console-white tracking-wider text-center md:text-left">
-              P2P <span className="text-console-blue-bright">BETTING</span> WEB3 AGENT
+              P2P <span className="text-console-blue-bright"> WAGERING </span> AI AGENT
             </h1>
           </div>
           
           <p className="text-console-white-dim font-mono text-lg text-center md:text-left max-w-3xl mx-auto md:mx-0">
-            CREATE SECURE P2P BETS ON NBA GAMES WITH BLOCKCHAIN ESCROW AND AI ANALYSIS FOR OPTIMAL DECISION MAKING.
+            CREATE SECURE PEER-TO-PEER BETS ON SPORTS GAMES WITH BLOCKCHAIN ESCROW AND AI ANALYSIS FOR OPTIMAL DECISION MAKING & BET MANAGEMENT.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 pt-4 justify-center md:justify-start">
@@ -163,38 +163,38 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-8 max-w-6xl mx-auto">
-        <div className="bg-console-gray-terminal/40 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-6 mb-8">
-          <h2 className="text-2xl md:text-3xl font-display uppercase text-console-white tracking-wider text-center">SYSTEM_FEATURES</h2>
+      <section className="py-6 max-w-6xl mx-auto">
+        <div className="bg-console-gray-terminal/30 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-4 mb-6">
+          <h2 className="text-xl font-display uppercase text-console-white tracking-wider text-center">SYSTEM_FEATURES</h2>
         </div>
         
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-6 flex flex-col items-center text-center transform hover:translate-y-[-5px] transition-transform duration-300">
-            <div className="bg-console-blue/20 backdrop-blur-xs border-1 border-console-blue p-3 rounded-full mb-4">
-              <Code className="h-8 w-8 text-console-blue-bright" />
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="bg-console-gray-terminal/50 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-4 flex flex-col items-center text-center transition-all duration-300 hover:bg-console-blue/10">
+            <div className="bg-console-blue/10 backdrop-blur-xs border-1 border-console-blue p-2 rounded-full mb-3">
+              <Code className="h-5 w-5 text-console-blue-bright" />
             </div>
-            <h3 className="text-xl font-display uppercase text-console-white mb-2">P2P_BETTING</h3>
-            <p className="text-console-white-muted font-mono">
+            <h3 className="text-lg font-display uppercase text-console-white mb-1">P2P_BETTING</h3>
+            <p className="text-console-white-muted font-mono text-xs">
               CREATE SECURE BETS ON NBA GAMES AND MATCH WITH USERS ON THE OPPOSITE SIDE.
             </p>
           </div>
           
-          <div className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-6 flex flex-col items-center text-center transform hover:translate-y-[-5px] transition-transform duration-300">
-            <div className="bg-console-blue/20 backdrop-blur-xs border-1 border-console-blue p-3 rounded-full mb-4">
-              <Shield className="h-8 w-8 text-console-blue-bright" />
+          <div className="bg-console-gray-terminal/50 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-4 flex flex-col items-center text-center transition-all duration-300 hover:bg-console-blue/10">
+            <div className="bg-console-blue/10 backdrop-blur-xs border-1 border-console-blue p-2 rounded-full mb-3">
+              <Shield className="h-5 w-5 text-console-blue-bright" />
             </div>
-            <h3 className="text-xl font-display uppercase text-console-white mb-2">SECURE_ESCROW</h3>
-            <p className="text-console-white-muted font-mono">
+            <h3 className="text-lg font-display uppercase text-console-white mb-1">SECURE_ESCROW</h3>
+            <p className="text-console-white-muted font-mono text-xs">
               FUNDS HELD IN SMART CONTRACT ESCROW UNTIL GAME COMPLETION FOR SECURE PAYOUTS.
             </p>
           </div>
           
-          <div className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-6 flex flex-col items-center text-center transform hover:translate-y-[-5px] transition-transform duration-300">
-            <div className="bg-console-blue/20 backdrop-blur-xs border-1 border-console-blue p-3 rounded-full mb-4">
-              <Cpu className="h-8 w-8 text-console-blue-bright" />
+          <div className="bg-console-gray-terminal/50 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-4 flex flex-col items-center text-center transition-all duration-300 hover:bg-console-blue/10">
+            <div className="bg-console-blue/10 backdrop-blur-xs border-1 border-console-blue p-2 rounded-full mb-3">
+              <Cpu className="h-5 w-5 text-console-blue-bright" />
             </div>
-            <h3 className="text-xl font-display uppercase text-console-white mb-2">AI_ANALYTICS</h3>
-            <p className="text-console-white-muted font-mono">
+            <h3 className="text-lg font-display uppercase text-console-white mb-1">AI_ANALYTICS</h3>
+            <p className="text-console-white-muted font-mono text-xs">
               ADVANCED ALGORITHMS PROVIDE REAL-TIME INSIGHTS ON GAMES AND BETTING PATTERNS.
             </p>
           </div>
@@ -390,7 +390,7 @@ const HomePage: React.FC = () => {
       </section>
       
       {/* Session ID indicator at bottom */}
-      <div className="fixed bottom-20 left-4 bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue px-3 py-1 text-console-white-dim font-mono text-xs z-[40]">
+      <div className="fixed bottom-20 left-4 bg-console-black/60 backdrop-blur-xs border-1 border-console-blue px-2 py-0.5 text-console-white-dim font-mono text-xs z-[40]">
         SESSION: {getSessionID()}
       </div>
     </div>

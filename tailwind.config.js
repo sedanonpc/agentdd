@@ -29,8 +29,9 @@ export default {
         }
       },
       fontFamily: {
-        mono: ['VT323', 'Monaco', 'Consolas', 'monospace'],
-        display: ['Orbitron', 'Audiowide', 'monospace']
+        mono: ['Chakra Petch', 'VT323', 'Monaco', 'Consolas', 'monospace'],
+        display: ['Chakra Petch', 'Orbitron', 'Audiowide', 'monospace'],
+        sans: ['Chakra Petch', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         'terminal': '0 0 10px rgba(0, 51, 255, 0.5), inset 0 0 10px rgba(0, 51, 255, 0.2)',
