@@ -145,19 +145,19 @@ const Navbar: React.FC = () => {
   return (
     <>
       {/* Top fixed header navbar - made more consistent with screenshots */}
-      <div className="fixed top-0 left-0 right-0 bg-console-blue/90 h-12 z-[999] flex items-center border-b border-console-blue shadow-terminal">
-        <div className="container mx-auto h-full flex items-center justify-between px-4">
+      <div className="fixed top-0 left-0 right-0 bg-console-blue/90 h-12 z-[999] flex items-center border-b border-console-blue shadow-terminal overflow-hidden">
+        <div className="w-full h-full flex items-center justify-between px-2 sm:px-4">
           {/* Left: BET_TERMINAL */}
-          <div className="flex items-center h-full">
-            <div className="text-xs text-console-white font-mono tracking-wide">[ BET_TERMINAL ]</div>
+          <div className="flex items-center h-full shrink-0">
+            <div className="text-xs text-console-white font-mono tracking-wide whitespace-nowrap">[ BET_TERMINAL ]</div>
           </div>
           
-          {/* Center: Rank and Refresh Button - aligned exactly as in screenshot */}
-          <div className="flex items-center gap-6">
+          {/* Center: Rank and Refresh Button - responsive layout */}
+          <div className="flex items-center gap-2 sm:gap-6 mx-1 shrink-0">
             {/* Rank */}
             <div className="flex items-center gap-1">
               <Star className="h-3 w-3 text-[#E5FF03]" />
-              <div className="text-xs text-console-white font-mono">
+              <div className="text-xs text-console-white font-mono whitespace-nowrap">
                 RANK: <span className="text-[#E5FF03]">{isAuthenticated ? (isLoading ? '...' : userRank || '?') : '-'}</span>
               </div>
             </div>
@@ -165,20 +165,21 @@ const Navbar: React.FC = () => {
             {/* Refresh Button */}
             <button 
               onClick={handleRefresh}
-              className="flex items-center gap-1 text-xs text-console-white font-mono tracking-wide hover:text-[#E5FF03] transition-colors"
+              className="flex items-center gap-1 text-xs text-console-white font-mono tracking-wide hover:text-[#E5FF03] transition-colors whitespace-nowrap"
             >
               <RefreshCw className="h-3 w-3" />
-              <span>[ REFRESH ]</span>
+              <span className="hidden xs:inline">[ REFRESH ]</span>
+              <span className="xs:hidden">[ R ]</span>
             </button>
           </div>
           
           {/* Right: User and $DARE - improved spacing to prevent overlap */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1 sm:space-x-3 shrink-0">
             {isAuthenticated ? (
               <>
-                {/* User Name */}
-                <div className="flex items-center">
-                  <span className="text-xs text-console-white font-mono truncate max-w-[80px]">
+                {/* User Name - Hidden on very small screens */}
+                <div className="hidden xs:flex items-center">
+                  <span className="text-xs text-console-white font-mono truncate max-w-[40px] sm:max-w-[80px]">
                     {authMethod === 'wallet' && user?.walletAddress 
                       ? formatAddress(user.walletAddress) 
                       : user?.email?.split('@')[0] || 'admin'}

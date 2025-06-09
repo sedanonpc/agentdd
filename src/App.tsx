@@ -84,7 +84,7 @@ function App() {
                   
                   {/* Content container - ensures content is above effects but below navbar */}
                   <div className="relative z-[10]">
-                    <main className="container mx-auto px-4 pt-20 pb-20">
+                    <main className="container mx-auto px-2 sm:px-4 pt-16 pb-20">
                     <Routes>
                       <Route path="/" element={<HomePage />} />
                       <Route path="/matches" element={
