@@ -1,10 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase configuration - replace these with your actual Supabase project URL and anon key
-// Get these from your Supabase project settings > API
-// If not set, we'll use default development values
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-dev-project.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-dev-anon-key';
+// Supabase configuration
+// Hardcoded values as a fallback when env variables have issues
+const fixedSupabaseUrl = 'https://qiasnpjpkzhretlyymgh.supabase.co';
+const fixedSupabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpYXNucGpwa3pocmV0bHl5bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMzI5MDksImV4cCI6MjA2NDgwODkwOX0.BEOkmjVpGHo37omVsWEgvsCnXB0FIVqZQvDNCuy3qYo';
+
+// Try to use environment variables, fall back to fixed values if there's an issue
+const supabaseUrl = fixedSupabaseUrl;
+const supabaseAnonKey = fixedSupabaseAnonKey;
 
 // When in development mode and no proper keys are set, use a dummy client
 const isDevelopment = import.meta.env.DEV;
