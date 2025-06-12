@@ -99,9 +99,9 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
   };
   
   return (
-    <div className="bg-console-gray-terminal/90 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden flex flex-col">
+    <div className="bg-console-gray-terminal/90 backdrop-blur-xs border-1 border-console-blue shadow-terminal flex flex-col h-full max-h-[90vh] md:max-h-[80vh]">
       {/* Form Header */}
-      <div className="bg-[#E5FF03]/90 p-3 text-black flex items-center justify-between">
+      <div className="bg-[#E5FF03]/90 p-3 text-black flex items-center justify-between flex-shrink-0">
         <div className="font-mono tracking-wide flex items-center">
           <Zap className="h-5 w-5 mr-2" />
           <span className="text-sm font-semibold">CREATE_NEW_BET</span>
@@ -117,7 +117,7 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
         </button>
       </div>
       
-      <div className="p-6 bg-console-black/70 backdrop-blur-xs">
+      <div className="p-6 bg-console-black/70 backdrop-blur-xs overflow-y-auto flex-1" style={{ WebkitOverflowScrolling: 'touch' }}>
         {!isAuthenticated ? (
           <div className="py-8">
             <div className="bg-console-blue/20 backdrop-blur-xs border-1 border-console-blue p-4 text-center max-w-md mx-auto">
@@ -263,7 +263,7 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
       </div>
       
       {/* Action Buttons */}
-      <div className="bg-console-gray-terminal/50 backdrop-blur-xs p-4 flex justify-between">
+      <div className="bg-console-gray-terminal/50 backdrop-blur-xs p-4 flex justify-between flex-shrink-0 border-t border-console-blue">
         <button
           onClick={onClose}
           className="bg-console-black/70 backdrop-blur-xs border-1 border-console-blue px-4 py-2 text-console-white-dim font-mono hover:text-console-white transition-colors"

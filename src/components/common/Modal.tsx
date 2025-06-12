@@ -53,22 +53,25 @@ const Modal: React.FC<ModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      document.body.classList.add('modal-open');
     } else {
       document.body.style.overflow = 'auto';
+      document.body.classList.remove('modal-open');
     }
     
     return () => {
       document.body.style.overflow = 'auto';
+      document.body.classList.remove('modal-open');
     };
   }, [isOpen]);
   
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-console-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-console-black/70 backdrop-blur-sm overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
       <div 
         ref={modalRef}
-        className={`${width} w-full m-4 shadow-glow`}
+        className={`${width} w-full m-4 shadow-glow my-8 md:my-16`}
       >
         {children}
       </div>
