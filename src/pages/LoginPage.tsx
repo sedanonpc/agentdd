@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWeb3 } from '../context/Web3Context';
 import { Lock, Mail, Wallet, AlertTriangle, Info, Smartphone } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
+import { toast } from 'react-toastify';
 
 const LoginPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
@@ -125,13 +126,29 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
     
     try {
+      console.log('Attempting to login with email:', email);
       await loginWithEmail(email, password);
+      
+      // Show success toast
+      toast.success('Login successful!');
+      
+      // Navigate to dashboard
       navigate('/dashboard');
     } catch (error) {
+      console.error('Login error:', error);
+      
       if (error instanceof Error) {
-        setError(error.message || 'Invalid email or password');
+        // Handle network errors specifically
+        if (error.message.includes('fetch') || error.message.includes('network')) {
+          setError('Network error. Please check your internet connection and try again.');
+          toast.error('Network error. Please check your connection.');
+        } else {
+          setError(error.message || 'Invalid email or password');
+          toast.error(error.message || 'Login failed');
+        }
       } else {
         setError('Invalid email or password');
+        toast.error('Login failed');
       }
     } finally {
       setIsLoading(false);
@@ -144,27 +161,52 @@ const LoginPage: React.FC = () => {
     
     if (password !== confirmPassword) {
       setError('Passwords do not match');
+      toast.error('Passwords do not match');
       return;
     }
     
     setIsLoading(true);
     
     try {
+      console.log('Attempting to register with email:', email);
+      
+      // Check if Supabase is available first
+      if (!isSupabaseAvailable) {
+        console.warn('Supabase is not available, registration may fail');
+        toast.warning('Database connection issue. Registration may fail.');
+      }
+      
       await registerWithEmail(email, password);
+      
+      // Show success toast
+      toast.success('Registration successful!');
+      
       // If we get here, registration or automatic login was successful
       navigate('/dashboard');
     } catch (error) {
+      console.error('Registration error:', error);
+      
       if (error instanceof Error) {
+        // Handle network errors specifically
+        if (error.message.includes('fetch') || error.message.includes('network')) {
+          setError('Network error. Please check your internet connection and try again.');
+          toast.error('Network error. Please check your connection.');
+        }
         // Provide a more descriptive error message
-        if (error.message.includes('User already registered')) {
+        else if (error.message.includes('User already registered')) {
           setError('Account already exists. Try logging in instead.');
+          toast.info('Account already exists. Try logging in instead.');
+          
+          // Automatically switch to login tab
+          setActiveTab('login');
         } else {
           setError(error.message || 'Registration failed');
+          toast.error(error.message || 'Registration failed');
         }
       } else {
         setError('Registration failed');
+        toast.error('Registration failed');
       }
-      console.error('Registration error:', error);
     } finally {
       setIsLoading(false);
     }
