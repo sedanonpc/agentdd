@@ -47,7 +47,7 @@ const EmbeddedDareDevilTerminal: React.FC = () => {
   };
 
   return (
-    <div className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-red-600 shadow-glow-red mb-6">
+    <div className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-red-600 shadow-glow-red mb-10 max-w-4xl mx-auto">
       {/* Header */}
       <div className="bg-red-900/90 p-2 flex items-center justify-between">
         <div className="flex items-center">
@@ -60,8 +60,8 @@ const EmbeddedDareDevilTerminal: React.FC = () => {
       </div>
       
       {/* Message area */}
-      <div className="p-4 bg-console-gray-terminal/80">
-        <div className="bg-red-900/80 border-1 border-red-600 text-white shadow-glow-red p-3 rounded">
+      <div className="p-6 bg-console-gray-terminal/80">
+        <div className="bg-red-900/80 border-1 border-red-600 text-white shadow-glow-red p-4 rounded">
           <div className="flex items-center gap-2 mb-2 pb-1 border-b border-red-600/50">
             <Terminal className="h-4 w-4 text-red-400" />
             <div className="font-mono text-sm text-red-400 font-bold tracking-wide">DareDevil</div>

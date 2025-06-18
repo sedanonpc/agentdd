@@ -165,17 +165,21 @@ const MatchesPage: React.FC = () => {
   };
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">  {/* Increased spacing between components */}
       {/* Header with title and banner */}
-      <div className="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
-        <div className="bg-console-blue/90 p-2 text-black flex items-center justify-between">
-          <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ NBA_TERMINAL ]</div>
-          <div className="flex items-center gap-4">
-            <LiveDataIndicator />
-            <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ SESSION: {getSessionID()} ]</div>
+      <section className="w-full bg-console-blue-bright/90 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
+        {/* Full-width image container */}
+        <div className="relative w-full border-b-1 border-console-blue bg-console-blue-bright/80 backdrop-blur-xs overflow-hidden">
+          <div className="relative max-w-6xl mx-auto">
+            <img 
+              src="https://i.ibb.co/rGh18fww/nba-banner-v3.png"
+              alt="Agent Daredevil - Wanna Bet?" 
+              className="w-full h-auto object-contain mx-auto relative z-0"
+            />
           </div>
         </div>
-        
+      </section>
+      <div className="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
         <div className="p-6 text-center">
           <div className="flex items-center justify-center mb-3">
             <Terminal className="text-console-blue-bright h-8 w-8 mr-2" />
@@ -196,25 +200,11 @@ const MatchesPage: React.FC = () => {
       </div>
       
       {/* Daredevil Banner - Added from photo */}
-      <section className="w-full bg-console-blue-bright/90 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
-        {/* Full-width image container */}
-        <div className="relative w-full border-b-1 border-console-blue bg-console-blue-bright/80 backdrop-blur-xs overflow-hidden">
-          <div className="relative max-w-6xl mx-auto">
-            <img 
-              src="https://i.ibb.co/Q7mKsRBc/nba-banner.png"
-              alt="Agent Daredevil - Wanna Bet?" 
-              className="w-full h-auto object-contain mx-auto relative z-0"
-            />
-          </div>
-        </div>
-      </section>
+
       
       {/* Featured Matches Banner removed */}
       
       {/* Search and Data Source Indicator section removed */}
-      
-      {/* DareDevil Analysis Terminal */}
-      <EmbeddedDareDevilTerminal />
       
       {error && (
         <div className="bg-red-900/30 backdrop-blur-xs border-1 border-red-800 text-red-300 px-4 py-3 font-mono">
@@ -234,7 +224,7 @@ const MatchesPage: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {filteredMatches.map((match) => (
             <MatchCard 
               key={match.id} 
@@ -251,9 +241,12 @@ const MatchesPage: React.FC = () => {
         </div>
       )}
       
+      {/* DareDevil Analysis Terminal */}
+      <EmbeddedDareDevilTerminal />
+      
       {/* Chat Room Section */}
       {selectedMatch && (
-        <div className="mt-8">
+        <div className="mt-12 mb-10">
           <MatchChatRoom match={selectedMatch} onClose={handleCloseChat} />
         </div>
       )}
