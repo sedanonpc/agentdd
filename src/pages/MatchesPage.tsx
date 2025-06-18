@@ -8,6 +8,7 @@ import { decimalToAmerican, formatDecimalOdds } from '../utils/oddsUtils';
 import MatchChatRoom from '../components/match/MatchChatRoom';
 import MatchBettingForm from '../components/match/MatchBettingForm';
 import Modal from '../components/common/Modal';
+import DareDevilChatModal from '../components/chat/DareDevilChatModal';
 
 const YAHOO_SPORTS_ODDS_URL = 'https://sports.yahoo.com/nba/odds/';
 
@@ -22,6 +23,8 @@ const MatchesPage: React.FC = () => {
   const [selectedMatchForBetting, setSelectedMatchForBetting] = useState<Match | null>(null);
   // State for showing betting modal
   const [showBettingModal, setShowBettingModal] = useState<boolean>(false);
+  // State for showing DareDevil chat modal
+  const [showDareDevilChat, setShowDareDevilChat] = useState<boolean>(false);
   
   useEffect(() => {
     // Load data when component mounts
@@ -212,6 +215,22 @@ const MatchesPage: React.FC = () => {
       
       {/* Search and Data Source Indicator section removed */}
       
+      {/* DareDevil Analysis Terminal Button */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={() => setShowDareDevilChat(true)}
+          className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-red-600 shadow-glow-red p-3 hover:shadow-glow-red transition-all flex items-center gap-2"
+        >
+          <div className="relative">
+            <MessageSquare className="h-5 w-5 text-red-500" />
+            <div className="absolute -top-2 -right-2 bg-red-600 text-white h-4 w-4 rounded-full flex items-center justify-center text-xs font-bold">
+              AI
+            </div>
+          </div>
+          <span className="text-console-white font-mono text-sm">CONSULT DAREDEVIL</span>
+        </button>
+      </div>
+      
       {error && (
         <div className="bg-red-900/30 backdrop-blur-xs border-1 border-red-800 text-red-300 px-4 py-3 font-mono">
           <span className="text-red-500 mr-2">ERROR:</span> {error}
@@ -264,6 +283,12 @@ const MatchesPage: React.FC = () => {
           <MatchBettingForm match={selectedMatchForBetting} onClose={handleCloseBetting} />
         )}
       </Modal>
+      
+      {/* DareDevil Chat Modal */}
+      <DareDevilChatModal 
+        isOpen={showDareDevilChat} 
+        onClose={() => setShowDareDevilChat(false)} 
+      />
     </div>
   );
 };
