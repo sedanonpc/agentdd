@@ -76,7 +76,7 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       // Try to get matches from The Odds API first
       let fetchedMatches: Match[] = [];
-      let dataSourceValue = 'mock';
+      let dataSourceValue = 'unknown';
       let isLiveDataValue = false;
       
       try {
@@ -101,24 +101,14 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.log('=== BETTING CONTEXT: Falling back to Yahoo Sports... ===');
       }
       
-      // If no matches found, try mock data as fallback
+      // If no matches found, show an empty state instead of using mock data
       if (!fetchedMatches || fetchedMatches.length === 0) {
-        try {
-          console.log('=== BETTING CONTEXT: Using mock match data as final fallback ===');
-          fetchedMatches = [...MOCK_MATCHES];
-          dataSourceValue = 'mock';
-          isLiveDataValue = false;
-          
-          if (fetchedMatches.length === 0) {
-            console.error('=== BETTING CONTEXT: Even mock data fetch failed! ===');
-          } else {
-            console.log(`=== BETTING CONTEXT: Loaded ${fetchedMatches.length} mock matches ===`);
-            console.log('First mock match:', fetchedMatches[0] ? 
-              `${fetchedMatches[0].away_team.name} vs ${fetchedMatches[0].home_team.name}` : 'No matches');
-          }
-        } catch (mockError) {
-          console.error('=== BETTING CONTEXT: Error using mock matches ===', mockError);
-        }
+        console.log('=== BETTING CONTEXT: No matches found from any source ===');
+        setDataSource('none');
+        setIsLiveData(false);
+        setMatches([]);
+        setLoadingMatches(false);
+        return;
       }
       
       // Debug the fetched matches
@@ -158,21 +148,8 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (error) {
       console.error('=== BETTING CONTEXT: Error refreshing matches ===', error);
       setIsLiveData(false);
-      setDataSource('mock');
-      
-      // Try to load mock data as a last resort
-      try {
-        const mockData = [...MOCK_MATCHES];
-        setMatches(mockData);
-        console.log('=== BETTING CONTEXT: Loaded emergency mock data ===');
-        
-        // Update the cache
-        mockData.forEach((match: Match) => {
-          matchCacheRef.current.set(match.id, match);
-        });
-      } catch (mockError) {
-        console.error('=== BETTING CONTEXT: Even mock data failed to load ===', mockError);
-      }
+      setDataSource('error');
+      setMatches([]);
     } finally {
       setLoadingMatches(false);
       console.log('=== BETTING CONTEXT: Finished refreshing matches ===');

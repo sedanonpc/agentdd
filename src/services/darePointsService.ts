@@ -24,22 +24,44 @@ export interface DareTransaction {
  */
 export const ensureDarePointsStructure = async (): Promise<void> => {
   try {
+    console.log('Ensuring DARE points structure exists...');
+    
+    // First, check if we can connect to Supabase
+    const { data: testData, error: testError } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .limit(1);
+      
+    if (testError) {
+      console.error('Error connecting to Supabase:', testError);
+      // If we can't connect, just return - we'll use local storage
+      return;
+    }
+    
+    console.log('Successfully connected to Supabase');
+    
     // Try to create or update the user_profiles table schema if needed
     const { error } = await supabase.rpc('ensure_dare_points_column');
     
-    if (error && error.code !== 'PGRST301') { // PGRST301 is function not found, which is expected if the function doesn't exist
+    if (error) {
       console.error('Error ensuring dare_points structure:', error);
       
-      // Try direct SQL approach as fallback
-      const { error: alterError } = await supabase.from('_temp_ensure_structure')
-        .select('*')
-        .limit(1)
-        .single();
-      
-      // We expect an error here, but it should indicate the database is working
-      if (alterError && alterError.code !== 'PGRST116') {
-        console.error('Fallback check failed:', alterError);
+      // If the function doesn't exist, try a direct approach
+      if (error.code === 'PGRST301' || error.message.includes('function not found')) {
+        console.log('RPC function not found, trying direct SQL approach');
+        
+        // Try to check if the column exists
+        const { error: columnCheckError } = await supabase
+          .from('user_profiles')
+          .select('dare_points')
+          .limit(1);
+          
+        if (columnCheckError && !columnCheckError.message.includes('column "dare_points" does not exist')) {
+          console.error('Error checking dare_points column:', columnCheckError);
+        }
       }
+    } else {
+      console.log('DARE points structure ensured successfully');
     }
   } catch (error) {
     console.error('Exception ensuring dare_points structure:', error);
