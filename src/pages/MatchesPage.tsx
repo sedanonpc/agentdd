@@ -10,8 +10,6 @@ import MatchBettingForm from '../components/match/MatchBettingForm';
 import Modal from '../components/common/Modal';
 import EmbeddedDareDevilTerminal from '../components/chat/EmbeddedDareDevilTerminal';
 
-const YAHOO_SPORTS_ODDS_URL = 'https://sports.yahoo.com/nba/odds/';
-
 const MatchesPage: React.FC = () => {
   const { matches, loadingMatches, refreshMatches, isLiveData, dataSource } = useBetting();
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +138,7 @@ const MatchesPage: React.FC = () => {
     let iconColor = 'text-yellow-400';
     let label = 'OFFLINE';
     let icon = <WifiOff className="w-3 h-3" />;
-    let tooltip = 'Using mock data - no live connection';
+    let tooltip = 'No live connection';
 
     if (isLiveData) {
       if (dataSource === 'the_odds_api') {
@@ -193,18 +191,24 @@ const MatchesPage: React.FC = () => {
             <span>SYSTEM: ONLINE</span>
             <span className="h-1.5 w-1.5 bg-console-blue-bright rounded-full animate-pulse"></span>
             <span>TIME: {getTerminalTime()}</span>
+            <span className="h-1.5 w-1.5 bg-console-blue-bright rounded-full animate-pulse"></span>
+            <LiveDataIndicator />
           </div>
-          
-          {/* Data source indicator removed */}
         </div>
       </div>
       
-      {/* Daredevil Banner - Added from photo */}
-
-      
-      {/* Featured Matches Banner removed */}
-      
-      {/* Search and Data Source Indicator section removed */}
+      {/* Status bar with refresh button */}
+      <div className="bg-console-gray-terminal/60 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-3 flex justify-between items-center">
+        <div className="text-console-white font-mono text-sm">
+          MATCHES: {filteredMatches.length}
+        </div>
+        <button 
+          onClick={handleRefresh} 
+          className="flex items-center gap-1 bg-console-blue/30 hover:bg-console-blue/50 border-1 border-console-blue px-3 py-1 text-console-white font-mono text-sm transition-colors"
+        >
+          <span>REFRESH DATA</span>
+        </button>
+      </div>
       
       {error && (
         <div className="bg-red-900/30 backdrop-blur-xs border-1 border-red-800 text-red-300 px-4 py-3 font-mono">
@@ -219,9 +223,16 @@ const MatchesPage: React.FC = () => {
         </div>
       ) : filteredMatches.length === 0 ? (
         <div className="text-center py-12 bg-console-gray-terminal/60 backdrop-blur-xs border-1 border-console-blue shadow-terminal">
-          <p className="text-console-white-muted font-mono">
-            NO_UPCOMING_MATCHES_AVAILABLE.
+          <Terminal className="h-10 w-10 text-console-blue-bright mx-auto mb-4" />
+          <p className="text-console-white font-mono mb-4">
+            NO_UPCOMING_MATCHES_AVAILABLE
           </p>
+          <button 
+            onClick={handleRefresh} 
+            className="inline-block bg-console-blue/30 hover:bg-console-blue/50 border-1 border-console-blue px-4 py-2 text-console-white font-mono"
+          >
+            REFRESH_DATA
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -299,12 +310,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
         return { home: null, away: null };
       }
       
-      // Log the team names and available outcomes for debugging
-      console.log('=== MATCH CARD DEBUG: Team names vs outcomes ===');
-      console.log('Home team:', match.home_team.name);
-      console.log('Away team:', match.away_team.name);
-      console.log('Available outcomes:', h2hMarket.outcomes.map(o => o.name));
-      
       // First try exact match
       let homeOutcome = h2hMarket.outcomes.find(o => o.name === match.home_team.name);
       let awayOutcome = h2hMarket.outcomes.find(o => o.name === match.away_team.name);
@@ -315,7 +320,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
           o.name.toLowerCase().includes(match.home_team.name.toLowerCase()) ||
           match.home_team.name.toLowerCase().includes(o.name.toLowerCase())
         );
-        console.log('Using fuzzy match for home team:', homeOutcome?.name);
       }
       
       if (!awayOutcome) {
@@ -323,12 +327,10 @@ const MatchCard: React.FC<MatchCardProps> = ({
           o.name.toLowerCase().includes(match.away_team.name.toLowerCase()) ||
           match.away_team.name.toLowerCase().includes(o.name.toLowerCase())
         );
-        console.log('Using fuzzy match for away team:', awayOutcome?.name);
       }
       
       // If we still have no matches, just take the first two outcomes in order
       if (!homeOutcome && !awayOutcome && h2hMarket.outcomes.length >= 2) {
-        console.log('Using fallback outcome assignment');
         homeOutcome = h2hMarket.outcomes[0];
         awayOutcome = h2hMarket.outcomes[1];
       }
@@ -370,10 +372,9 @@ const MatchCard: React.FC<MatchCardProps> = ({
             <span className="text-sm text-console-white font-mono">{formatTime(match.commence_time)}</span>
             {match.bookmakers && match.bookmakers.length > 0 && (
               <span className={`text-xs font-mono px-1 py-0.5 ${
-                match.bookmakers[0].key === 'yahoo_sports' ? 'bg-blue-600 text-white' :
-                !isLiveData ? 'bg-yellow-600 text-black' : 'bg-green-600 text-white'
+                match.bookmakers[0].key === 'yahoo_sports' ? 'bg-blue-600 text-white' : 'bg-green-600 text-white'
               } rounded`}>
-                {match.bookmakers[0].key === 'yahoo_sports' ? 'YAHOO' : !isLiveData ? 'MOCK' : 'API'}
+                {match.bookmakers[0].key === 'yahoo_sports' ? 'YAHOO' : 'API'}
               </span>
             )}
             </div>
