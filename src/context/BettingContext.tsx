@@ -4,7 +4,7 @@ import { useWeb3 } from './Web3Context';
 import { useDarePoints } from './DarePointsContext';
 import { useAuth } from './AuthContext';
 import { Match, Bet, BetStatus } from '../types';
-import { fetchNBAMatches } from '../services/oddsApi';
+import { fetchNBAMatches, forceRefreshNBAMatches } from '../services/oddsApi';
 import { createBet, getBetsByUser, getAllBets, acceptBet as acceptBetService, settleBet as settleBetService, cancelBet } from '../services/bettingService';
 import { INITIAL_MOCK_BETS } from '../data/mockBets';
 import { MOCK_MATCHES } from '../data/mockMatches';
@@ -22,6 +22,7 @@ interface BettingContextType {
   createNewBet: (matchId: string, teamId: string, amount: number, description: string) => Promise<Bet | null>;
   settleBet: (betId: string) => Promise<boolean>;
   refreshMatches: () => Promise<void>;
+  forceRefreshMatches: () => Promise<void>;
   refreshBets: () => Promise<void>;
   getMatchById: (id: string) => Match | undefined;
   getBetById: (id: string) => Bet | undefined;
@@ -178,6 +179,36 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
+  // Force refresh function that bypasses caching
+  const forceRefreshMatches = useCallback(async () => {
+    try {
+      setLoadingMatches(true);
+      console.log('=== BETTING CONTEXT: Force refreshing matches... ===');
+      
+      const response = await forceRefreshNBAMatches();
+      
+      // Set the data source values
+      setDataSource(response.dataSource || 'unknown');
+      setIsLiveData(response.isLive);
+      
+      // Update the cache with all matches
+      response.matches.forEach((match: Match) => {
+        matchCacheRef.current.set(match.id, match);
+      });
+      
+      // Update the matches state
+      setMatches(response.matches);
+      
+      console.log(`=== BETTING CONTEXT: Force refreshed ${response.matches.length} matches from ${response.dataSource} ===`);
+    } catch (error) {
+      console.error('=== BETTING CONTEXT: Error force refreshing matches ===', error);
+      // Fallback to regular refresh
+      await refreshMatches();
+    } finally {
+      setLoadingMatches(false);
+    }
+  }, [refreshMatches]);
+
   // Add this function to identify mock bets
   const isMockBet = (bet: Bet): boolean => {
     // Check if bet already has is_mock flag
@@ -228,11 +259,12 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [user, account]);
 
-  // Initial data loading
+  // Initial data loading with force refresh
   useEffect(() => {
     if (!isInitialized) {
       const initializeData = async () => {
-        await refreshMatches();
+        // Use force refresh on initial load to ensure fresh data
+        await forceRefreshMatches();
         if (isAuthenticated) {
           await refreshBets();
         }
@@ -241,14 +273,41 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       initializeData();
     }
-  }, [isAuthenticated, refreshMatches, refreshBets, isInitialized]);
+  }, [isAuthenticated, forceRefreshMatches, refreshBets, isInitialized]);
+
+  // Add a refresh listener for when the page is reloaded or becomes visible
+  useEffect(() => {
+    // Function to handle page visibility change
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('=== BETTING CONTEXT: Page became visible, refreshing data... ===');
+        forceRefreshMatches();
+      }
+    };
+
+    // Function to handle page reload
+    const handlePageLoad = () => {
+      console.log('=== BETTING CONTEXT: Page loaded/reloaded, refreshing data... ===');
+      forceRefreshMatches();
+    };
+
+    // Add event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('load', handlePageLoad);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('load', handlePageLoad);
+    };
+  }, [forceRefreshMatches]);
 
   // Refresh data when user changes
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
       refreshBets();
     }
-  }, [isAuthenticated, user, account, isInitialized, refreshBets]);
+  }, [isInitialized, isAuthenticated, refreshBets]);
 
   const createNewBet = async (matchId: string, teamId: string, amount: number, description: string): Promise<Bet | null> => {
     const userId = getCurrentUserId();
@@ -618,6 +677,7 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         createNewBet,
         settleBet,
         refreshMatches,
+        forceRefreshMatches,
         refreshBets,
         getMatchById,
         getBetById,

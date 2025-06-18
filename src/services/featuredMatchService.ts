@@ -1,5 +1,6 @@
 import { Match } from '../types';
 import { scrapeYahooSportsOdds } from './yahooSportsApi';
+import { getMatchesWithAutoRefresh } from './dataRefreshService';
 
 interface FeaturedMatchResponse {
   match: Match;
@@ -14,14 +15,14 @@ interface FeaturedMatchResponse {
 }
 
 /**
- * Fetch a featured NBA match, defaulting to Thunder vs Pacers
+ * Fetch a featured NBA match with auto-refresh
  */
 export const fetchFeaturedMatch = async (): Promise<FeaturedMatchResponse> => {
   console.log('=== FEATURED MATCH SERVICE: Attempting to fetch featured match... ===');
   
   try {
-    // Try to fetch from Yahoo Sports API
-    const response = await scrapeYahooSportsOdds();
+    // Try to fetch with auto-refresh
+    const response = await getMatchesWithAutoRefresh();
     
     // We should have at least one match
     if (response.matches && response.matches.length > 0) {
@@ -29,11 +30,12 @@ export const fetchFeaturedMatch = async (): Promise<FeaturedMatchResponse> => {
       
       console.log('=== FEATURED MATCH SERVICE: Successfully fetched match ===', 
         `${featuredMatch.away_team.name} vs ${featuredMatch.home_team.name}`);
+      console.log(`=== FEATURED MATCH SERVICE: Data ${response.refreshed ? 'was refreshed' : 'came from cache'} ===`);
       
       return {
         match: featuredMatch,
         isLive: response.isLive,
-        dataSource: 'yahoo',
+        dataSource: response.dataSource,
         liveScore: {
           home: 59,
           away: 64,
@@ -45,10 +47,36 @@ export const fetchFeaturedMatch = async (): Promise<FeaturedMatchResponse> => {
       throw new Error('No matches available in the response');
     }
   } catch (error) {
-    console.error('=== FEATURED MATCH SERVICE: Error fetching featured match ===', error);
+    console.error('=== FEATURED MATCH SERVICE: Error fetching featured match with auto-refresh ===', error);
     
-    // Fallback to a hardcoded featured match
-    return getFallbackFeaturedMatch();
+    try {
+      // Fall back to direct Yahoo scraper
+      console.log('=== FEATURED MATCH SERVICE: Falling back to direct Yahoo scraper ===');
+      const yahooResponse = await scrapeYahooSportsOdds();
+      
+      if (yahooResponse.matches && yahooResponse.matches.length > 0) {
+        const featuredMatch = yahooResponse.matches[0];
+        
+        return {
+          match: featuredMatch,
+          isLive: yahooResponse.isLive,
+          dataSource: 'yahoo',
+          liveScore: {
+            home: 59,
+            away: 64,
+            quarter: 'Q3',
+            timeRemaining: '5:22'
+          }
+        };
+      } else {
+        throw new Error('No matches available from direct Yahoo scraper');
+      }
+    } catch (yahooError) {
+      console.error('=== FEATURED MATCH SERVICE: Error with direct Yahoo scraper ===', yahooError);
+      
+      // Fallback to a hardcoded featured match
+      return getFallbackFeaturedMatch();
+    }
   }
 };
 
