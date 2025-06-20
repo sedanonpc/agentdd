@@ -11,6 +11,7 @@ import ChatPage from './pages/ChatPage';
 import AcceptBetPage from './pages/AcceptBetPage';
 import LoginPage from './pages/LoginPage';
 import LeaderboardPage from './pages/Leaderboard';
+import TestPage from './pages/TestPage';
 import { Web3Provider } from './context/Web3Context';
 import { AuthProvider } from './context/AuthContext';
 import { BettingProvider } from './context/BettingContext';
@@ -121,6 +122,10 @@ function App() {
                       <Route 
                         path="/leaderboard" 
                         element={<LeaderboardPage />} 
+                      />
+                      <Route 
+                        path="/test-db" 
+                        element={<TestPage />} 
                       />
                     </Routes>
                   </main>

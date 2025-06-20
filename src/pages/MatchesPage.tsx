@@ -146,7 +146,12 @@ const MatchesPage: React.FC = () => {
     let tooltip = 'Using mock data - no live connection';
 
     if (isLiveData) {
-      if (dataSource === 'the_odds_api') {
+      if (dataSource === 'database') {
+        iconColor = 'text-green-400';
+        label = 'DB DATA';
+        icon = <Database className="w-3 h-3" />;
+        tooltip = 'Using persisted data from database';
+      } else if (dataSource === 'the_odds_api') {
         iconColor = 'text-green-400';
         label = 'API DATA';
         icon = <Wifi className="w-3 h-3" />;
@@ -165,6 +170,36 @@ const MatchesPage: React.FC = () => {
         <span className="text-xs font-mono tracking-wide">{label}</span>
       </div>
     );
+  };
+  
+  // Add a function to get a badge for the data source
+  const getDataSourceBadge = () => {
+    if (dataSource === 'database') {
+      return (
+        <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-mono ml-2">
+          DB
+        </span>
+      );
+    } else if (dataSource === 'yahoo') {
+      return (
+        <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-mono ml-2">
+          YAHOO
+        </span>
+      );
+    } else if (dataSource === 'the_odds_api') {
+      return (
+        <span className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-mono ml-2">
+          API
+        </span>
+      );
+    } else if (dataSource === 'mock') {
+      return (
+        <span className="bg-yellow-600 text-black px-2 py-1 rounded text-xs font-mono ml-2">
+          MOCK
+        </span>
+      );
+    }
+    return null;
   };
   
   return (
@@ -198,11 +233,17 @@ const MatchesPage: React.FC = () => {
           {!loadingMatches && (
             <div className="mt-4 p-2 bg-console-gray-terminal/80 border-1 border-console-blue inline-block">
               <div className={`font-mono text-sm uppercase flex items-center ${
+                dataSource === 'database' ? 'text-green-500' :
                 dataSource === 'the_odds_api' ? 'text-green-500' : 
                 dataSource === 'yahoo' ? 'text-blue-500' : 
                 'text-yellow-500'
               }`}>
-                {dataSource === 'the_odds_api' ? (
+                {dataSource === 'database' ? (
+                  <>
+                    <Database className="h-4 w-4 mr-2" />
+                    <span>DATABASE_DATA: Using persisted matches from database</span>
+                  </>
+                ) : dataSource === 'the_odds_api' ? (
                   <>
                     <Wifi className="h-4 w-4 mr-2" />
                     <span>LIVE_API_DATA: Using real-time The Odds API</span>
@@ -312,11 +353,17 @@ const MatchesPage: React.FC = () => {
         
         <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mt-3 md:mt-0">
           <div className={`inline-flex items-center gap-2 px-3 py-1 font-mono text-sm ${
+            dataSource === 'database' ? 'text-green-500' : 
             dataSource === 'the_odds_api' ? 'text-green-500' : 
             dataSource === 'yahoo' ? 'text-blue-500' : 
             'text-yellow-500'
           }`}>
-            {dataSource === 'the_odds_api' ? (
+            {dataSource === 'database' ? (
+              <>
+                <Database className="h-4 w-4" />
+                <span>DB_DATA</span>
+              </>
+            ) : dataSource === 'the_odds_api' ? (
               <>
                 <Wifi className="h-4 w-4" />
                 <span>API_DATA</span>

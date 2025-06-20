@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { Match, Team } from '../types'; // Add Match and Team import
 
 // Supabase configuration
 // Hardcoded values as a fallback when env variables have issues
@@ -312,4 +313,336 @@ export const updateDarePoints = async (userId: string, points: number): Promise<
   
   await updateUserProfile(userId, { dare_points: newPoints });
   return newPoints;
+};
+
+// Match storage functions
+export const storeMatch = async (match: Match): Promise<boolean> => {
+  try {
+    console.log('Checking if match already exists in Supabase:', match.id);
+    
+    // Check if a similar match already exists based on teams and time
+    const { data: existingMatches, error: queryError } = await supabaseClient
+      .from('matches')
+      .select('id')
+      .eq('home_team_name', match.home_team.name)
+      .eq('away_team_name', match.away_team.name)
+      // Compare dates within a 12-hour window to account for small time differences
+      .gte('commence_time', new Date(new Date(match.commence_time).getTime() - 12 * 60 * 60 * 1000).toISOString())
+      .lte('commence_time', new Date(new Date(match.commence_time).getTime() + 12 * 60 * 60 * 1000).toISOString());
+    
+    if (queryError) {
+      console.error('Error checking for existing match:', queryError);
+      return false;
+    }
+    
+    // If a similar match already exists, consider it a success but don't insert
+    if (existingMatches && existingMatches.length > 0) {
+      console.log(`Match between ${match.home_team.name} and ${match.away_team.name} on ${new Date(match.commence_time).toLocaleDateString()} already exists - skipping`);
+      return true;
+    }
+    
+    // No duplicate found, insert this match
+    const matchRecord = {
+      id: match.id,
+      sport_key: match.sport_key,
+      sport_title: match.sport_title,
+      commence_time: match.commence_time,
+      home_team_id: match.home_team.id,
+      home_team_name: match.home_team.name,
+      home_team_logo: match.home_team.logo,
+      away_team_id: match.away_team.id,
+      away_team_name: match.away_team.name,
+      away_team_logo: match.away_team.logo,
+      bookmakers: match.bookmakers,
+      scores: match.scores,
+      completed: match.completed || false,
+      updated_at: new Date().toISOString()
+    };
+
+    const { error } = await supabaseClient
+      .from('matches')
+      .insert(matchRecord);
+
+    if (error) {
+      console.error('Error storing match in Supabase:', error);
+      return false;
+    }
+
+    console.log(`Successfully stored new match: ${match.home_team.name} vs ${match.away_team.name}`);
+    return true;
+  } catch (error) {
+    console.error('Exception storing match:', error);
+    return false;
+  }
+};
+
+export const storeMatches = async (matches: Match[]): Promise<number> => {
+  try {
+    let successCount = 0;
+    
+    // Process each match individually to check for duplicates
+    for (const match of matches) {
+      try {
+        // Check if a similar match already exists based on teams and time
+        const { data: existingMatches, error: queryError } = await supabaseClient
+          .from('matches')
+          .select('id')
+          .eq('home_team_name', match.home_team.name)
+          .eq('away_team_name', match.away_team.name)
+          // Compare dates within a 12-hour window to account for small time differences
+          .gte('commence_time', new Date(new Date(match.commence_time).getTime() - 12 * 60 * 60 * 1000).toISOString())
+          .lte('commence_time', new Date(new Date(match.commence_time).getTime() + 12 * 60 * 60 * 1000).toISOString());
+        
+        if (queryError) {
+          console.error('Error checking for existing match:', queryError);
+          continue;
+        }
+        
+        // If a similar match already exists, skip this one
+        if (existingMatches && existingMatches.length > 0) {
+          console.log(`Match between ${match.home_team.name} and ${match.away_team.name} on ${new Date(match.commence_time).toLocaleDateString()} already exists - skipping`);
+          successCount++;
+          continue;
+        }
+        
+        // No duplicate found, insert this match
+        const matchRecord = {
+          id: match.id,
+          sport_key: match.sport_key,
+          sport_title: match.sport_title,
+          commence_time: match.commence_time,
+          home_team_id: match.home_team.id,
+          home_team_name: match.home_team.name,
+          home_team_logo: match.home_team.logo,
+          away_team_id: match.away_team.id,
+          away_team_name: match.away_team.name,
+          away_team_logo: match.away_team.logo,
+          bookmakers: match.bookmakers,
+          scores: match.scores,
+          completed: match.completed || false,
+          updated_at: new Date().toISOString()
+        };
+        
+        const { error: insertError } = await supabaseClient
+          .from('matches')
+          .insert(matchRecord);
+        
+        if (insertError) {
+          console.error(`Error storing match in Supabase:`, insertError);
+        } else {
+          console.log(`Stored new match: ${match.home_team.name} vs ${match.away_team.name} on ${new Date(match.commence_time).toLocaleDateString()}`);
+          successCount++;
+        }
+      } catch (matchError) {
+        console.error(`Error processing match ${match.id}:`, matchError);
+      }
+    }
+    
+    console.log(`Successfully processed ${successCount} of ${matches.length} matches`);
+    return successCount;
+  } catch (error) {
+    console.error('Exception storing matches:', error);
+    return 0;
+  }
+};
+
+export const getMatchById = async (id: string, homeTeamName?: string, awayTeamName?: string, commenceTime?: string): Promise<Match | null> => {
+  try {
+    // First try to get by ID
+    const { data, error } = await supabaseClient
+      .from('matches')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    // If found by ID, return it
+    if (!error && data) {
+      return {
+        id: data.id,
+        sport_key: data.sport_key,
+        sport_title: data.sport_title,
+        commence_time: data.commence_time,
+        home_team: {
+          id: data.home_team_id,
+          name: data.home_team_name,
+          logo: data.home_team_logo
+        },
+        away_team: {
+          id: data.away_team_id,
+          name: data.away_team_name,
+          logo: data.away_team_logo
+        },
+        bookmakers: data.bookmakers,
+        scores: data.scores,
+        completed: data.completed
+      };
+    }
+    
+    // If not found by ID and we have team names and time, try to find by those
+    if (homeTeamName && awayTeamName && commenceTime) {
+      console.log(`Could not find match with ID ${id}, trying to find by team names and time`);
+      
+      // Find matches with these team names around the commence time
+      const { data: matchData, error: findError } = await supabaseClient
+        .from('matches')
+        .select('*')
+        .eq('home_team_name', homeTeamName)
+        .eq('away_team_name', awayTeamName)
+        // Compare dates within a 12-hour window to account for small time differences
+        .gte('commence_time', new Date(new Date(commenceTime).getTime() - 12 * 60 * 60 * 1000).toISOString())
+        .lte('commence_time', new Date(new Date(commenceTime).getTime() + 12 * 60 * 60 * 1000).toISOString());
+      
+      if (findError || !matchData || matchData.length === 0) {
+        console.error('Error finding match by team names and time:', findError || 'No matches found');
+        return null;
+      }
+      
+      // Return the first matching match
+      const foundMatch = matchData[0];
+      console.log(`Found match with ID ${foundMatch.id} instead of ${id}`);
+      
+      return {
+        id: foundMatch.id,
+        sport_key: foundMatch.sport_key,
+        sport_title: foundMatch.sport_title,
+        commence_time: foundMatch.commence_time,
+        home_team: {
+          id: foundMatch.home_team_id,
+          name: foundMatch.home_team_name,
+          logo: foundMatch.home_team_logo
+        },
+        away_team: {
+          id: foundMatch.away_team_id,
+          name: foundMatch.away_team_name,
+          logo: foundMatch.away_team_logo
+        },
+        bookmakers: foundMatch.bookmakers,
+        scores: foundMatch.scores,
+        completed: foundMatch.completed
+      };
+    }
+
+    if (error) {
+      console.error('Error getting match by ID:', error);
+    }
+    return null;
+  } catch (error) {
+    console.error('Exception getting match by ID:', error);
+    return null;
+  }
+};
+
+export const getUpcomingMatches = async (limit: number = 50): Promise<Match[]> => {
+  try {
+    const now = new Date().toISOString();
+    
+    const { data, error } = await supabaseClient
+      .from('matches')
+      .select('*')
+      .gt('commence_time', now)
+      .eq('completed', false)
+      .order('commence_time', { ascending: true })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error getting upcoming matches:', error);
+      return [];
+    }
+
+    // Convert from DB format to Match format
+    return (data || []).map(item => ({
+      id: item.id,
+      sport_key: item.sport_key,
+      sport_title: item.sport_title,
+      commence_time: item.commence_time,
+      home_team: {
+        id: item.home_team_id,
+        name: item.home_team_name,
+        logo: item.home_team_logo
+      },
+      away_team: {
+        id: item.away_team_id,
+        name: item.away_team_name,
+        logo: item.away_team_logo
+      },
+      bookmakers: item.bookmakers,
+      scores: item.scores,
+      completed: item.completed
+    }));
+  } catch (error) {
+    console.error('Exception getting upcoming matches:', error);
+    return [];
+  }
+};
+
+export const updateMatchScores = async (
+  matchId: string, 
+  homeScore: number, 
+  awayScore: number, 
+  homeTeamName?: string,
+  awayTeamName?: string,
+  commenceTime?: string,
+  completed: boolean = false
+): Promise<boolean> => {
+  try {
+    // First try to update by ID
+    const { error, count } = await supabaseClient
+      .from('matches')
+      .update({
+        scores: { home: homeScore, away: awayScore },
+        completed: completed,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', matchId);
+
+    // If update failed or no rows were updated, and we have team names and time, try to find by those
+    if ((error || count === 0) && homeTeamName && awayTeamName && commenceTime) {
+      console.log(`Could not update match with ID ${matchId}, trying to find by team names and time`);
+      
+      // Find matches with these team names around the commence time
+      const { data: matchData, error: findError } = await supabaseClient
+        .from('matches')
+        .select('id')
+        .eq('home_team_name', homeTeamName)
+        .eq('away_team_name', awayTeamName)
+        // Compare dates within a 12-hour window to account for small time differences
+        .gte('commence_time', new Date(new Date(commenceTime).getTime() - 12 * 60 * 60 * 1000).toISOString())
+        .lte('commence_time', new Date(new Date(commenceTime).getTime() + 12 * 60 * 60 * 1000).toISOString());
+      
+      if (findError || !matchData || matchData.length === 0) {
+        console.error('Error finding match by team names and time:', findError || 'No matches found');
+        return false;
+      }
+      
+      // Update the first matching match
+      const foundMatchId = matchData[0].id;
+      console.log(`Found match with ID ${foundMatchId}, updating scores`);
+      
+      const { error: updateError } = await supabaseClient
+        .from('matches')
+        .update({
+          scores: { home: homeScore, away: awayScore },
+          completed: completed,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', foundMatchId);
+      
+      if (updateError) {
+        console.error('Error updating match scores by team names:', updateError);
+        return false;
+      }
+      
+      return true;
+    }
+
+    if (error) {
+      console.error('Error updating match scores:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Exception updating match scores:', error);
+    return false;
+  }
 }; 
