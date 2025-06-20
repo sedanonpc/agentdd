@@ -120,7 +120,6 @@ const Navbar: React.FC = () => {
     { path: '/leaderboard', label: 'RANKS', icon: Trophy },
     { path: '/dashboard', label: 'DASHBOARD', icon: Database, requiresAuth: true },
     { path: '/chat', label: 'COMMS', icon: MessageSquare, requiresAuth: true },
-    { path: '/test-db', label: 'TEST DB', icon: Database },
   ];
 
   const handleLogout = () => {
