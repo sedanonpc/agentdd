@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // Supabase configuration
 // Hardcoded values as a fallback when env variables have issues
-const fixedSupabaseUrl = 'https://qiasopjpkzhretlyvmph.supabase.co';
-const fixedSupabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpYXNvcGpwa3pocmV0bHl2bXBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc5NTk1MzcsImV4cCI6MjAzMzUzNTUzN30.RYbQlNvtVTzjNlYFXBJtVJQFkXEXrKJfpwC_YtbHlWU';
+const fixedSupabaseUrl = 'https://qiasnpjpkzhretlyymgh.supabase.co';
+const fixedSupabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpYXNucGpwa3pocmV0bHl5bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMzI5MDksImV4cCI6MjA2NDgwODkwOX0.BEOkmjVpGHo37omVsWEgvsCnXB0FIVqZQvDNCuy3qYo';
 
 // Try to use environment variables, fall back to fixed values if there's an issue
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || fixedSupabaseUrl;
