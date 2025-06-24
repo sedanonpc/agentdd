@@ -1,8 +1,8 @@
 import { supabase } from './supabaseService';
 import { 
   getCurrentUser, 
-  getUserProfile, 
-  updateUserProfile, 
+  getUserAccount, 
+  updateUserAccount, 
   getDarePoints, 
   getUnprovisionedDarePoints,
   getProvisionedDarePoints,
@@ -65,19 +65,19 @@ export const getUserDarePoints = async (userId: string): Promise<number> => {
     await ensureDarePointsStructure();
     
     // Try to get from Supabase first
-    const profile = await getUserProfile(userId);
+    const account = await getUserAccount(userId);
     
     // Check if account exists
-    if (profile) {
-      const totalPoints = (profile.unprovisioned_points || 0) + (profile.provisioned_points || 0);
+    if (account) {
+      const totalPoints = (account.unprovisioned_points || 0) + (account.provisioned_points || 0);
       
       // Cache to local storage
       localStorage.setItem(
         `${LOCAL_STORAGE_KEY}_${userId}`, 
         JSON.stringify({ 
           total: totalPoints,
-          unprovisioned: profile.unprovisioned_points || 0,
-          provisioned: profile.provisioned_points || 0,
+          unprovisioned: account.unprovisioned_points || 0,
+          provisioned: account.provisioned_points || 0,
           timestamp: Date.now() 
         })
       );
@@ -86,10 +86,10 @@ export const getUserDarePoints = async (userId: string): Promise<number> => {
     }
     
     // If profile exists but points don't exist, try to add them
-    if (profile && (!('unprovisioned_points' in profile) || !('provisioned_points' in profile))) {
+    if (account && (!('unprovisioned_points' in account) || !('provisioned_points' in account))) {
       try {
         // Try to update the profile with points
-        const updatedProfile = await updateUserProfile(userId, { 
+        const updatedAccount = await updateUserAccount(userId, { 
           unprovisioned_points: DEFAULT_POINTS,
           provisioned_points: 0
         });
@@ -107,7 +107,7 @@ export const getUserDarePoints = async (userId: string): Promise<number> => {
         
         return DEFAULT_POINTS;
       } catch (updateError) {
-        console.error('Error adding points to profile:', updateError);
+        console.error('Error adding points to account:', updateError);
       }
     }
     
@@ -194,14 +194,14 @@ export const updateUserDarePoints = async (userId: string, points: number): Prom
     await updateDarePoints(userId, points);
     
     // Update local cache
-    const profile = await getUserProfile(userId);
-    if (profile) {
+    const account = await getUserAccount(userId);
+    if (account) {
       localStorage.setItem(
         `${LOCAL_STORAGE_KEY}_${userId}`, 
         JSON.stringify({ 
-          total: (profile.unprovisioned_points || 0) + (profile.provisioned_points || 0),
-          unprovisioned: profile.unprovisioned_points || 0,
-          provisioned: profile.provisioned_points || 0,
+          total: (account.unprovisioned_points || 0) + (account.provisioned_points || 0),
+          unprovisioned: account.unprovisioned_points || 0,
+          provisioned: account.provisioned_points || 0,
           timestamp: Date.now() 
         })
       );

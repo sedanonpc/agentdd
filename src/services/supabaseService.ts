@@ -198,13 +198,13 @@ export const signUpWithEmail = async (email: string, password: string) => {
   // If successful, create a user profile record
   if (data.user) {
     try {
-      await createUserProfile(data.user.id, {
+      await createUserAccount(data.user.id, {
         email: data.user.email,
         dare_points: 500, // Initialize new users with 500 DARE points
       });
     } catch (profileError) {
       // If profile creation fails, but auth succeeded, just log error
-      console.error('Error creating user profile:', profileError);
+      console.error('Error creating user account:', profileError);
     }
   }
   
@@ -251,14 +251,14 @@ interface UserAccount {
   [key: string]: any; // Allow for additional fields
 }
 
-export const createUserProfile = async (userId: string, profile: Partial<UserAccount>) => {
+export const createUserAccount = async (userId: string, account: Partial<UserAccount>) => {
   const { data, error } = await supabase
     .from('user_accounts')
     .insert({
       supabase_user_id: userId,
       unprovisioned_points: 500, // Default value for new users
       provisioned_points: 0,
-      ...profile,
+      ...account,
     })
     .select()
     .single();
@@ -267,7 +267,7 @@ export const createUserProfile = async (userId: string, profile: Partial<UserAcc
   return data;
 };
 
-export const getUserProfile = async (userId: string) => {
+export const getUserAccount = async (userId: string) => {
   const { data, error } = await supabase
     .from('user_accounts')
     .select('*')
@@ -281,7 +281,7 @@ export const getUserProfile = async (userId: string) => {
   return data;
 };
 
-export const updateUserProfile = async (userId: string, updates: Partial<UserAccount>) => {
+export const updateUserAccount = async (userId: string, updates: Partial<UserAccount>) => {
   const { data, error } = await supabase
     .from('user_accounts')
     .update(updates)
@@ -294,7 +294,7 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserAcc
 };
 
 export const linkWalletToUser = async (userId: string, walletAddress: string) => {
-  return updateUserProfile(userId, { wallet_address: walletAddress });
+  return updateUserAccount(userId, { wallet_address: walletAddress });
 };
 
 // Helper function to check if Supabase is properly configured
@@ -304,39 +304,39 @@ export const isSupabaseConfigured = () => {
 
 // DARE Points functions
 export const getDarePoints = async (userId: string): Promise<number> => {
-  const profile = await getUserProfile(userId);
-  return (profile?.unprovisioned_points || 0) + (profile?.provisioned_points || 0);
+  const account = await getUserAccount(userId);
+  return (account?.unprovisioned_points || 0) + (account?.provisioned_points || 0);
 };
 
 export const getUnprovisionedDarePoints = async (userId: string): Promise<number> => {
-  const profile = await getUserProfile(userId);
-  return profile?.unprovisioned_points || 0;
+  const account = await getUserAccount(userId);
+  return account?.unprovisioned_points || 0;
 };
 
 export const getProvisionedDarePoints = async (userId: string): Promise<number> => {
-  const profile = await getUserProfile(userId);
-  return profile?.provisioned_points || 0;
+  const account = await getUserAccount(userId);
+  return account?.provisioned_points || 0;
 };
 
 export const updateDarePoints = async (userId: string, points: number): Promise<number> => {
-  const profile = await getUserProfile(userId);
-  const currentPoints = profile?.unprovisioned_points || 0;
+  const account = await getUserAccount(userId);
+  const currentPoints = account?.unprovisioned_points || 0;
   const newPoints = currentPoints + points;
   
-  await updateUserProfile(userId, { unprovisioned_points: newPoints });
+  await updateUserAccount(userId, { unprovisioned_points: newPoints });
   return newPoints;
 };
 
 export const provisionDarePoints = async (userId: string, amount: number): Promise<boolean> => {
-  const profile = await getUserProfile(userId);
-  const unprovisioned = profile?.unprovisioned_points || 0;
-  const provisioned = profile?.provisioned_points || 0;
+  const account = await getUserAccount(userId);
+  const unprovisioned = account?.unprovisioned_points || 0;
+  const provisioned = account?.provisioned_points || 0;
   
   if (unprovisioned < amount) {
     return false; // Not enough unprovisioned points
   }
   
-  await updateUserProfile(userId, { 
+  await updateUserAccount(userId, { 
     unprovisioned_points: unprovisioned - amount,
     provisioned_points: provisioned + amount
   });
@@ -345,15 +345,15 @@ export const provisionDarePoints = async (userId: string, amount: number): Promi
 };
 
 export const unprovisionDarePoints = async (userId: string, amount: number): Promise<boolean> => {
-  const profile = await getUserProfile(userId);
-  const unprovisioned = profile?.unprovisioned_points || 0;
-  const provisioned = profile?.provisioned_points || 0;
+  const account = await getUserAccount(userId);
+  const unprovisioned = account?.unprovisioned_points || 0;
+  const provisioned = account?.provisioned_points || 0;
   
   if (provisioned < amount) {
     return false; // Not enough provisioned points
   }
   
-  await updateUserProfile(userId, { 
+  await updateUserAccount(userId, { 
     unprovisioned_points: unprovisioned + amount,
     provisioned_points: provisioned - amount
   });

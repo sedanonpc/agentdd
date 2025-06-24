@@ -6,7 +6,7 @@ import {
   signOut, 
   getCurrentUser, 
   getCurrentSession,
-  getUserProfile,
+  getUserAccount,
   linkWalletToUser,
   isSupabaseConfigured
 } from '../services/supabaseService';
@@ -56,12 +56,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // User is logged in via Supabase
             const supabaseUser = await getCurrentUser();
             if (supabaseUser) {
-              const profile = await getUserProfile(supabaseUser.id);
+              const account = await getUserAccount(supabaseUser.id);
               
               setUser({
                 id: supabaseUser.id,
                 email: supabaseUser.email,
-                walletAddress: profile?.wallet_address
+                walletAddress: account?.wallet_address
               });
               setAuthMethod('email');
             }
@@ -133,12 +133,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Use Supabase authentication
         const { user: supabaseUser } = await signInWithEmail(email, password);
         if (supabaseUser) {
-          const profile = await getUserProfile(supabaseUser.id);
+          const account = await getUserAccount(supabaseUser.id);
           
           setUser({
             id: supabaseUser.id,
             email: supabaseUser.email,
-            walletAddress: profile?.wallet_address
+            walletAddress: account?.wallet_address
           });
           setAuthMethod('email');
         }
