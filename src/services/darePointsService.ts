@@ -69,15 +69,15 @@ export const getUserDarePoints = async (userId: string): Promise<number> => {
     
     // Check if account exists
     if (account) {
-      const totalPoints = (account.unprovisioned_points || 0) + (account.provisioned_points || 0);
+      const totalPoints = (account.free_dare_points || 0) + (account.reserved_dare_points || 0);
       
       // Cache to local storage
       localStorage.setItem(
         `${LOCAL_STORAGE_KEY}_${userId}`, 
         JSON.stringify({ 
           total: totalPoints,
-          unprovisioned: account.unprovisioned_points || 0,
-          provisioned: account.provisioned_points || 0,
+          unprovisioned: account.free_dare_points || 0,
+          provisioned: account.reserved_dare_points || 0,
           timestamp: Date.now() 
         })
       );
@@ -86,12 +86,12 @@ export const getUserDarePoints = async (userId: string): Promise<number> => {
     }
     
     // If profile exists but points don't exist, try to add them
-    if (account && (!('unprovisioned_points' in account) || !('provisioned_points' in account))) {
+    if (account && (!('free_dare_points' in account) || !('reserved_dare_points' in account))) {
       try {
         // Try to update the profile with points
         const updatedAccount = await updateUserAccount(userId, { 
-          unprovisioned_points: DEFAULT_POINTS,
-          provisioned_points: 0
+          free_dare_points: DEFAULT_POINTS,
+          reserved_dare_points: 0
         });
         
         // Cache to local storage
@@ -199,9 +199,9 @@ export const updateUserDarePoints = async (userId: string, points: number): Prom
       localStorage.setItem(
         `${LOCAL_STORAGE_KEY}_${userId}`, 
         JSON.stringify({ 
-          total: (account.unprovisioned_points || 0) + (account.provisioned_points || 0),
-          unprovisioned: account.unprovisioned_points || 0,
-          provisioned: account.provisioned_points || 0,
+          total: (account.free_dare_points || 0) + (account.reserved_dare_points || 0),
+          unprovisioned: account.free_dare_points || 0,
+          provisioned: account.reserved_dare_points || 0,
           timestamp: Date.now() 
         })
       );

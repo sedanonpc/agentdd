@@ -243,8 +243,8 @@ interface UserAccount {
   user_id?: string;
   email?: string;
   wallet_address?: string;
-  provisioned_points?: number;
-  unprovisioned_points?: number;
+  reserved_dare_points?: number;
+  free_dare_points?: number;
   created_at?: string;
   updated_at?: string;
   [key: string]: any; // Allow for additional fields
@@ -255,8 +255,8 @@ export const createUserAccount = async (userId: string, account: Partial<UserAcc
     .from('user_accounts')
     .insert({
       user_id: userId,
-      unprovisioned_points: 500, // Default value for new users
-      provisioned_points: 0,
+      free_dare_points: 500, // Default value for new users
+      reserved_dare_points: 0,
       ...account,
     })
     .select()
@@ -304,40 +304,40 @@ export const isSupabaseConfigured = () => {
 // DARE Points functions
 export const getDarePoints = async (userId: string): Promise<number> => {
   const account = await getUserAccount(userId);
-  return (account?.unprovisioned_points || 0) + (account?.provisioned_points || 0);
+  return (account?.free_dare_points || 0) + (account?.reserved_dare_points || 0);
 };
 
 export const getUnprovisionedDarePoints = async (userId: string): Promise<number> => {
   const account = await getUserAccount(userId);
-  return account?.unprovisioned_points || 0;
+  return account?.free_dare_points || 0;
 };
 
 export const getProvisionedDarePoints = async (userId: string): Promise<number> => {
   const account = await getUserAccount(userId);
-  return account?.provisioned_points || 0;
+  return account?.reserved_dare_points || 0;
 };
 
 export const updateDarePoints = async (userId: string, points: number): Promise<number> => {
   const account = await getUserAccount(userId);
-  const currentPoints = account?.unprovisioned_points || 0;
+  const currentPoints = account?.free_dare_points || 0;
   const newPoints = currentPoints + points;
   
-  await updateUserAccount(userId, { unprovisioned_points: newPoints });
+  await updateUserAccount(userId, { free_dare_points: newPoints });
   return newPoints;
 };
 
 export const provisionDarePoints = async (userId: string, amount: number): Promise<boolean> => {
   const account = await getUserAccount(userId);
-  const unprovisioned = account?.unprovisioned_points || 0;
-  const provisioned = account?.provisioned_points || 0;
+  const free = account?.free_dare_points || 0;
+  const reserved = account?.reserved_dare_points || 0;
   
-  if (unprovisioned < amount) {
-    return false; // Not enough unprovisioned points
+  if (free < amount) {
+    return false; // Not enough free points
   }
   
   await updateUserAccount(userId, { 
-    unprovisioned_points: unprovisioned - amount,
-    provisioned_points: provisioned + amount
+    free_dare_points: free - amount,
+    reserved_dare_points: reserved + amount
   });
   
   return true;
@@ -345,16 +345,16 @@ export const provisionDarePoints = async (userId: string, amount: number): Promi
 
 export const unprovisionDarePoints = async (userId: string, amount: number): Promise<boolean> => {
   const account = await getUserAccount(userId);
-  const unprovisioned = account?.unprovisioned_points || 0;
-  const provisioned = account?.provisioned_points || 0;
+  const free = account?.free_dare_points || 0;
+  const reserved = account?.reserved_dare_points || 0;
   
-  if (provisioned < amount) {
-    return false; // Not enough provisioned points
+  if (reserved < amount) {
+    return false; // Not enough reserved points
   }
   
   await updateUserAccount(userId, { 
-    unprovisioned_points: unprovisioned + amount,
-    provisioned_points: provisioned - amount
+    free_dare_points: free + amount,
+    reserved_dare_points: reserved - amount
   });
   
   return true;

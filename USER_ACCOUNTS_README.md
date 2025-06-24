@@ -14,8 +14,8 @@ CREATE TABLE public.user_accounts (
   wallet_address TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  provisioned_points DECIMAL(18,8) DEFAULT 0,
-  unprovisioned_points DECIMAL(18,8) DEFAULT 500
+  reserved_dare_points DECIMAL(18,8) DEFAULT 0,
+  free_dare_points DECIMAL(18,8) DEFAULT 500
 );
 ```
 
@@ -24,8 +24,8 @@ CREATE TABLE public.user_accounts (
 1. `id` is the primary key
 2. `user_id` references the Supabase auth.users table
 3. Points are split into two columns:
-   - `provisioned_points`: Points that are reserved (e.g., held in escrow) and can no longer be spent
-   - `unprovisioned_points`: Points that are not yet reserved and can still be spent
+   - `reserved_dare_points`: Points that are reserved (e.g., held in escrow) and can no longer be spent
+   - `free_dare_points`: Points that are not yet reserved and can still be spent
 
 ## Database Initialization
 
@@ -37,27 +37,27 @@ The `user_accounts` table is created manually in Supabase by running the SQL mig
 
 The following functions have been added to handle the split DARE points:
 
-- `getUserUnprovisionedPoints()`: Get available points
+- `getUserUnprovisionedPoints()`: Get free points
 - `getUserProvisionedPoints()`: Get reserved points
-- `provisionUserPoints()`: Move points from unprovisioned to provisioned
-- `unprovisionUserPoints()`: Move points from provisioned to unprovisioned
+- `provisionUserPoints()`: Move points from free to reserved
+- `unprovisionUserPoints()`: Move points from reserved to free
 
 ### Core Functions
 
 The following functions manage user accounts:
 
-- `getUserDarePoints()`: Returns the sum of provisioned and unprovisioned points
-- `updateUserDarePoints()`: Updates only unprovisioned points
-- `adjustUserDarePoints()`: Checks against unprovisioned points
-- `deductBetPoints()`: Provisions points instead of deducting them
+- `getUserDarePoints()`: Returns the sum of reserved and free points
+- `updateUserDarePoints()`: Updates only free points
+- `adjustUserDarePoints()`: Checks against free points
+- `deductBetPoints()`: Reserves points instead of deducting them
 
 ## UI Components
 
 The DARE Points display shows:
 
-1. Total points (sum of provisioned and unprovisioned)
-2. Available points (unprovisioned)
-3. Provisioned points (if any)
+1. Total points (sum of reserved and free)
+2. Free points
+3. Reserved points (if any)
 
 ## Migration Files
 
@@ -71,8 +71,8 @@ The DARE Points display shows:
 
 ## Context
 
-- `DarePointsContext.tsx`: Tracks both provisioned and unprovisioned points
+- `DarePointsContext.tsx`: Tracks both reserved and free points
 
 ## Components
 
-- `DarePointsDisplay.tsx`: Shows both provisioned and unprovisioned points 
+- `DarePointsDisplay.tsx`: Shows both reserved and free points 
