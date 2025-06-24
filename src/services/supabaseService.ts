@@ -307,12 +307,12 @@ export const getDarePoints = async (userId: string): Promise<number> => {
   return (account?.free_dare_points || 0) + (account?.reserved_dare_points || 0);
 };
 
-export const getUnprovisionedDarePoints = async (userId: string): Promise<number> => {
+export const getFreeDarePoints = async (userId: string): Promise<number> => {
   const account = await getUserAccount(userId);
   return account?.free_dare_points || 0;
 };
 
-export const getProvisionedDarePoints = async (userId: string): Promise<number> => {
+export const getReservedDarePoints = async (userId: string): Promise<number> => {
   const account = await getUserAccount(userId);
   return account?.reserved_dare_points || 0;
 };

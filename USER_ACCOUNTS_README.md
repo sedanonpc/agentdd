@@ -37,10 +37,10 @@ The `user_accounts` table is created manually in Supabase by running the SQL mig
 
 The following functions have been added to handle the split DARE points:
 
-- `getUserUnprovisionedPoints()`: Get free points
-- `getUserProvisionedPoints()`: Get reserved points
-- `provisionUserPoints()`: Move points from free to reserved
-- `unprovisionUserPoints()`: Move points from reserved to free
+- `getUserFreeDarePoints()`: Get free points
+- `getUserReservedDarePoints()`: Get reserved points
+- `reserveDarePoints()`: Move points from free to reserved
+- `freeDarePoints()`: Move points from reserved to free
 
 ### Core Functions
 

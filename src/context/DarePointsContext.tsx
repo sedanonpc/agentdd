@@ -5,12 +5,12 @@ import {
   DareTransaction,
   DEFAULT_POINTS,
   getUserDarePoints,
-  getUserUnprovisionedPoints,
-  getUserProvisionedPoints,
+  getUserFreeDarePoints,
+  getUserReservedDarePoints,
   updateUserDarePoints,
   adjustUserDarePoints,
-  provisionUserPoints,
-  unprovisionUserPoints,
+  reserveDarePoints,
+  freeDarePoints,
   recordTransaction,
   getUserTransactions,
   deductBetPoints,
@@ -115,8 +115,8 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       // Get user balance from service
       const totalBalance = await getUserDarePoints(userId);
-      const freeDarePoints = await getUserUnprovisionedPoints(userId);
-      const reservedDarePoints = await getUserProvisionedPoints(userId);
+      const freeDarePoints = await getUserFreeDarePoints(userId);
+      const reservedDarePoints = await getUserReservedDarePoints(userId);
       
       setUserBalance(totalBalance);
       setFreeDarePointsBalance(freeDarePoints);
@@ -140,8 +140,8 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
   const refreshUserBalance = async (userId: string) => {
     try {
       const totalBalance = await getUserDarePoints(userId);
-      const freeDarePoints = await getUserUnprovisionedPoints(userId);
-      const reservedDarePoints = await getUserProvisionedPoints(userId);
+      const freeDarePoints = await getUserFreeDarePoints(userId);
+      const reservedDarePoints = await getUserReservedDarePoints(userId);
       
       setUserBalance(totalBalance);
       setFreeDarePointsBalance(freeDarePoints);
@@ -299,7 +299,7 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
       
       if (type === 'BET_WON' && betId) {
         // For bet wins, we need to unprovision points first if they were in escrow
-        await unprovisionUserPoints(user.id, amount);
+        await freeDarePoints(user.id, amount);
         
         // Use service for bet win
         success = await addBetWinPoints(user.id, amount, betId);

@@ -3,11 +3,10 @@ import {
   getCurrentUser, 
   getUserAccount, 
   updateUserAccount, 
-  getDarePoints, 
-  getUnprovisionedDarePoints,
-  getProvisionedDarePoints,
-  provisionDarePoints,
-  unprovisionDarePoints,
+  getFreeDarePoints as getSupabaseFreeDarePoints,
+  getReservedDarePoints as getSupabaseReservedDarePoints,
+  provisionDarePoints as supabaseReserveDarePoints,
+  unprovisionDarePoints as supabaseFreeDarePoints,
   updateDarePoints
 } from './supabaseService';
 
@@ -135,17 +134,17 @@ export const getUserDarePoints = async (userId: string): Promise<number> => {
 };
 
 /**
- * Get user's unprovisioned DARE points
+ * Get user's free DARE points
  */
-export const getUserUnprovisionedPoints = async (userId: string): Promise<number> => {
+export const getUserFreeDarePoints = async (userId: string): Promise<number> => {
   try {
     // First ensure the structure exists
     await ensureDarePointsStructure();
     
     // Try to get from Supabase first
-    return await getUnprovisionedDarePoints(userId);
+    return await getSupabaseFreeDarePoints(userId);
   } catch (error) {
-    console.error('Error fetching unprovisioned DARE points:', error);
+    console.error('Error fetching free DARE points:', error);
     
     // Try local cache on error
     const cached = localStorage.getItem(`${LOCAL_STORAGE_KEY}_${userId}`);
@@ -159,17 +158,17 @@ export const getUserUnprovisionedPoints = async (userId: string): Promise<number
 };
 
 /**
- * Get user's provisioned DARE points
+ * Get user's reserved DARE points
  */
-export const getUserProvisionedPoints = async (userId: string): Promise<number> => {
+export const getUserReservedDarePoints = async (userId: string): Promise<number> => {
   try {
     // First ensure the structure exists
     await ensureDarePointsStructure();
     
     // Try to get from Supabase first
-    return await getProvisionedDarePoints(userId);
+    return await getSupabaseReservedDarePoints(userId);
   } catch (error) {
-    console.error('Error fetching provisioned DARE points:', error);
+    console.error('Error fetching reserved DARE points:', error);
     
     // Try local cache on error
     const cached = localStorage.getItem(`${LOCAL_STORAGE_KEY}_${userId}`);
@@ -245,7 +244,7 @@ export const updateUserDarePoints = async (userId: string, points: number): Prom
  */
 export const adjustUserDarePoints = async (userId: string, amount: number): Promise<boolean> => {
   try {
-    const currentPoints = await getUserUnprovisionedPoints(userId);
+    const currentPoints = await getUserFreeDarePoints(userId);
     if (amount < 0 && Math.abs(amount) > currentPoints) {
       return false; // Not enough points
     }
@@ -258,25 +257,25 @@ export const adjustUserDarePoints = async (userId: string, amount: number): Prom
 };
 
 /**
- * Provision points (move from unprovisioned to provisioned)
+ * Reserve points (move from free to reserved)
  */
-export const provisionUserPoints = async (userId: string, amount: number): Promise<boolean> => {
+export const reserveDarePoints = async (userId: string, amount: number): Promise<boolean> => {
   try {
-    return await provisionDarePoints(userId, amount);
+    return await supabaseReserveDarePoints(userId, amount);
   } catch (error) {
-    console.error('Error provisioning DARE points:', error);
+    console.error('Error reserving points:', error);
     return false;
   }
 };
 
 /**
- * Unprovision points (move from provisioned to unprovisioned)
+ * Free points (move from reserved to free)
  */
-export const unprovisionUserPoints = async (userId: string, amount: number): Promise<boolean> => {
+export const freeDarePoints = async (userId: string, amount: number): Promise<boolean> => {
   try {
-    return await unprovisionDarePoints(userId, amount);
+    return await supabaseFreeDarePoints(userId, amount);
   } catch (error) {
-    console.error('Error unprovisioning DARE points:', error);
+    console.error('Error freeing points:', error);
     return false;
   }
 };
@@ -361,14 +360,15 @@ export const addBetWinPoints = async (userId: string, amount: number, betId: str
 export const deductBetPoints = async (userId: string, amount: number, betId: string): Promise<boolean> => {
   try {
     // Check if user has enough points
-    const currentPoints = await getUserUnprovisionedPoints(userId);
+    const currentPoints = await getUserFreeDarePoints(userId);
+    
     if (currentPoints < amount) {
       return false;
     }
     
-    // First provision the points
-    const provisioned = await provisionUserPoints(userId, amount);
-    if (!provisioned) {
+    // Use reserve function to move points to reserved
+    const reserved = await reserveDarePoints(userId, amount);
+    if (!reserved) {
       return false;
     }
     
