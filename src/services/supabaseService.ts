@@ -200,7 +200,6 @@ export const signUpWithEmail = async (email: string, password: string) => {
     try {
       await createUserAccount(data.user.id, {
         email: data.user.email,
-        dare_points: 500, // Initialize new users with 500 DARE points
       });
     } catch (profileError) {
       // If profile creation fails, but auth succeeded, just log error

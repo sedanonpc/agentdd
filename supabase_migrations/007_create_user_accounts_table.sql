@@ -20,6 +20,9 @@ ON public.user_accounts(unprovisioned_points);
 CREATE INDEX IF NOT EXISTS idx_user_accounts_provisioned_points
 ON public.user_accounts(provisioned_points);
 
+-- Enable Row Level Security
+ALTER TABLE public.user_accounts ENABLE ROW LEVEL SECURITY;
+
 -- Add policies
 CREATE POLICY "Users can view their own account"
   ON user_accounts
