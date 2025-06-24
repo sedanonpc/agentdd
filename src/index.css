@@ -1,9 +1,9 @@
+/* Import iOS-specific fixes */
+@import './styles/ios-fixes.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import iOS-specific fixes */
-@import './styles/ios-fixes.css';
 
 /* Set Chakra Petch as default font */
 @layer base {
