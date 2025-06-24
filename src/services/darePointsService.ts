@@ -1,5 +1,15 @@
 import { supabase } from './supabaseService';
-import { getCurrentUser, getUserProfile, updateUserProfile } from './supabaseService';
+import { 
+  getCurrentUser, 
+  getUserProfile, 
+  updateUserProfile, 
+  getDarePoints, 
+  getUnprovisionedDarePoints,
+  getProvisionedDarePoints,
+  provisionDarePoints,
+  unprovisionDarePoints,
+  updateDarePoints
+} from './supabaseService';
 
 // Constants
 export const LOCAL_STORAGE_KEY = 'dare_points_cache';
@@ -20,15 +30,15 @@ export interface DareTransaction {
 }
 
 /**
- * Ensure the user_profiles table and dare_points column exist
+ * Ensure the user_accounts table exists
  */
 export const ensureDarePointsStructure = async (): Promise<void> => {
   try {
-    // Try to create or update the user_profiles table schema if needed
-    const { error } = await supabase.rpc('ensure_dare_points_column');
+    // Try to access the user_accounts table
+    const { error } = await supabase.from('user_accounts').select('account_id').limit(1);
     
-    if (error && error.code !== 'PGRST301') { // PGRST301 is function not found, which is expected if the function doesn't exist
-      console.error('Error ensuring dare_points structure:', error);
+    if (error && error.code !== 'PGRST116') { // PGRST116 is the error for no rows returned
+      console.error('Error ensuring user_accounts structure:', error);
       
       // Try direct SQL approach as fallback
       const { error: alterError } = await supabase.from('_temp_ensure_structure')
@@ -42,12 +52,12 @@ export const ensureDarePointsStructure = async (): Promise<void> => {
       }
     }
   } catch (error) {
-    console.error('Exception ensuring dare_points structure:', error);
+    console.error('Exception ensuring user_accounts structure:', error);
   }
 };
 
 /**
- * Get user's DARE points from Supabase with local fallback
+ * Get user's total DARE points from Supabase with local fallback
  */
 export const getUserDarePoints = async (userId: string): Promise<number> => {
   try {
@@ -57,39 +67,55 @@ export const getUserDarePoints = async (userId: string): Promise<number> => {
     // Try to get from Supabase first
     const profile = await getUserProfile(userId);
     
-    // Check if dare_points exists in the profile
-    if (profile && 'dare_points' in profile) {
+    // Check if account exists
+    if (profile) {
+      const totalPoints = (profile.unprovisioned_points || 0) + (profile.provisioned_points || 0);
+      
       // Cache to local storage
       localStorage.setItem(
         `${LOCAL_STORAGE_KEY}_${userId}`, 
-        JSON.stringify({ points: profile.dare_points, timestamp: Date.now() })
+        JSON.stringify({ 
+          total: totalPoints,
+          unprovisioned: profile.unprovisioned_points || 0,
+          provisioned: profile.provisioned_points || 0,
+          timestamp: Date.now() 
+        })
       );
-      return profile.dare_points || DEFAULT_POINTS;
+      
+      return totalPoints;
     }
     
-    // If profile exists but dare_points doesn't exist, try to add it
-    if (profile && !('dare_points' in profile)) {
+    // If profile exists but points don't exist, try to add them
+    if (profile && (!('unprovisioned_points' in profile) || !('provisioned_points' in profile))) {
       try {
-        // Try to update the profile with dare_points
-        const updatedProfile = await updateUserProfile(userId, { dare_points: DEFAULT_POINTS });
+        // Try to update the profile with points
+        const updatedProfile = await updateUserProfile(userId, { 
+          unprovisioned_points: DEFAULT_POINTS,
+          provisioned_points: 0
+        });
         
         // Cache to local storage
         localStorage.setItem(
           `${LOCAL_STORAGE_KEY}_${userId}`, 
-          JSON.stringify({ points: DEFAULT_POINTS, timestamp: Date.now() })
+          JSON.stringify({ 
+            total: DEFAULT_POINTS,
+            unprovisioned: DEFAULT_POINTS,
+            provisioned: 0,
+            timestamp: Date.now() 
+          })
         );
         
         return DEFAULT_POINTS;
       } catch (updateError) {
-        console.error('Error adding dare_points to profile:', updateError);
+        console.error('Error adding points to profile:', updateError);
       }
     }
     
-    // If not in Supabase or dare_points couldn't be added, try local storage
+    // If not in Supabase or points couldn't be added, try local storage
     const cached = localStorage.getItem(`${LOCAL_STORAGE_KEY}_${userId}`);
     if (cached) {
-      const { points } = JSON.parse(cached);
-      return points;
+      const { total } = JSON.parse(cached);
+      return total;
     }
     
     // Default value if nothing found
@@ -100,11 +126,59 @@ export const getUserDarePoints = async (userId: string): Promise<number> => {
     // Try local cache on error
     const cached = localStorage.getItem(`${LOCAL_STORAGE_KEY}_${userId}`);
     if (cached) {
-      const { points } = JSON.parse(cached);
-      return points;
+      const { total } = JSON.parse(cached);
+      return total;
     }
     
     return DEFAULT_POINTS;
+  }
+};
+
+/**
+ * Get user's unprovisioned DARE points
+ */
+export const getUserUnprovisionedPoints = async (userId: string): Promise<number> => {
+  try {
+    // First ensure the structure exists
+    await ensureDarePointsStructure();
+    
+    // Try to get from Supabase first
+    return await getUnprovisionedDarePoints(userId);
+  } catch (error) {
+    console.error('Error fetching unprovisioned DARE points:', error);
+    
+    // Try local cache on error
+    const cached = localStorage.getItem(`${LOCAL_STORAGE_KEY}_${userId}`);
+    if (cached) {
+      const { unprovisioned } = JSON.parse(cached);
+      return unprovisioned || 0;
+    }
+    
+    return 0;
+  }
+};
+
+/**
+ * Get user's provisioned DARE points
+ */
+export const getUserProvisionedPoints = async (userId: string): Promise<number> => {
+  try {
+    // First ensure the structure exists
+    await ensureDarePointsStructure();
+    
+    // Try to get from Supabase first
+    return await getProvisionedDarePoints(userId);
+  } catch (error) {
+    console.error('Error fetching provisioned DARE points:', error);
+    
+    // Try local cache on error
+    const cached = localStorage.getItem(`${LOCAL_STORAGE_KEY}_${userId}`);
+    if (cached) {
+      const { provisioned } = JSON.parse(cached);
+      return provisioned || 0;
+    }
+    
+    return 0;
   }
 };
 
@@ -116,22 +190,51 @@ export const updateUserDarePoints = async (userId: string, points: number): Prom
     // Ensure the structure exists first
     await ensureDarePointsStructure();
     
-    await updateUserProfile(userId, { dare_points: points });
+    // Update only unprovisioned points
+    await updateDarePoints(userId, points);
     
     // Update local cache
-    localStorage.setItem(
-      `${LOCAL_STORAGE_KEY}_${userId}`, 
-      JSON.stringify({ points, timestamp: Date.now() })
-    );
+    const profile = await getUserProfile(userId);
+    if (profile) {
+      localStorage.setItem(
+        `${LOCAL_STORAGE_KEY}_${userId}`, 
+        JSON.stringify({ 
+          total: (profile.unprovisioned_points || 0) + (profile.provisioned_points || 0),
+          unprovisioned: profile.unprovisioned_points || 0,
+          provisioned: profile.provisioned_points || 0,
+          timestamp: Date.now() 
+        })
+      );
+    }
+    
     return true;
   } catch (error) {
     console.error('Error updating DARE points:', error);
     
     // Try to update local cache anyway
-    localStorage.setItem(
-      `${LOCAL_STORAGE_KEY}_${userId}`, 
-      JSON.stringify({ points, timestamp: Date.now() })
-    );
+    const cached = localStorage.getItem(`${LOCAL_STORAGE_KEY}_${userId}`);
+    if (cached) {
+      const cachedData = JSON.parse(cached);
+      localStorage.setItem(
+        `${LOCAL_STORAGE_KEY}_${userId}`, 
+        JSON.stringify({
+          ...cachedData,
+          total: (cachedData.unprovisioned + points) + cachedData.provisioned,
+          unprovisioned: cachedData.unprovisioned + points,
+          timestamp: Date.now()
+        })
+      );
+    } else {
+      localStorage.setItem(
+        `${LOCAL_STORAGE_KEY}_${userId}`, 
+        JSON.stringify({ 
+          total: points > 0 ? points : DEFAULT_POINTS,
+          unprovisioned: points > 0 ? points : DEFAULT_POINTS,
+          provisioned: 0,
+          timestamp: Date.now() 
+        })
+      );
+    }
     
     return true; // Return true for local mode
   }
@@ -142,10 +245,38 @@ export const updateUserDarePoints = async (userId: string, points: number): Prom
  */
 export const adjustUserDarePoints = async (userId: string, amount: number): Promise<boolean> => {
   try {
-    const currentPoints = await getUserDarePoints(userId);
-    return updateUserDarePoints(userId, currentPoints + amount);
+    const currentPoints = await getUserUnprovisionedPoints(userId);
+    if (amount < 0 && Math.abs(amount) > currentPoints) {
+      return false; // Not enough points
+    }
+    
+    return updateUserDarePoints(userId, amount);
   } catch (error) {
     console.error('Error adjusting DARE points:', error);
+    return false;
+  }
+};
+
+/**
+ * Provision points (move from unprovisioned to provisioned)
+ */
+export const provisionUserPoints = async (userId: string, amount: number): Promise<boolean> => {
+  try {
+    return await provisionDarePoints(userId, amount);
+  } catch (error) {
+    console.error('Error provisioning DARE points:', error);
+    return false;
+  }
+};
+
+/**
+ * Unprovision points (move from provisioned to unprovisioned)
+ */
+export const unprovisionUserPoints = async (userId: string, amount: number): Promise<boolean> => {
+  try {
+    return await unprovisionDarePoints(userId, amount);
+  } catch (error) {
+    console.error('Error unprovisioning DARE points:', error);
     return false;
   }
 };
@@ -230,26 +361,27 @@ export const addBetWinPoints = async (userId: string, amount: number, betId: str
 export const deductBetPoints = async (userId: string, amount: number, betId: string): Promise<boolean> => {
   try {
     // Check if user has enough points
-    const currentPoints = await getUserDarePoints(userId);
+    const currentPoints = await getUserUnprovisionedPoints(userId);
     if (currentPoints < amount) {
       return false;
     }
     
-    // Deduct points from user's balance
-    const success = await adjustUserDarePoints(userId, -amount);
-    
-    if (success) {
-      // Record the transaction
-      await recordTransaction({
-        userId,
-        amount: -amount,
-        type: 'BET_PLACED',
-        description: `Placed a bet of ${amount} $DARE`,
-        betId
-      });
+    // First provision the points
+    const provisioned = await provisionUserPoints(userId, amount);
+    if (!provisioned) {
+      return false;
     }
     
-    return success;
+    // Record the transaction
+    await recordTransaction({
+      userId,
+      amount: -amount,
+      type: 'BET_PLACED',
+      description: `Placed a bet of ${amount} $DARE`,
+      betId
+    });
+    
+    return true;
   } catch (error) {
     console.error('Error deducting bet points:', error);
     return false;

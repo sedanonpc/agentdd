@@ -29,7 +29,7 @@ const createDummyClient = () => {
   
   // Create a simple in-memory store for development
   const inMemoryStore: Record<string, any[]> = {
-    user_profiles: [],
+    user_accounts: [],
     bets: [],
   };
   
@@ -238,24 +238,26 @@ export const getCurrentSession = async () => {
   return data.session;
 };
 
-// User profile functions
-interface UserProfile {
-  id?: string;
-  user_id?: string;
+// User account functions
+interface UserAccount {
+  account_id?: string;
+  supabase_user_id?: string;
   email?: string;
   wallet_address?: string;
-  dare_points?: number; // Added DARE points field
+  provisioned_points?: number;
+  unprovisioned_points?: number;
   created_at?: string;
   updated_at?: string;
   [key: string]: any; // Allow for additional fields
 }
 
-export const createUserProfile = async (userId: string, profile: UserProfile) => {
+export const createUserProfile = async (userId: string, profile: Partial<UserAccount>) => {
   const { data, error } = await supabase
-    .from('user_profiles')
+    .from('user_accounts')
     .insert({
-      user_id: userId,
-      dare_points: 500, // Default value for new users
+      supabase_user_id: userId,
+      unprovisioned_points: 500, // Default value for new users
+      provisioned_points: 0,
       ...profile,
     })
     .select()
@@ -267,9 +269,9 @@ export const createUserProfile = async (userId: string, profile: UserProfile) =>
 
 export const getUserProfile = async (userId: string) => {
   const { data, error } = await supabase
-    .from('user_profiles')
+    .from('user_accounts')
     .select('*')
-    .eq('user_id', userId)
+    .eq('supabase_user_id', userId)
     .single();
   
   if (error && error.code !== 'PGRST116') { // PGRST116 is the error for no rows returned
@@ -279,11 +281,11 @@ export const getUserProfile = async (userId: string) => {
   return data;
 };
 
-export const updateUserProfile = async (userId: string, updates: Partial<UserProfile>) => {
+export const updateUserProfile = async (userId: string, updates: Partial<UserAccount>) => {
   const { data, error } = await supabase
-    .from('user_profiles')
+    .from('user_accounts')
     .update(updates)
-    .eq('user_id', userId)
+    .eq('supabase_user_id', userId)
     .select()
     .single();
   
@@ -303,16 +305,60 @@ export const isSupabaseConfigured = () => {
 // DARE Points functions
 export const getDarePoints = async (userId: string): Promise<number> => {
   const profile = await getUserProfile(userId);
-  return profile?.dare_points || 0;
+  return (profile?.unprovisioned_points || 0) + (profile?.provisioned_points || 0);
+};
+
+export const getUnprovisionedDarePoints = async (userId: string): Promise<number> => {
+  const profile = await getUserProfile(userId);
+  return profile?.unprovisioned_points || 0;
+};
+
+export const getProvisionedDarePoints = async (userId: string): Promise<number> => {
+  const profile = await getUserProfile(userId);
+  return profile?.provisioned_points || 0;
 };
 
 export const updateDarePoints = async (userId: string, points: number): Promise<number> => {
   const profile = await getUserProfile(userId);
-  const currentPoints = profile?.dare_points || 0;
+  const currentPoints = profile?.unprovisioned_points || 0;
   const newPoints = currentPoints + points;
   
-  await updateUserProfile(userId, { dare_points: newPoints });
+  await updateUserProfile(userId, { unprovisioned_points: newPoints });
   return newPoints;
+};
+
+export const provisionDarePoints = async (userId: string, amount: number): Promise<boolean> => {
+  const profile = await getUserProfile(userId);
+  const unprovisioned = profile?.unprovisioned_points || 0;
+  const provisioned = profile?.provisioned_points || 0;
+  
+  if (unprovisioned < amount) {
+    return false; // Not enough unprovisioned points
+  }
+  
+  await updateUserProfile(userId, { 
+    unprovisioned_points: unprovisioned - amount,
+    provisioned_points: provisioned + amount
+  });
+  
+  return true;
+};
+
+export const unprovisionDarePoints = async (userId: string, amount: number): Promise<boolean> => {
+  const profile = await getUserProfile(userId);
+  const unprovisioned = profile?.unprovisioned_points || 0;
+  const provisioned = profile?.provisioned_points || 0;
+  
+  if (provisioned < amount) {
+    return false; // Not enough provisioned points
+  }
+  
+  await updateUserProfile(userId, { 
+    unprovisioned_points: unprovisioned + amount,
+    provisioned_points: provisioned - amount
+  });
+  
+  return true;
 };
 
 /**

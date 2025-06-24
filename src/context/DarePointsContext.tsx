@@ -5,8 +5,12 @@ import {
   DareTransaction,
   DEFAULT_POINTS,
   getUserDarePoints,
+  getUserUnprovisionedPoints,
+  getUserProvisionedPoints,
   updateUserDarePoints,
   adjustUserDarePoints,
+  provisionUserPoints,
+  unprovisionUserPoints,
   recordTransaction,
   getUserTransactions,
   deductBetPoints,
@@ -34,6 +38,8 @@ interface RewardPool {
 // Define the context type
 interface DarePointsContextType {
   userBalance: number;
+  unprovisionedBalance: number;
+  provisionedBalance: number;
   loadingBalance: boolean;
   rewardPool: RewardPool;
   transactions: DareTransaction[];
@@ -61,6 +67,8 @@ const REWARD_POOL_KEY = 'daredevil_reward_pool';
 export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [userBalance, setUserBalance] = useState<number>(0);
+  const [unprovisionedBalance, setUnprovisionedBalance] = useState<number>(0);
+  const [provisionedBalance, setProvisionedBalance] = useState<number>(0);
   const [loadingBalance, setLoadingBalance] = useState<boolean>(true);
   const [transactions, setTransactions] = useState<DareTransaction[]>([]);
   const [rewardPool, setRewardPool] = useState<RewardPool>({ totalPoints: 0, transactions: [] });
@@ -73,6 +81,8 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
     } else {
       // Reset state when no account is connected
       setUserBalance(0);
+      setUnprovisionedBalance(0);
+      setProvisionedBalance(0);
       setTransactions([]);
       setLoadingBalance(false);
     }
@@ -104,8 +114,13 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
     setLoadingBalance(true);
     try {
       // Get user balance from service
-      const balance = await getUserDarePoints(userId);
-      setUserBalance(balance);
+      const totalBalance = await getUserDarePoints(userId);
+      const unprovisionedPoints = await getUserUnprovisionedPoints(userId);
+      const provisionedPoints = await getUserProvisionedPoints(userId);
+      
+      setUserBalance(totalBalance);
+      setUnprovisionedBalance(unprovisionedPoints);
+      setProvisionedBalance(provisionedPoints);
       
       // Get transaction history
       const userTransactions = getUserTransactions(userId);
@@ -124,8 +139,13 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
   // Refresh just the user balance
   const refreshUserBalance = async (userId: string) => {
     try {
-      const balance = await getUserDarePoints(userId);
-      setUserBalance(balance);
+      const totalBalance = await getUserDarePoints(userId);
+      const unprovisionedPoints = await getUserUnprovisionedPoints(userId);
+      const provisionedPoints = await getUserProvisionedPoints(userId);
+      
+      setUserBalance(totalBalance);
+      setUnprovisionedBalance(unprovisionedPoints);
+      setProvisionedBalance(provisionedPoints);
     } catch (error) {
       console.error('Error refreshing balance:', error);
     }
@@ -155,6 +175,16 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
         }, 0);
       
       setEscrowedPoints(userEscrowedPoints);
+      
+      // This should match the provisioned points, but we keep both for now
+      // as the escrow system might not be fully integrated with the new points system yet
+      setProvisionedBalance(prev => {
+        if (Math.abs(prev - userEscrowedPoints) > 1) {
+          // If there's a significant difference, update the provisioned balance
+          return userEscrowedPoints;
+        }
+        return prev;
+      });
     } catch (error) {
       console.error('Error updating escrowed points:', error);
     }
@@ -197,7 +227,7 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
       return false;
     }
 
-    if (userBalance < amount) {
+    if (unprovisionedBalance < amount) {
       if (!silent) toast.error('Insufficient balance');
       return false;
     }
@@ -208,7 +238,8 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
       
       if (success) {
         // Update local state
-        setUserBalance(prev => prev - amount);
+        setUnprovisionedBalance(prev => prev - amount);
+        setProvisionedBalance(prev => prev + amount);
         
         // Skip creating escrow if silent (it will be created separately in bet acceptance flow)
         if (!silent) {
@@ -255,6 +286,9 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
       let success = false;
       
       if (type === 'BET_WON' && betId) {
+        // For bet wins, we need to unprovision points first if they were in escrow
+        await unprovisionUserPoints(user.id, amount);
+        
         // Use service for bet win
         success = await addBetWinPoints(user.id, amount, betId);
       } else {
@@ -264,7 +298,7 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
       
       if (success) {
         // Update local state
-        setUserBalance(prev => prev + amount);
+        setUnprovisionedBalance(prev => prev + amount);
         
         // Get updated transactions
         const updatedTransactions = getUserTransactions(user.id);
@@ -306,7 +340,7 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
       return null;
     }
     
-    if (userBalance < amount) {
+    if (unprovisionedBalance < amount) {
       if (!silent) toast.error(`Insufficient balance. You need ${amount} $DARE points to create this escrow.`);
       return null;
     }
@@ -341,7 +375,7 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
       
       if (success) {
         // Update local state
-        setUserBalance(prev => prev - amount);
+        setUnprovisionedBalance(prev => prev - amount);
         
         // Add to escrow
         const updatedEscrow = addAcceptorToEscrow(escrowId, user.id, amount);
@@ -386,7 +420,7 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
       
       if (success && winnerId === user?.id) {
         // Update local state if current user is the winner
-        setUserBalance(prev => prev + completedEscrow.totalAmount);
+        setUnprovisionedBalance(prev => prev + completedEscrow.totalAmount);
       }
       
       // Update escrowed points
@@ -427,7 +461,7 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
         
         if (escrow.creatorId === user?.id) {
           // Update local state if current user is the creator
-          setUserBalance(prev => prev + escrow.creatorAmount);
+          setUnprovisionedBalance(prev => prev + escrow.creatorAmount);
         }
       }
       
@@ -441,7 +475,7 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
         
         if (escrow.acceptorId === user?.id) {
           // Update local state if current user is the acceptor
-          setUserBalance(prev => prev + escrow.acceptorAmount);
+          setUnprovisionedBalance(prev => prev + escrow.acceptorAmount);
         }
       }
       
@@ -468,6 +502,8 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
   // Context value
   const contextValue: DarePointsContextType = {
     userBalance,
+    unprovisionedBalance,
+    provisionedBalance,
     loadingBalance,
     rewardPool,
     transactions,
