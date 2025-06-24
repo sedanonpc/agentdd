@@ -16,11 +16,13 @@ export const setupDatabase = async (): Promise<void> => {
     
     if (userTableExistsError) {
       console.log('Creating user_accounts table...');
-      const { error: createUserTableError } = await supabase.rpc('setup_user_accounts_table');
       
-      if (createUserTableError && createUserTableError.code !== 'PGRST301') {
-        console.error('Error creating user_accounts table:', createUserTableError);
-        await createUserAccountsTableFallback();
+      try {
+        await createUserAccountsTable();
+        console.log('Successfully created user_accounts table');
+      } catch (error) {
+        console.error('Error creating user_accounts table:', error);
+        console.log('Please run the 007_create_user_accounts_table.sql migration manually to create the table');
       }
     }
     
@@ -51,15 +53,11 @@ export const setupDatabase = async (): Promise<void> => {
 };
 
 /**
- * Fallback function to create user_accounts table
- * This is for development only and should be replaced with proper migrations
+ * Create the user_accounts table with direct SQL execution
  */
-const createUserAccountsTableFallback = async (): Promise<void> => {
-  // In a real app, we'd use migrations or Supabase SQL functions
-  // For this demo, we'll just console log instructions
-  console.log(`
-    SQL to create user_accounts table:
-    
+const createUserAccountsTable = async (): Promise<void> => {
+  // Execute raw SQL to create the table directly
+  const createTableQuery = `
     CREATE TABLE IF NOT EXISTS public.user_accounts (
       account_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       supabase_user_id UUID REFERENCES auth.users(id) NOT NULL,
@@ -67,9 +65,19 @@ const createUserAccountsTableFallback = async (): Promise<void> => {
       wallet_address TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-      provisioned_points INTEGER DEFAULT 0,
-      unprovisioned_points INTEGER DEFAULT 500
+      provisioned_points DECIMAL(18,8) DEFAULT 0,
+      unprovisioned_points DECIMAL(18,8) DEFAULT 500
     );
+    
+    -- Create indexes for faster queries
+    CREATE INDEX IF NOT EXISTS idx_user_accounts_supabase_user_id 
+    ON public.user_accounts(supabase_user_id);
+    
+    CREATE INDEX IF NOT EXISTS idx_user_accounts_unprovisioned_points
+    ON public.user_accounts(unprovisioned_points);
+    
+    CREATE INDEX IF NOT EXISTS idx_user_accounts_provisioned_points
+    ON public.user_accounts(provisioned_points);
     
     -- Add policies
     CREATE POLICY "Users can view their own account"
@@ -86,7 +94,15 @@ const createUserAccountsTableFallback = async (): Promise<void> => {
       ON user_accounts
       FOR UPDATE
       USING (auth.uid() = supabase_user_id);
-  `);
+      
+    -- Add comments
+    COMMENT ON TABLE public.user_accounts IS 'User accounts with DARE points information';
+    COMMENT ON COLUMN public.user_accounts.provisioned_points IS 'DARE Points that are reserved (e.g., held in escrow) and can no longer be spent';
+    COMMENT ON COLUMN public.user_accounts.unprovisioned_points IS 'DARE Points that are not yet reserved and can still be spent';
+  `;
+  
+  // Execute the query
+  await supabase.rpc('exec_sql', { sql: createTableQuery });
 };
 
 /**

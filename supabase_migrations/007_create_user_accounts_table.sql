@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS public.user_accounts (
   wallet_address TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  provisioned_points INTEGER DEFAULT 0,
-  unprovisioned_points INTEGER DEFAULT 500
+  provisioned_points DECIMAL(18,8) DEFAULT 0,
+  unprovisioned_points DECIMAL(18,8) DEFAULT 500
 );
 
 -- Create indexes for faster queries
