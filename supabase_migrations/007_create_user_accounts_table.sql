@@ -1,4 +1,4 @@
--- Create user_accounts table to replace user_profiles
+-- Create user_accounts table
 CREATE TABLE IF NOT EXISTS public.user_accounts (
   account_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   supabase_user_id UUID REFERENCES auth.users(id) NOT NULL,
@@ -35,18 +35,6 @@ CREATE POLICY "Users can update their own account"
   ON user_accounts
   FOR UPDATE
   USING (auth.uid() = supabase_user_id);
-
--- Migrate data from user_profiles to user_accounts
-INSERT INTO public.user_accounts (supabase_user_id, email, wallet_address, created_at, updated_at, unprovisioned_points)
-SELECT 
-  user_id as supabase_user_id, 
-  email, 
-  wallet_address, 
-  created_at, 
-  updated_at, 
-  dare_points as unprovisioned_points
-FROM public.user_profiles
-ON CONFLICT (account_id) DO NOTHING;
 
 -- Add comments
 COMMENT ON TABLE public.user_accounts IS 'User accounts with DARE points information';
