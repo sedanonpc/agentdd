@@ -3,22 +3,6 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
-import { setupDatabase } from './services/setupDatabaseService';
-
-// Initialize database tables
-const initializeApp = async () => {
-  try {
-    // Setup database tables
-    await setupDatabase();
-    
-    console.log('Database initialization complete');
-  } catch (error) {
-    console.error('Error initializing database:', error);
-  }
-};
-
-// Start initialization process
-initializeApp();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
