@@ -8,28 +8,28 @@ This document describes the `user_accounts` table structure in the AgentDD appli
 
 ```sql
 CREATE TABLE public.user_accounts (
-  account_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  supabase_user_id UUID REFERENCES auth.users(id) NOT NULL,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) NOT NULL,
   email TEXT,
   wallet_address TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  provisioned_points INTEGER DEFAULT 0,
-  unprovisioned_points INTEGER DEFAULT 500
+  provisioned_points DECIMAL(18,8) DEFAULT 0,
+  unprovisioned_points DECIMAL(18,8) DEFAULT 500
 );
 ```
 
 ### Key Features
 
-1. `account_id` is the primary key
-2. `supabase_user_id` references the Supabase auth.users table
+1. `id` is the primary key
+2. `user_id` references the Supabase auth.users table
 3. Points are split into two columns:
    - `provisioned_points`: Points that are reserved (e.g., held in escrow) and can no longer be spent
    - `unprovisioned_points`: Points that are not yet reserved and can still be spent
 
 ## Database Initialization
 
-The `user_accounts` table is automatically created when the application starts if it doesn't exist already. This is handled by the `setupDatabase()` function in `setupDatabaseService.ts`.
+The `user_accounts` table is created manually in Supabase by running the SQL migrations directly.
 
 ## API Functions
 
@@ -65,7 +65,7 @@ The DARE Points display shows:
 
 ## Services
 
-- `setupDatabaseService.ts`: Handles database initialization including the user_accounts table
+- `setupDatabaseService.ts`: Contains SQL functions for leaderboards
 - `supabaseService.ts`: Provides functions for interacting with the user_accounts table
 - `darePointsService.ts`: Manages DARE points operations
 

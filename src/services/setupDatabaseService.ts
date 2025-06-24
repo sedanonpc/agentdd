@@ -44,26 +44,26 @@ const setupLeaderboardFunctions = async (): Promise<void> => {
       RETURN QUERY
       WITH user_stats AS (
         SELECT
-          u.supabase_user_id as user_id,
+          u.user_id as user_id,
           u.email as username,
           u.wallet_address,
           COUNT(b.*) as total_bets,
-          COUNT(CASE WHEN b.winner_id = u.supabase_user_id THEN 1 ELSE NULL END) as wins,
-          COUNT(CASE WHEN b.status = 'completed' AND b.winner_id != u.supabase_user_id THEN 1 ELSE NULL END) as losses,
+          COUNT(CASE WHEN b.winner_id = u.user_id THEN 1 ELSE NULL END) as wins,
+          COUNT(CASE WHEN b.status = 'completed' AND b.winner_id != u.user_id THEN 1 ELSE NULL END) as losses,
           COALESCE(SUM(b.amount), 0) as total_wagered,
-          COALESCE(SUM(CASE WHEN b.winner_id = u.supabase_user_id THEN b.amount * 2 ELSE 0 END), 0) as total_won,
+          COALESCE(SUM(CASE WHEN b.winner_id = u.user_id THEN b.amount * 2 ELSE 0 END), 0) as total_won,
           CASE
             WHEN COUNT(CASE WHEN b.status = 'completed' THEN 1 ELSE NULL END) > 0 
-            THEN COUNT(CASE WHEN b.winner_id = u.supabase_user_id THEN 1 ELSE NULL END)::numeric / 
+            THEN COUNT(CASE WHEN b.winner_id = u.user_id THEN 1 ELSE NULL END)::numeric / 
                  COUNT(CASE WHEN b.status = 'completed' THEN 1 ELSE NULL END)::numeric
             ELSE 0
           END as win_rate
         FROM
           public.user_accounts u
         LEFT JOIN
-          public.bets b ON (u.supabase_user_id = b.creator_id OR u.supabase_user_id = b.acceptor_id)
+          public.bets b ON (u.user_id = b.creator_id OR u.user_id = b.acceptor_id)
         GROUP BY
-          u.supabase_user_id, u.email, u.wallet_address
+          u.user_id, u.email, u.wallet_address
       )
       SELECT * FROM user_stats
       ORDER BY wins DESC, win_rate DESC, total_bets DESC
@@ -90,26 +90,26 @@ const setupLeaderboardFunctions = async (): Promise<void> => {
       RETURN QUERY
       WITH user_stats AS (
         SELECT
-          u.supabase_user_id as user_id,
+          u.user_id as user_id,
           u.email as username,
           u.wallet_address,
           COUNT(b.*) as total_bets,
-          COUNT(CASE WHEN b.winner_id = u.supabase_user_id THEN 1 ELSE NULL END) as wins,
-          COUNT(CASE WHEN b.status = 'completed' AND b.winner_id != u.supabase_user_id THEN 1 ELSE NULL END) as losses,
+          COUNT(CASE WHEN b.winner_id = u.user_id THEN 1 ELSE NULL END) as wins,
+          COUNT(CASE WHEN b.status = 'completed' AND b.winner_id != u.user_id THEN 1 ELSE NULL END) as losses,
           COALESCE(SUM(b.amount), 0) as total_wagered,
-          COALESCE(SUM(CASE WHEN b.winner_id = u.supabase_user_id THEN b.amount * 2 ELSE 0 END), 0) as total_won,
+          COALESCE(SUM(CASE WHEN b.winner_id = u.user_id THEN b.amount * 2 ELSE 0 END), 0) as total_won,
           CASE
             WHEN COUNT(CASE WHEN b.status = 'completed' THEN 1 ELSE NULL END) > 0 
-            THEN COUNT(CASE WHEN b.winner_id = u.supabase_user_id THEN 1 ELSE NULL END)::numeric / 
+            THEN COUNT(CASE WHEN b.winner_id = u.user_id THEN 1 ELSE NULL END)::numeric / 
                  COUNT(CASE WHEN b.status = 'completed' THEN 1 ELSE NULL END)::numeric
             ELSE 0
           END as win_rate
         FROM
           public.user_accounts u
         LEFT JOIN
-          public.bets b ON (u.supabase_user_id = b.creator_id OR u.supabase_user_id = b.acceptor_id)
+          public.bets b ON (u.user_id = b.creator_id OR u.user_id = b.acceptor_id)
         GROUP BY
-          u.supabase_user_id, u.email, u.wallet_address
+          u.user_id, u.email, u.wallet_address
       )
       SELECT * FROM user_stats
       ORDER BY total_won DESC, wins DESC, win_rate DESC
@@ -136,26 +136,26 @@ const setupLeaderboardFunctions = async (): Promise<void> => {
       RETURN QUERY
       WITH user_stats AS (
         SELECT
-          u.supabase_user_id as user_id,
+          u.user_id as user_id,
           u.email as username,
           u.wallet_address,
           COUNT(b.*) as total_bets,
-          COUNT(CASE WHEN b.winner_id = u.supabase_user_id THEN 1 ELSE NULL END) as wins,
-          COUNT(CASE WHEN b.status = 'completed' AND b.winner_id != u.supabase_user_id THEN 1 ELSE NULL END) as losses,
+          COUNT(CASE WHEN b.winner_id = u.user_id THEN 1 ELSE NULL END) as wins,
+          COUNT(CASE WHEN b.status = 'completed' AND b.winner_id != u.user_id THEN 1 ELSE NULL END) as losses,
           COALESCE(SUM(b.amount), 0) as total_wagered,
-          COALESCE(SUM(CASE WHEN b.winner_id = u.supabase_user_id THEN b.amount * 2 ELSE 0 END), 0) as total_won,
+          COALESCE(SUM(CASE WHEN b.winner_id = u.user_id THEN b.amount * 2 ELSE 0 END), 0) as total_won,
           CASE
             WHEN COUNT(CASE WHEN b.status = 'completed' THEN 1 ELSE NULL END) > 0 
-            THEN COUNT(CASE WHEN b.winner_id = u.supabase_user_id THEN 1 ELSE NULL END)::numeric / 
+            THEN COUNT(CASE WHEN b.winner_id = u.user_id THEN 1 ELSE NULL END)::numeric / 
                  COUNT(CASE WHEN b.status = 'completed' THEN 1 ELSE NULL END)::numeric
             ELSE 0
           END as win_rate
         FROM
           public.user_accounts u
         LEFT JOIN
-          public.bets b ON (u.supabase_user_id = b.creator_id OR u.supabase_user_id = b.acceptor_id)
+          public.bets b ON (u.user_id = b.creator_id OR u.user_id = b.acceptor_id)
         GROUP BY
-          u.supabase_user_id, u.email, u.wallet_address
+          u.user_id, u.email, u.wallet_address
       )
       SELECT * FROM user_stats
       ORDER BY total_bets DESC, total_wagered DESC
@@ -182,28 +182,28 @@ const setupLeaderboardFunctions = async (): Promise<void> => {
       RETURN QUERY
       WITH user_stats AS (
         SELECT
-          u.supabase_user_id as user_id,
+          u.user_id as user_id,
           u.email as username,
           u.wallet_address,
           COUNT(b.*) as total_bets,
-          COUNT(CASE WHEN b.winner_id = u.supabase_user_id THEN 1 ELSE NULL END) as wins,
-          COUNT(CASE WHEN b.status = 'completed' AND b.winner_id != u.supabase_user_id THEN 1 ELSE NULL END) as losses,
+          COUNT(CASE WHEN b.winner_id = u.user_id THEN 1 ELSE NULL END) as wins,
+          COUNT(CASE WHEN b.status = 'completed' AND b.winner_id != u.user_id THEN 1 ELSE NULL END) as losses,
           COALESCE(SUM(b.amount), 0) as total_wagered,
-          COALESCE(SUM(CASE WHEN b.winner_id = u.supabase_user_id THEN b.amount * 2 ELSE 0 END), 0) as total_won,
+          COALESCE(SUM(CASE WHEN b.winner_id = u.user_id THEN b.amount * 2 ELSE 0 END), 0) as total_won,
           CASE
             WHEN COUNT(CASE WHEN b.status = 'completed' THEN 1 ELSE NULL END) > 0 
-            THEN COUNT(CASE WHEN b.winner_id = u.supabase_user_id THEN 1 ELSE NULL END)::numeric / 
+            THEN COUNT(CASE WHEN b.winner_id = u.user_id THEN 1 ELSE NULL END)::numeric / 
                  COUNT(CASE WHEN b.status = 'completed' THEN 1 ELSE NULL END)::numeric
             ELSE 0
           END as win_rate
         FROM
           public.user_accounts u
         LEFT JOIN
-          public.bets b ON (u.supabase_user_id = b.creator_id OR u.supabase_user_id = b.acceptor_id)
+          public.bets b ON (u.user_id = b.creator_id OR u.user_id = b.acceptor_id)
         WHERE
-          u.supabase_user_id = get_user_betting_stats.user_id
+          u.user_id = get_user_betting_stats.user_id
         GROUP BY
-          u.supabase_user_id, u.email, u.wallet_address
+          u.user_id, u.email, u.wallet_address
       )
       SELECT * FROM user_stats;
     END;

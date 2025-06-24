@@ -240,8 +240,8 @@ export const getCurrentSession = async () => {
 
 // User account functions
 interface UserAccount {
-  account_id?: string;
-  supabase_user_id?: string;
+  id?: string;
+  user_id?: string;
   email?: string;
   wallet_address?: string;
   provisioned_points?: number;
@@ -255,7 +255,7 @@ export const createUserAccount = async (userId: string, account: Partial<UserAcc
   const { data, error } = await supabase
     .from('user_accounts')
     .insert({
-      supabase_user_id: userId,
+      user_id: userId,
       unprovisioned_points: 500, // Default value for new users
       provisioned_points: 0,
       ...account,
@@ -271,7 +271,7 @@ export const getUserAccount = async (userId: string) => {
   const { data, error } = await supabase
     .from('user_accounts')
     .select('*')
-    .eq('supabase_user_id', userId)
+    .eq('user_id', userId)
     .single();
   
   if (error && error.code !== 'PGRST116') { // PGRST116 is the error for no rows returned
@@ -285,7 +285,7 @@ export const updateUserAccount = async (userId: string, updates: Partial<UserAcc
   const { data, error } = await supabase
     .from('user_accounts')
     .update(updates)
-    .eq('supabase_user_id', userId)
+    .eq('user_id', userId)
     .select()
     .single();
   

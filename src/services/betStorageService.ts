@@ -382,7 +382,7 @@ export const getUsersByDarePoints = async (limit: number = 10): Promise<Leaderbo
     // Get users ranked by their $DARE points
     const { data, error } = await supabaseClient
       .from('user_accounts')
-      .select('supabase_user_id, email, wallet_address, provisioned_points, unprovisioned_points')
+      .select('user_id, email, wallet_address, provisioned_points, unprovisioned_points')
       .order('unprovisioned_points', { ascending: false })
       .limit(limit);
 
@@ -399,7 +399,7 @@ export const getUsersByDarePoints = async (limit: number = 10): Promise<Leaderbo
       
       // Convert to LeaderboardEntry format with available fields
       const realUsers = data.map(user => ({
-        user_id: user.supabase_user_id,
+        user_id: user.user_id,
         username: user.email,
         wallet_address: user.wallet_address,
         total_bets: 0, // Default values for fields not directly in user_accounts

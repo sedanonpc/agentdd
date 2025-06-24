@@ -35,7 +35,7 @@ export interface DareTransaction {
 export const ensureDarePointsStructure = async (): Promise<void> => {
   try {
     // Try to access the user_accounts table
-    const { error } = await supabase.from('user_accounts').select('account_id').limit(1);
+    const { error } = await supabase.from('user_accounts').select('id').limit(1);
     
     if (error && error.code !== 'PGRST116') { // PGRST116 is the error for no rows returned
       console.error('Error ensuring user_accounts structure:', error);
