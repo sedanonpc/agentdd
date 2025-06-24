@@ -5,8 +5,8 @@ import {
   updateUserAccount, 
   getFreeDarePoints as getSupabaseFreeDarePoints,
   getReservedDarePoints as getSupabaseReservedDarePoints,
-  provisionDarePoints as supabaseReserveDarePoints,
-  unprovisionDarePoints as supabaseFreeDarePoints,
+  reserveDarePoints as supabaseReserveDarePoints,
+  freeDarePoints as supabaseFreeDarePoints,
   updateDarePoints
 } from './supabaseService';
 
@@ -75,8 +75,8 @@ export const getUserDarePoints = async (userId: string): Promise<number> => {
         `${LOCAL_STORAGE_KEY}_${userId}`, 
         JSON.stringify({ 
           total: totalPoints,
-          unprovisioned: account.free_dare_points || 0,
-          provisioned: account.reserved_dare_points || 0,
+          free: account.free_dare_points || 0,
+          reserved: account.reserved_dare_points || 0,
           timestamp: Date.now() 
         })
       );
@@ -98,8 +98,8 @@ export const getUserDarePoints = async (userId: string): Promise<number> => {
           `${LOCAL_STORAGE_KEY}_${userId}`, 
           JSON.stringify({ 
             total: DEFAULT_POINTS,
-            unprovisioned: DEFAULT_POINTS,
-            provisioned: 0,
+            free: DEFAULT_POINTS,
+            reserved: 0,
             timestamp: Date.now() 
           })
         );
@@ -149,8 +149,8 @@ export const getUserFreeDarePoints = async (userId: string): Promise<number> => 
     // Try local cache on error
     const cached = localStorage.getItem(`${LOCAL_STORAGE_KEY}_${userId}`);
     if (cached) {
-      const { unprovisioned } = JSON.parse(cached);
-      return unprovisioned || 0;
+      const { free } = JSON.parse(cached);
+      return free || 0;
     }
     
     return 0;
@@ -173,8 +173,8 @@ export const getUserReservedDarePoints = async (userId: string): Promise<number>
     // Try local cache on error
     const cached = localStorage.getItem(`${LOCAL_STORAGE_KEY}_${userId}`);
     if (cached) {
-      const { provisioned } = JSON.parse(cached);
-      return provisioned || 0;
+      const { reserved } = JSON.parse(cached);
+      return reserved || 0;
     }
     
     return 0;
@@ -189,7 +189,7 @@ export const updateUserDarePoints = async (userId: string, points: number): Prom
     // Ensure the structure exists first
     await ensureDarePointsStructure();
     
-    // Update only unprovisioned points
+    // Update only free points
     await updateDarePoints(userId, points);
     
     // Update local cache
@@ -199,8 +199,8 @@ export const updateUserDarePoints = async (userId: string, points: number): Prom
         `${LOCAL_STORAGE_KEY}_${userId}`, 
         JSON.stringify({ 
           total: (account.free_dare_points || 0) + (account.reserved_dare_points || 0),
-          unprovisioned: account.free_dare_points || 0,
-          provisioned: account.reserved_dare_points || 0,
+          free: account.free_dare_points || 0,
+          reserved: account.reserved_dare_points || 0,
           timestamp: Date.now() 
         })
       );
@@ -218,8 +218,9 @@ export const updateUserDarePoints = async (userId: string, points: number): Prom
         `${LOCAL_STORAGE_KEY}_${userId}`, 
         JSON.stringify({
           ...cachedData,
-          total: (cachedData.unprovisioned + points) + cachedData.provisioned,
-          unprovisioned: cachedData.unprovisioned + points,
+          total: (cachedData.free + points) + cachedData.reserved,
+          free: cachedData.free + points,
+          reserved: cachedData.reserved,
           timestamp: Date.now()
         })
       );
@@ -228,8 +229,8 @@ export const updateUserDarePoints = async (userId: string, points: number): Prom
         `${LOCAL_STORAGE_KEY}_${userId}`, 
         JSON.stringify({ 
           total: points > 0 ? points : DEFAULT_POINTS,
-          unprovisioned: points > 0 ? points : DEFAULT_POINTS,
-          provisioned: 0,
+          free: points > 0 ? points : DEFAULT_POINTS,
+          reserved: 0,
           timestamp: Date.now() 
         })
       );

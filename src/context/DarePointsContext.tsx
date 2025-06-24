@@ -298,7 +298,7 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
       let success = false;
       
       if (type === 'BET_WON' && betId) {
-        // For bet wins, we need to unprovision points first if they were in escrow
+        // For bet wins, we need to free points first if they were in escrow
         await freeDarePoints(user.id, amount);
         
         // Use service for bet win

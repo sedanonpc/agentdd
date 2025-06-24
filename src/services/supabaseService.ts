@@ -326,7 +326,7 @@ export const updateDarePoints = async (userId: string, points: number): Promise<
   return newPoints;
 };
 
-export const provisionDarePoints = async (userId: string, amount: number): Promise<boolean> => {
+export const reserveDarePoints = async (userId: string, amount: number): Promise<boolean> => {
   const account = await getUserAccount(userId);
   const free = account?.free_dare_points || 0;
   const reserved = account?.reserved_dare_points || 0;
@@ -343,7 +343,7 @@ export const provisionDarePoints = async (userId: string, amount: number): Promi
   return true;
 };
 
-export const unprovisionDarePoints = async (userId: string, amount: number): Promise<boolean> => {
+export const freeDarePoints = async (userId: string, amount: number): Promise<boolean> => {
   const account = await getUserAccount(userId);
   const free = account?.free_dare_points || 0;
   const reserved = account?.reserved_dare_points || 0;
