@@ -29,7 +29,7 @@ const createDummyClient = () => {
   
   // Create a simple in-memory store for development
   const inMemoryStore: Record<string, any[]> = {
-    user_profiles: [],
+    user_accounts: [],
     bets: [],
   };
   
@@ -198,13 +198,12 @@ export const signUpWithEmail = async (email: string, password: string) => {
   // If successful, create a user profile record
   if (data.user) {
     try {
-      await createUserProfile(data.user.id, {
+      await createUserAccount(data.user.id, {
         email: data.user.email,
-        dare_points: 500, // Initialize new users with 500 DARE points
       });
     } catch (profileError) {
       // If profile creation fails, but auth succeeded, just log error
-      console.error('Error creating user profile:', profileError);
+      console.error('Error creating user account:', profileError);
     }
   }
   
@@ -238,25 +237,27 @@ export const getCurrentSession = async () => {
   return data.session;
 };
 
-// User profile functions
-interface UserProfile {
+// User account functions
+interface UserAccount {
   id?: string;
   user_id?: string;
   email?: string;
   wallet_address?: string;
-  dare_points?: number; // Added DARE points field
+  reserved_dare_points?: number;
+  free_dare_points?: number;
   created_at?: string;
   updated_at?: string;
   [key: string]: any; // Allow for additional fields
 }
 
-export const createUserProfile = async (userId: string, profile: UserProfile) => {
+export const createUserAccount = async (userId: string, account: Partial<UserAccount>) => {
   const { data, error } = await supabase
-    .from('user_profiles')
+    .from('user_accounts')
     .insert({
       user_id: userId,
-      dare_points: 500, // Default value for new users
-      ...profile,
+      free_dare_points: 500, // Default value for new users
+      reserved_dare_points: 0,
+      ...account,
     })
     .select()
     .single();
@@ -265,9 +266,9 @@ export const createUserProfile = async (userId: string, profile: UserProfile) =>
   return data;
 };
 
-export const getUserProfile = async (userId: string) => {
+export const getUserAccount = async (userId: string) => {
   const { data, error } = await supabase
-    .from('user_profiles')
+    .from('user_accounts')
     .select('*')
     .eq('user_id', userId)
     .single();
@@ -279,9 +280,9 @@ export const getUserProfile = async (userId: string) => {
   return data;
 };
 
-export const updateUserProfile = async (userId: string, updates: Partial<UserProfile>) => {
+export const updateUserAccount = async (userId: string, updates: Partial<UserAccount>) => {
   const { data, error } = await supabase
-    .from('user_profiles')
+    .from('user_accounts')
     .update(updates)
     .eq('user_id', userId)
     .select()
@@ -292,7 +293,7 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
 };
 
 export const linkWalletToUser = async (userId: string, walletAddress: string) => {
-  return updateUserProfile(userId, { wallet_address: walletAddress });
+  return updateUserAccount(userId, { wallet_address: walletAddress });
 };
 
 // Helper function to check if Supabase is properly configured
@@ -302,17 +303,61 @@ export const isSupabaseConfigured = () => {
 
 // DARE Points functions
 export const getDarePoints = async (userId: string): Promise<number> => {
-  const profile = await getUserProfile(userId);
-  return profile?.dare_points || 0;
+  const account = await getUserAccount(userId);
+  return (account?.free_dare_points || 0) + (account?.reserved_dare_points || 0);
+};
+
+export const getFreeDarePoints = async (userId: string): Promise<number> => {
+  const account = await getUserAccount(userId);
+  return account?.free_dare_points || 0;
+};
+
+export const getReservedDarePoints = async (userId: string): Promise<number> => {
+  const account = await getUserAccount(userId);
+  return account?.reserved_dare_points || 0;
 };
 
 export const updateDarePoints = async (userId: string, points: number): Promise<number> => {
-  const profile = await getUserProfile(userId);
-  const currentPoints = profile?.dare_points || 0;
+  const account = await getUserAccount(userId);
+  const currentPoints = account?.free_dare_points || 0;
   const newPoints = currentPoints + points;
   
-  await updateUserProfile(userId, { dare_points: newPoints });
+  await updateUserAccount(userId, { free_dare_points: newPoints });
   return newPoints;
+};
+
+export const reserveDarePoints = async (userId: string, amount: number): Promise<boolean> => {
+  const account = await getUserAccount(userId);
+  const free = account?.free_dare_points || 0;
+  const reserved = account?.reserved_dare_points || 0;
+  
+  if (free < amount) {
+    return false; // Not enough free points
+  }
+  
+  await updateUserAccount(userId, { 
+    free_dare_points: free - amount,
+    reserved_dare_points: reserved + amount
+  });
+  
+  return true;
+};
+
+export const freeDarePoints = async (userId: string, amount: number): Promise<boolean> => {
+  const account = await getUserAccount(userId);
+  const free = account?.free_dare_points || 0;
+  const reserved = account?.reserved_dare_points || 0;
+  
+  if (reserved < amount) {
+    return false; // Not enough reserved points
+  }
+  
+  await updateUserAccount(userId, { 
+    free_dare_points: free + amount,
+    reserved_dare_points: reserved - amount
+  });
+  
+  return true;
 };
 
 /**

@@ -78,7 +78,7 @@ const LoginPage: React.FC = () => {
         let connectionError = null;
         try {
           // This will fail if the table doesn't exist, but that's expected
-          const { error } = await supabase.from('user_profiles').select('count').limit(1);
+          const { error } = await supabase.from('user_accounts').select('id').limit(1);
           console.log("Debug: Supabase query result:", error ? "Error" : "Success");
           if (error) {
             console.error("Debug: Supabase query error:", error);
