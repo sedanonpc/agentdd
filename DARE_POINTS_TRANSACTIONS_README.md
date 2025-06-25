@@ -1,48 +1,22 @@
 # DARE Points Transactions System
 
-This document describes the `dare_points_transactions` table structure and how it provides an audit trail for all DARE points movements in the AgentDD application.
+This document describes how to use the `dare_points_transactions` table to track all DARE points movements in the AgentDD application.
 
-## Table Structure
+## Overview
 
-### `dare_points_transactions` Table
+The transactions table provides a complete audit trail of all DARE points movements. For the table structure and transaction type definitions, see the migration files:
+- `supabase_migrations/008_create_dare_points_transactions_table.sql`
+- `src/types/darePoints.ts` for TypeScript definitions
 
-```sql
-CREATE TABLE IF NOT EXISTS public.dare_points_transactions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES auth.users(id) NOT NULL,
-  transaction_type dare_points_transaction_type NOT NULL,
-  balance_type dare_points_balance_type NOT NULL,
-  amount DECIMAL(18,8) NOT NULL,
-  common_event_id UUID NOT NULL,
-  metadata JSONB,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
+## Key Concepts
 
-## Transaction Types
+**Transaction-Based Audit**: Every points movement creates a transaction record, allowing complete traceability by summing transactions.
 
-The system uses the following transaction types to categorize different DARE points movements:
+**Balance Types**: Transactions specify whether they affect `FREE` or `RESERVED` balance.
 
-| Transaction Type | Description | Points Movement |
-|-----------------|-------------|----------------|
-| `BET_PLACED` | When a user places a bet | Free → Reserved |
-| `BET_PLACEMENT_BONUS` | 10 points earned for placing a bet | System → Free |
-| `BET_WON` | When a user wins a bet | Reserved → Free |
-| `BET_WIN_BONUS` | 50 points bonus for winning a bet | System → Free |
-| `BET_LOST` | When a user loses a bet | User's Reserved → Other User's Free |
-| `SIGNUP_BONUS` | 500 points bonus for signing up | System → Free |
-| `REFERRAL_BONUS` | 100 points bonus for referring a user | System → Free |
-| `DAILY_LOGIN` | 5 points bonus for daily login | System → Free |
-| `MANUAL_ADJUSTMENT` | Admin-initiated adjustment | Varies |
+**Event Grouping**: Related transactions share a `common_event_id` to group multi-step operations.
 
-## Balance Types
-
-The system uses the following balance types to specify which points balance is affected:
-
-| Balance Type | Description | Example Transactions |
-|-------------|-------------|---------------------|
-| `FREE` | Affects the free points balance | SIGNUP_BONUS, REFERRAL_BONUS, DAILY_LOGIN, BET_WIN_BONUS, BET_PLACEMENT_BONUS |
-| `RESERVED` | Affects the reserved points balance | Reserved points for bets |
+**Metadata**: Transaction-specific information is stored in JSONB metadata field.
 
 ## Key Features
 
@@ -63,227 +37,108 @@ The system uses the following balance types to specify which points balance is a
 
 6. **Event Grouping**: The `common_event_id` field allows grouping multiple transactions that result from the same event (e.g., a bet settlement creates multiple transaction records).
 
-## Use Cases
+## How to Use the Transaction System
 
-### 1. Placing a Bet
+The transaction system is accessed through high-level service functions that handle all the database operations automatically. Components should never write SQL directly.
 
-When a user places a bet, three transactions are created with the same common_event_id:
+### 1. Betting Functions
 
-```sql
--- Generate a common event ID for all related transactions
-SET @common_event_id = 'e2a8d7b6-c5d4-e3f2-a1b0-987654321000';
+```typescript
+import { 
+  deductBetPoints, 
+  awardBetWinPoints, 
+  awardBetPlacementBonus,
+  awardBetWinBonus 
+} from '../services/darePointsService';
 
--- Transaction 1: Deduct from free balance
-INSERT INTO dare_points_transactions (
-  user_id, transaction_type, balance_type, amount, 
-  common_event_id, metadata
-) VALUES (
-  '123e4567-e89b-12d3-a456-426614174000', 'BET_PLACED', 'FREE', -100.00,
-  @common_event_id,
-  '{"bet_id": "123e4567-e89b-12d3-a456-426614174001", "match_id": "123e4567-e89b-12d3-a456-426614174002", "description": "Bet placed on Lakers vs Bulls - deducted from free balance"}'
-);
+// When user places a bet
+const success = await deductBetPoints(userId, betAmount, betId);
+if (success) {
+  // Optionally award placement bonus
+  await awardBetPlacementBonus(userId, betId, matchId);
+}
 
--- Transaction 2: Add to reserved balance
-INSERT INTO dare_points_transactions (
-  user_id, transaction_type, balance_type, amount, 
-  common_event_id, metadata
-) VALUES (
-  '123e4567-e89b-12d3-a456-426614174000', 'BET_PLACED', 'RESERVED', 100.00,
-  @common_event_id,
-  '{"bet_id": "123e4567-e89b-12d3-a456-426614174001", "match_id": "123e4567-e89b-12d3-a456-426614174002", "description": "Bet placed on Lakers vs Bulls - added to reserved balance"}'
-);
-
--- Transaction 3: Award 10 points bonus for placing a bet
-INSERT INTO dare_points_transactions (
-  user_id, transaction_type, balance_type, amount, 
-  common_event_id, metadata
-) VALUES (
-  '123e4567-e89b-12d3-a456-426614174000', 'BET_PLACEMENT_BONUS', 'FREE', 10.00,
-  @common_event_id,
-  '{"bet_id": "123e4567-e89b-12d3-a456-426614174001", "match_id": "123e4567-e89b-12d3-a456-426614174002", "description": "Bonus for placing bet on Lakers vs Bulls"}'
-);
+// When user wins a bet
+const winSuccess = await awardBetWinPoints(userId, winAmount, betId);
+if (winSuccess) {
+  // Award win bonus
+  await awardBetWinBonus(userId, betId, matchId);
+}
 ```
 
-### 2. Winning a Bet
+### 2. User Lifecycle Functions
 
-When a user wins a bet, three transactions are created:
+```typescript
+import { 
+  awardSignupBonus,
+  awardReferralBonus,
+  awardDailyLoginBonus 
+} from '../services/darePointsConfigService';
 
-```sql
--- Generate a common event ID for all related transactions
-SET @common_event_id = 'f3b2a1c0-d4e5-f6g7-h8i9-123456789000';
+// When new user signs up
+await awardSignupBonus(userId);
 
--- Transaction 1: Reduce reserved balance
-INSERT INTO dare_points_transactions (
-  user_id, transaction_type, balance_type, amount, 
-  common_event_id, metadata
-) VALUES (
-  '123e4567-e89b-12d3-a456-426614174000', 'BET_WON', 'RESERVED', -100.00,
-  @common_event_id,
-  '{"bet_id": "123e4567-e89b-12d3-a456-426614174001", "match_id": "123e4567-e89b-12d3-a456-426614174002", "description": "Won bet on Lakers vs Bulls - removed from reserved balance"}'
-);
+// When someone uses a referral code
+await awardReferralBonus(referrerId, newUserId, referralCode);
 
--- Transaction 2: Add to free balance
-INSERT INTO dare_points_transactions (
-  user_id, transaction_type, balance_type, amount, 
-  common_event_id, metadata
-) VALUES (
-  '123e4567-e89b-12d3-a456-426614174000', 'BET_WON', 'FREE', 100.00,
-  @common_event_id,
-  '{"bet_id": "123e4567-e89b-12d3-a456-426614174001", "match_id": "123e4567-e89b-12d3-a456-426614174002", "description": "Won bet on Lakers vs Bulls - added to free balance"}'
-);
-
--- Transaction 3: Award 50 points bonus for winning
-INSERT INTO dare_points_transactions (
-  user_id, transaction_type, balance_type, amount, 
-  common_event_id, metadata
-) VALUES (
-  '123e4567-e89b-12d3-a456-426614174000', 'BET_WIN_BONUS', 'FREE', 50.00,
-  @common_event_id,
-  '{"bet_id": "123e4567-e89b-12d3-a456-426614174001", "match_id": "123e4567-e89b-12d3-a456-426614174002", "description": "Bonus for winning bet on Lakers vs Bulls"}'
-);
+// Daily login bonus
+await awardDailyLoginBonus(userId);
 ```
 
-### 3. Losing a Bet
+### 3. Manual Adjustments
 
-When a user loses a bet, two transactions are created for the loser and one for the winner:
+```typescript
+import { awardPoints } from '../services/darePointsService';
 
-```sql
--- Generate a common event ID for all related transactions
-SET @common_event_id = 'f3b2a1c0-d4e5-f6g7-h8i9-123456789000';
-
--- Transaction 1: Reduce loser's reserved balance
-INSERT INTO dare_points_transactions (
-  user_id, transaction_type, balance_type, amount, 
-  common_event_id, metadata
-) VALUES (
-  '123e4567-e89b-12d3-a456-426614174000', 'BET_LOST', 'RESERVED', -100.00,
-  @common_event_id,
-  '{"bet_id": "123e4567-e89b-12d3-a456-426614174001", "match_id": "123e4567-e89b-12d3-a456-426614174002", "related_user_id": "123e4567-e89b-12d3-a456-426614174003", "description": "Lost bet on Lakers vs Bulls - removed from reserved balance"}'
-);
-
--- Transaction 2: Add to winner's free balance
-INSERT INTO dare_points_transactions (
-  user_id, transaction_type, balance_type, amount, 
-  common_event_id, metadata
-) VALUES (
-  '123e4567-e89b-12d3-a456-426614174003', 'BET_WON', 'FREE', 100.00,
-  @common_event_id,
-  '{"bet_id": "123e4567-e89b-12d3-a456-426614174001", "match_id": "123e4567-e89b-12d3-a456-426614174002", "related_user_id": "123e4567-e89b-12d3-a456-426614174000", "description": "Won bet against User456 on Lakers vs Bulls"}'
-);
+// Admin manual adjustment
+await awardPoints(userId, adjustmentAmount, 'Customer service adjustment');
 ```
 
-### 4. Sign-up Bonus
-
-When a new user signs up:
-
-```sql
-INSERT INTO dare_points_transactions (
-  user_id, transaction_type, balance_type, amount, 
-  common_event_id, metadata
-) VALUES (
-  '123e4567-e89b-12d3-a456-426614174000', 'SIGNUP_BONUS', 'FREE', 500.00,
-  uuid_generate_v4(),
-  '{"description": "Welcome bonus for new user"}'
-);
-```
-
-### 5. Referral Bonus
-
-When a user signs up with a referral:
-
-```sql
-INSERT INTO dare_points_transactions (
-  user_id, transaction_type, balance_type, amount, 
-  common_event_id, metadata
-) VALUES (
-  '123e4567-e89b-12d3-a456-426614174003', 'REFERRAL_BONUS', 'FREE', 100.00,
-  uuid_generate_v4(),
-  '{"related_user_id": "123e4567-e89b-12d3-a456-426614174000", "referral_code": "REFER123", "description": "Bonus for referring new user User456"}'
-);
-```
-
-### 6. Daily Login Bonus
-
-When a user logs in daily:
-
-```sql
-INSERT INTO dare_points_transactions (
-  user_id, transaction_type, balance_type, amount, 
-  common_event_id, metadata
-) VALUES (
-  '123e4567-e89b-12d3-a456-426614174000', 'DAILY_LOGIN', 'FREE', 5.00,
-  uuid_generate_v4(),
-  '{"description": "Daily login bonus"}'
-);
-```
+**Note**: Each function automatically handles creating the appropriate transaction records, updating balances, and maintaining audit trails. See the function definitions for implementation details.
 
 ## Integration with Existing System
 
 The `dare_points_transactions` table complements the existing `user_accounts` table by providing a detailed audit trail of all points movements. While the `user_accounts` table maintains the current balance state, the transactions table records how that state changed over time.
 
-## Calculating Current Balances
+## Querying Transaction Data
 
-To calculate a user's current balances from the transaction history:
+Use the following service functions to access transaction data:
 
-```sql
--- Calculate free points balance
-SELECT COALESCE(SUM(amount), 0) as free_balance
-FROM dare_points_transactions
-WHERE user_id = '123e4567-e89b-12d3-a456-426614174000'
-AND balance_type = 'FREE';
+### Get User Balances
 
--- Calculate reserved points balance
-SELECT COALESCE(SUM(amount), 0) as reserved_balance
-FROM dare_points_transactions
-WHERE user_id = '123e4567-e89b-12d3-a456-426614174000'
-AND balance_type = 'RESERVED';
+```typescript
+import { 
+  getUserFreeDarePoints, 
+  getUserReservedDarePoints,
+  getUserDarePoints 
+} from '../services/darePointsService';
+
+// Get current balances
+const freeBalance = await getUserFreeDarePoints(userId);
+const reservedBalance = await getUserReservedDarePoints(userId);
+const totalBalance = await getUserDarePoints(userId);
 ```
 
-## Querying Transaction History
+### Get Transaction History
 
-### Get All Transactions for a User
+```typescript
+import { getUserTransactions } from '../services/darePointsService';
 
-```sql
-SELECT * FROM dare_points_transactions
-WHERE user_id = '123e4567-e89b-12d3-a456-426614174000'
-ORDER BY created_at DESC;
+// Get user's transaction history
+const transactions = getUserTransactions(userId);
+
+// Filter transactions by type
+const bonusTransactions = transactions.filter(t => 
+  t.type === 'REWARD' && t.amount > 0
+);
+
+// Filter transactions by bet
+const betTransactions = transactions.filter(t => 
+  t.betId === 'specific-bet-id'
+);
 ```
 
-### Get All Free Balance Transactions
-
-```sql
-SELECT * FROM dare_points_transactions
-WHERE balance_type = 'FREE'
-AND user_id = '123e4567-e89b-12d3-a456-426614174000'
-ORDER BY created_at DESC;
-```
-
-### Get All Bet-Related Transactions
-
-```sql
-SELECT * FROM dare_points_transactions
-WHERE metadata->>'bet_id' = '123e4567-e89b-12d3-a456-426614174001'
-ORDER BY created_at ASC;
-```
-
-### Get All Transactions from the Same Event
-
-```sql
-SELECT * FROM dare_points_transactions
-WHERE common_event_id = 'f3b2a1c0-d4e5-f6g7-h8i9-123456789000'
-ORDER BY created_at ASC;
-```
-
-### Get Total Points Earned from Specific Activities
-
-```sql
-SELECT transaction_type, SUM(amount) as total_earned
-FROM dare_points_transactions
-WHERE user_id = '123e4567-e89b-12d3-a456-426614174000'
-AND transaction_type IN ('BET_PLACEMENT_BONUS', 'BET_WIN_BONUS', 'DAILY_LOGIN')
-AND amount > 0
-GROUP BY transaction_type;
-```
+**Note**: For complex queries or analytics, implement additional service functions rather than writing SQL directly in components.
 
 ## Security Considerations
 

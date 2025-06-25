@@ -12,9 +12,6 @@ CREATE TABLE IF NOT EXISTS public.dare_points_config (
   -- Number of points awarded or deducted for this action
   points_value DECIMAL(18,8) NOT NULL,
   
-  -- Human-readable description of the action
-  description TEXT NOT NULL,
-  
   -- Whether this configuration is currently active
   is_active BOOLEAN DEFAULT true,
   
@@ -51,7 +48,7 @@ CREATE TABLE IF NOT EXISTS public.dare_points_config_history (
   changed_by UUID REFERENCES auth.users(id),
   
   -- Reason for changing the point value
-  change_reason TEXT,
+  change_reason TEXT NOT NULL,
   
   -- When the change was made
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -74,27 +71,27 @@ CREATE POLICY "Everyone can view dare_points_config"
   FOR SELECT
   USING (true);
 
-CREATE POLICY "Only admins can modify dare_points_config"
+CREATE POLICY "Only service role can modify dare_points_config"
   ON dare_points_config
   FOR ALL
-  USING (auth.uid() IN (SELECT user_id FROM admin_users));
+  USING (auth.role() = 'service_role');
 
 CREATE POLICY "Everyone can view dare_points_config_history"
   ON dare_points_config_history
   FOR SELECT
   USING (true);
 
-CREATE POLICY "Only admins can insert dare_points_config_history"
+CREATE POLICY "Only service role can insert dare_points_config_history"
   ON dare_points_config_history
   FOR INSERT
-  WITH CHECK (auth.uid() IN (SELECT user_id FROM admin_users));
+  WITH CHECK (auth.role() = 'service_role');
 
 -- Add comments
 COMMENT ON TABLE public.dare_points_config IS 'Configurable point values for different DARE point actions';
 COMMENT ON COLUMN public.dare_points_config.id IS 'Unique identifier for the configuration';
 COMMENT ON COLUMN public.dare_points_config.action_type IS 'Type of action that earns or costs points';
 COMMENT ON COLUMN public.dare_points_config.points_value IS 'Number of points awarded or deducted for this action';
-COMMENT ON COLUMN public.dare_points_config.description IS 'Human-readable description of the action';
+
 COMMENT ON COLUMN public.dare_points_config.is_active IS 'Whether this configuration is currently active';
 COMMENT ON COLUMN public.dare_points_config.created_at IS 'When the configuration was created';
 COMMENT ON COLUMN public.dare_points_config.updated_at IS 'When the configuration was last updated';
@@ -148,21 +145,21 @@ BEFORE UPDATE ON public.dare_points_config
 FOR EACH ROW EXECUTE FUNCTION public.track_dare_points_config_changes();
 
 -- Insert initial configuration values
-INSERT INTO public.dare_points_config (action_type, points_value, description)
+INSERT INTO public.dare_points_config (action_type, points_value)
 VALUES 
-  ('SIGNUP_BONUS', 500, 'Points awarded when a new user signs up'),
-  ('REFERRAL_BONUS', 100, 'Points awarded to a user who refers someone who signs up'),
-  ('BET_PLACEMENT_BONUS', 10, 'Points awarded for placing a bet'),
-  ('BET_WIN_BONUS', 50, 'Points awarded for winning a bet'),
-  ('DAILY_LOGIN', 5, 'Points awarded for daily login'),
-  ('BET_PLACED', 0, 'No points awarded/deducted for this action type - used for tracking bet amount reservations'),
-  ('BET_WON', 0, 'No points awarded/deducted for this action type - used for tracking bet amount releases'),
-  ('BET_LOST', 0, 'No points awarded/deducted for this action type - used for tracking bet amount transfers'),
-  ('MANUAL_ADJUSTMENT', 0, 'Variable points for manual adjustments - value set per transaction');
+  ('SIGNUP', 500),
+  ('REFERRAL_BONUS', 100),
+  ('BET_PLACEMENT_BONUS_AWARDED', 10),
+  ('BET_WIN_BONUS_AWARDED', 50),
+  ('DAILY_LOGIN', 5),
+  ('BET_PLACED', 0),
+  ('BET_WON', 0),
+  ('BET_LOST', 0),
+  ('MANUAL_ADJUSTMENT', 0);
 
 -- Create a view for easy access to active configurations
 CREATE OR REPLACE VIEW public.active_dare_points_config AS
-SELECT action_type, points_value, description
+SELECT action_type, points_value
 FROM public.dare_points_config
 WHERE is_active = true;
 

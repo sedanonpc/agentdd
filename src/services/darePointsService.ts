@@ -357,6 +357,16 @@ export const addBetWinPoints = async (userId: string, amount: number, betId: str
 
 /**
  * Deduct points for placing a bet
+ * 
+ * Database operations performed:
+ * 1. INSERT BET_PLACED transaction (-amount, RESERVED balance)
+ * 2. UPDATE user's free_dare_points (-amount)
+ * 3. UPDATE user's reserved_dare_points (+amount)
+ * 
+ * @param userId - ID of the user placing the bet
+ * @param amount - Number of points to reserve for the bet
+ * @param betId - ID of the bet being placed
+ * @returns Promise<boolean> - true if successful, false if insufficient funds or error
  */
 export const deductBetPoints = async (userId: string, amount: number, betId: string): Promise<boolean> => {
   try {

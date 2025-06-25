@@ -1,12 +1,13 @@
 import { supabase } from './supabaseService';
+import { DarePointsTransactionType } from '../types/darePoints';
 
 /**
  * Interface for DARE Points Configuration
  */
 export interface DarePointsConfig {
-  action_type: string;
+  action_type: DarePointsTransactionType;
   points_value: number;
-  description: string;
+  // description field removed to match database schema
 }
 
 /**
@@ -42,7 +43,7 @@ export const getAllPointConfigs = async (): Promise<DarePointsConfig[]> => {
 /**
  * Get point value for a specific action type
  */
-export const getPointValue = async (actionType: string): Promise<number> => {
+export const getPointValue = async (actionType: DarePointsTransactionType): Promise<number> => {
   try {
     const { data, error } = await supabase
       .rpc('get_dare_points_value', { action: actionType });
@@ -59,7 +60,7 @@ export const getPointValue = async (actionType: string): Promise<number> => {
  * Update a point value (admin only)
  */
 export const updatePointValue = async (
-  actionType: string, 
+  actionType: DarePointsTransactionType, 
   newValue: number, 
   reason: string
 ): Promise<boolean> => {
@@ -82,8 +83,9 @@ export const updatePointValue = async (
 /**
  * Get configuration history for all actions or a specific action
  */
-export const getConfigHistory = async (actionType?: string): Promise<DarePointsConfigHistory[]> => {
+export const getConfigHistory = async (actionType?: DarePointsTransactionType): Promise<DarePointsConfigHistory[]> => {
   try {
+    // Simplify the query to avoid complex join that causes TypeScript parsing issues
     let query = supabase
       .from('dare_points_config_history')
       .select(`
@@ -91,7 +93,7 @@ export const getConfigHistory = async (actionType?: string): Promise<DarePointsC
         action_type,
         old_points_value,
         new_points_value,
-        auth.users!changed_by(email).email as changed_by_user,
+        changed_by,
         change_reason,
         created_at
       `)
@@ -104,7 +106,13 @@ export const getConfigHistory = async (actionType?: string): Promise<DarePointsC
     const { data, error } = await query;
     
     if (error) throw error;
-    return data || [];
+    
+    // For now, return data with a placeholder for changed_by_user
+    // In a real implementation, you could make a separate query to get user emails
+    return (data || []).map(record => ({
+      ...record,
+      changed_by_user: record.changed_by ? 'Admin User' : 'System'
+    }));
   } catch (error) {
     console.error('Error getting configuration history:', error);
     return [];
@@ -116,7 +124,7 @@ export const getConfigHistory = async (actionType?: string): Promise<DarePointsC
  */
 export const awardPointsByAction = async (
   userId: string, 
-  actionType: string, 
+  actionType: DarePointsTransactionType, 
   description: string,
   betId?: string,
   matchId?: string,
@@ -128,7 +136,7 @@ export const awardPointsByAction = async (
       getUserFreeDarePoints, 
       getUserReservedDarePoints,
       updateUserDarePoints,
-      recordTransaction
+      awardPoints  // Use awardPoints instead of recordTransaction for bonus transactions
     } = await import('./darePointsService');
     
     // Get the current point value from configuration
@@ -140,25 +148,13 @@ export const awardPointsByAction = async (
     
     // Get current balances
     const freeDarePoints = await getUserFreeDarePoints(userId);
-    const reservedDarePoints = await getUserReservedDarePoints(userId);
     
     // Update the user's balance
     const success = await updateUserDarePoints(userId, freeDarePoints + pointsAmount);
     
     if (success) {
-      // Record the transaction
-      await recordTransaction({
-        userId,
-        amount: pointsAmount,
-        type: actionType,
-        description,
-        betId,
-        previous_free_balance: freeDarePoints,
-        previous_reserved_balance: reservedDarePoints,
-        new_free_balance: freeDarePoints + pointsAmount,
-        new_reserved_balance: reservedDarePoints,
-        related_user_id: relatedUserId
-      });
+      // Use the existing awardPoints function which handles the transaction recording
+      await awardPoints(userId, pointsAmount, description);
       
       return true;
     }
@@ -171,12 +167,20 @@ export const awardPointsByAction = async (
 };
 
 /**
- * Award signup bonus
+ * Award signup bonus to a new user
+ * 
+ * Database operations performed:
+ * 1. SELECT configured point value for 'SIGNUP' action type
+ * 2. INSERT SIGNUP transaction (+configured_amount, FREE balance)
+ * 3. UPDATE user's free_dare_points (+configured_amount)
+ * 
+ * @param userId - ID of the new user receiving the bonus
+ * @returns Promise<boolean> - true if successful, false if error
  */
 export const awardSignupBonus = async (userId: string): Promise<boolean> => {
   return awardPointsByAction(
     userId, 
-    'SIGNUP_BONUS', 
+    'SIGNUP', 
     'Welcome bonus for new user'
   );
 };
@@ -209,7 +213,7 @@ export const awardBetPlacementBonus = async (
 ): Promise<boolean> => {
   return awardPointsByAction(
     userId, 
-    'BET_PLACEMENT_BONUS', 
+    'BET_PLACEMENT_BONUS_AWARDED', 
     'Bonus for placing a bet',
     betId,
     matchId
@@ -226,7 +230,7 @@ export const awardBetWinBonus = async (
 ): Promise<boolean> => {
   return awardPointsByAction(
     userId, 
-    'BET_WIN_BONUS', 
+    'BET_WIN_BONUS_AWARDED', 
     'Bonus for winning a bet',
     betId,
     matchId

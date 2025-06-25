@@ -6,146 +6,56 @@ This document describes the configuration system for DARE points values in the A
 
 The DARE points configuration system allows for dynamic management of point values awarded for different actions in the application. Rather than hardcoding these values, they are stored in a database table and can be modified by administrators. All changes to point values are tracked in a history table for auditing purposes.
 
-## Table Structure
+## Key Concepts
 
-### `dare_points_config` Table
+- **Dynamic Configuration**: Point values are stored in the database and can be changed without code deployment
+- **Audit Trail**: All changes to point values are automatically tracked with timestamps and reasons
+- **Type Safety**: Uses the `dare_points_transaction_type` enum to ensure consistency
+- **Admin Controls**: Only administrators can modify point values
 
-This table stores the current point values for each action type:
+## Configuration Overview
 
-```sql
-CREATE TABLE public.dare_points_config (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  action_type dare_points_transaction_type NOT NULL,
-  points_value DECIMAL(18,8) NOT NULL,
-  description TEXT NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
+The system stores configurable point values for different transaction types. For the complete list of transaction types and their current default values, see:
+- `supabase_migrations/009_create_dare_points_config_tables.sql` for the schema and initial values
+- `src/types/darePoints.ts` for TypeScript type definitions
 
-### `dare_points_config_history` Table
-
-This table tracks all changes made to point values:
-
-```sql
-CREATE TABLE public.dare_points_config_history (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  config_id UUID REFERENCES public.dare_points_config(id) NOT NULL,
-  action_type dare_points_transaction_type NOT NULL,
-  old_points_value DECIMAL(18,8),
-  new_points_value DECIMAL(18,8) NOT NULL,
-  changed_by UUID REFERENCES auth.users(id),
-  change_reason TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
-
-## Default Point Values
-
-The system is initialized with the following default values:
-
-| Action Type | Points Value | Description |
-|-------------|--------------|-------------|
-| `SIGNUP_BONUS` | 500 | Points awarded when a new user signs up |
-| `REFERRAL_BONUS` | 100 | Points awarded to a user who refers someone who signs up |
-| `BET_PLACEMENT_BONUS` | 10 | Points awarded for placing a bet |
-| `BET_WIN_BONUS` | 50 | Points awarded for winning a bet |
-| `DAILY_LOGIN` | 5 | Points awarded for daily login |
-| `BET_PLACED` | 0 | No points awarded/deducted - used for tracking bet amount reservations |
-| `BET_WON` | 0 | No points awarded/deducted - used for tracking bet amount releases |
-| `BET_LOST` | 0 | No points awarded/deducted - used for tracking bet amount transfers |
-| `MANUAL_ADJUSTMENT` | 0 | Variable points for manual adjustments - value set per transaction |
+**Key principle**: Bonus-awarding actions have configurable point values, while balance transfer actions (like `BET_PLACED`, `BET_WON`, `BET_LOST`) have zero values since they move existing points rather than create new ones.
 
 ## Using the Configuration System
 
-### Getting Point Values in SQL
+Use the configuration service functions to access and modify point values:
 
-To get the current point value for an action:
-
-```sql
-SELECT * FROM get_dare_points_value('SIGNUP_BONUS');
-```
-
-### Updating Point Values in SQL
-
-To update a point value:
-
-```sql
-SELECT * FROM update_dare_points_value('SIGNUP_BONUS', 600, 'Increasing signup bonus for promotion');
-```
-
-### Using the Configuration in TypeScript
+### Getting Current Point Values
 
 ```typescript
-import { supabase } from './supabaseService';
+import { getPointValueForAction } from '../services/darePointsConfigService';
 
-// Get a point value
-export const getPointValue = async (actionType: string): Promise<number> => {
-  try {
-    const { data, error } = await supabase
-      .rpc('get_dare_points_value', { action: actionType });
-    
-    if (error) throw error;
-    return data || 0;
-  } catch (error) {
-    console.error(`Error getting point value for ${actionType}:`, error);
-    return 0;
-  }
-};
-
-// Update a point value (admin only)
-export const updatePointValue = async (
-  actionType: string, 
-  newValue: number, 
-  reason: string
-): Promise<boolean> => {
-  try {
-    const { data, error } = await supabase
-      .rpc('update_dare_points_value', { 
-        action: actionType,
-        new_value: newValue,
-        reason: reason
-      });
-    
-    if (error) throw error;
-    return !!data;
-  } catch (error) {
-    console.error(`Error updating point value for ${actionType}:`, error);
-    return false;
-  }
-};
+// Get configured point values
+const signupBonus = await getPointValueForAction('SIGNUP');
+const dailyLoginBonus = await getPointValueForAction('DAILY_LOGIN');
+const betPlacementBonus = await getPointValueForAction('BET_PLACEMENT_BONUS_AWARDED');
 ```
+
+### Updating Point Values (Admin Only)
+
+```typescript
+import { updatePointValue } from '../services/darePointsConfigService';
+
+// Update configuration values (admin only)
+await updatePointValue('SIGNUP', 750, 'Promotional signup bonus increase');
+await updatePointValue('DAILY_LOGIN', 10, 'Boosting daily engagement');
+```
+
+**Note**: Point value updates automatically call `update_dare_points_value()` SQL function and create history records. See service function definitions for implementation details.
 
 ## Viewing Configuration History
 
-To view the history of changes to point values:
+```typescript
+import { getConfigurationHistory } from '../services/darePointsConfigService';
 
-```sql
--- View all changes
-SELECT 
-  h.action_type, 
-  h.old_points_value, 
-  h.new_points_value, 
-  u.email as changed_by_user,
-  h.change_reason, 
-  h.created_at
-FROM dare_points_config_history h
-LEFT JOIN auth.users u ON h.changed_by = u.id
-ORDER BY h.created_at DESC;
-
--- View changes for a specific action type
-SELECT 
-  h.action_type, 
-  h.old_points_value, 
-  h.new_points_value, 
-  u.email as changed_by_user,
-  h.change_reason, 
-  h.created_at
-FROM dare_points_config_history h
-LEFT JOIN auth.users u ON h.changed_by = u.id
-WHERE h.action_type = 'SIGNUP_BONUS'
-ORDER BY h.created_at DESC;
+// View configuration change history
+const signupHistory = await getConfigurationHistory('SIGNUP');
+const allRecentChanges = await getConfigurationHistory(); // All recent changes
 ```
 
 ## Admin Interface
@@ -159,45 +69,22 @@ The application should provide an admin interface for managing point values. Thi
 
 ## Integration with Transactions
 
-When recording transactions, the system should use the current point value from the configuration:
+The configuration system automatically integrates with point-awarding functions:
 
 ```typescript
-// Example of awarding signup bonus
-const awardSignupBonus = async (userId: string): Promise<boolean> => {
-  try {
-    // Get the current signup bonus value from configuration
-    const bonusAmount = await getPointValue('SIGNUP_BONUS');
-    
-    // Get current balances
-    const freeDarePoints = await getUserFreeDarePoints(userId);
-    const reservedDarePoints = await getUserReservedDarePoints(userId);
-    
-    // Update the user's balance
-    const success = await updateUserDarePoints(userId, freeDarePoints + bonusAmount);
-    
-    if (success) {
-      // Record the transaction
-      await recordTransaction({
-        user_id: userId,
-        transaction_type: 'SIGNUP_BONUS',
-        amount: bonusAmount,
-        previous_free_balance: freeDarePoints,
-        previous_reserved_balance: reservedDarePoints,
-        new_free_balance: freeDarePoints + bonusAmount,
-        new_reserved_balance: reservedDarePoints,
-        description: 'Welcome bonus for new user'
-      });
-      
-      return true;
-    }
-    
-    return false;
-  } catch (error) {
-    console.error('Error awarding signup bonus:', error);
-    return false;
-  }
-};
+import { 
+  awardSignupBonus,
+  awardReferralBonus,
+  awardDailyLoginBonus 
+} from '../services/darePointsConfigService';
+
+// These functions automatically use current configured values
+await awardSignupBonus(userId);
+await awardReferralBonus(referrerId, newUserId, referralCode);
+await awardDailyLoginBonus(userId);
 ```
+
+Point values can be changed in the database without code deployment - the functions always use current configured amounts.
 
 ## Security Considerations
 
