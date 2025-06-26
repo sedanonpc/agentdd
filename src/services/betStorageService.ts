@@ -382,8 +382,8 @@ export const getUsersByPoints = async (limit: number = 10): Promise<LeaderboardE
     // Get users ranked by their $DARE points
     const { data, error } = await supabaseClient
       .from('user_accounts')
-      .select('user_id, email, wallet_address, reserved_dare_points, free_dare_points')
-      .order('free_dare_points', { ascending: false })
+              .select('user_id, email, wallet_address, reserved_points, free_points')
+              .order('free_points', { ascending: false })
       .limit(limit);
 
     // Create an array to hold our result (real + mock)
@@ -408,7 +408,7 @@ export const getUsersByPoints = async (limit: number = 10): Promise<LeaderboardE
         total_wagered: 0,
         total_won: 0,
         win_rate: 0,
-        dare_points: (user.reserved_dare_points || 0) + (user.free_dare_points || 0),
+        dare_points: (user.reserved_points || 0) + (user.free_points || 0),
         is_mock: false
       }));
       
