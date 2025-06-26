@@ -14,8 +14,8 @@ CREATE TABLE public.user_accounts (
   wallet_address TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  reserved_dare_points DECIMAL(18,8) DEFAULT 0,
-  free_dare_points DECIMAL(18,8) DEFAULT 500
+  reserved_points DECIMAL(18,8) DEFAULT 0,
+  free_points DECIMAL(18,8) DEFAULT 500
 );
 ```
 
@@ -24,8 +24,8 @@ CREATE TABLE public.user_accounts (
 1. `id` is the primary key
 2. `user_id` references the Supabase auth.users table
 3. Points are split into two columns:
-   - `reserved_dare_points`: Points that are reserved (e.g., held in escrow) and can no longer be spent
-   - `free_dare_points`: Points that are not yet reserved and can still be spent
+   - `reserved_points`: Points that are reserved (e.g., held in escrow) and can no longer be spent
+   - `free_points`: Points that are not yet reserved and can still be spent
 
 ## Database Initialization
 
@@ -37,18 +37,18 @@ The `user_accounts` table is created manually in Supabase by running the SQL mig
 
 The following functions have been added to handle the split DARE points:
 
-- `getUserFreeDarePoints()`: Get free points
-- `getUserReservedDarePoints()`: Get reserved points
-- `reserveDarePoints()`: Move points from free to reserved
-- `freeDarePoints()`: Move points from reserved to free
+- `getUserFreePoints()`: Get free points
+- `getUserReservedPoints()`: Get reserved points
+- `reservePoints()`: Move points from free to reserved
+- `freePoints()`: Move points from reserved to free
 
 ### Core Functions
 
 The following functions manage user accounts:
 
-- `getUserDarePoints()`: Returns the sum of reserved and free points
-- `updateUserDarePoints()`: Updates only free points
-- `adjustUserDarePoints()`: Checks against free points
+- `getTotalUserPoints()`: Returns the sum of reserved and free points
+- `updatePoints()`: Updates only free points
+- `adjustUserPoints()`: Checks against free points
 - `deductBetPoints()`: Reserves points instead of deducting them
 
 ## UI Components
@@ -61,18 +61,18 @@ The DARE Points display shows:
 
 ## Migration Files
 
-- `007_create_user_accounts_table.sql`: Creates the user_accounts table
+- `002_create_user_accounts_table.sql`: Creates the user_accounts table
 
 ## Services
 
 - `setupDatabaseService.ts`: Contains SQL functions for leaderboards
 - `supabaseService.ts`: Provides functions for interacting with the user_accounts table
-- `darePointsService.ts`: Manages DARE points operations
+- `pointsService.ts`: Manages DARE points operations
 
 ## Context
 
-- `DarePointsContext.tsx`: Tracks both reserved and free points
+- `PointsContext.tsx`: Tracks both reserved and free points
 
 ## Components
 
-- `DarePointsDisplay.tsx`: Shows both reserved and free points 
+- `PointsDisplay.tsx`: Shows both reserved and free points 

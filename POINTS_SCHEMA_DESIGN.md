@@ -1,6 +1,6 @@
-# DARE Points Schema Design Considerations
+# Points Schema Design Considerations
 
-This document explains the design decisions made for the DARE points transactions schema, particularly focusing on the use of metadata vs. dedicated columns.
+This document explains the design decisions made for the points transactions schema, particularly focusing on the use of metadata vs. dedicated columns.
 
 ## Using JSONB Metadata vs. Dedicated Columns
 
@@ -40,7 +40,7 @@ We've chosen to store conditional fields in a JSONB metadata field rather than a
 We could have kept all fields as dedicated columns in the table:
 
 ```sql
-CREATE TABLE public.dare_points_transactions (
+CREATE TABLE public.points_transactions (
   -- Core fields...
   related_user_id UUID REFERENCES auth.users(id),
   bet_id UUID,
@@ -66,18 +66,18 @@ CREATE TABLE public.dare_points_transactions (
 We could have created a core transactions table and separate tables for each transaction type:
 
 ```sql
-CREATE TABLE public.dare_points_transactions (
+CREATE TABLE public.points_transactions (
   -- Core fields only
 );
 
 CREATE TABLE public.bet_transactions (
-  transaction_id UUID REFERENCES dare_points_transactions(id),
+  transaction_id UUID REFERENCES points_transactions(id),
   bet_id UUID,
   match_id UUID
 );
 
 CREATE TABLE public.referral_transactions (
-  transaction_id UUID REFERENCES dare_points_transactions(id),
+  transaction_id UUID REFERENCES points_transactions(id),
   referrer_id UUID,
   referral_code VARCHAR(50)
 );
@@ -111,8 +111,8 @@ To support efficient queries while using the JSONB approach, we've implemented:
 
 1. **GIN Index on Metadata**: Allows efficient searching within the JSONB structure.
    ```sql
-   CREATE INDEX idx_dare_points_transactions_metadata
-   ON public.dare_points_transactions USING GIN (metadata);
+   CREATE INDEX idx_points_transactions_metadata
+   ON public.points_transactions USING GIN (metadata);
    ```
 
 2. **Standard Indexes**: For commonly queried fields like user_id, transaction_type, and event_id.
@@ -127,6 +127,6 @@ To support efficient queries while using the JSONB approach, we've implemented:
 
 ## Conclusion
 
-The JSONB metadata approach provides the best balance of flexibility, storage efficiency, and query capability for our use case. While there are some tradeoffs in terms of query complexity and foreign key constraints, the benefits of a more adaptable schema outweigh these drawbacks, especially considering the evolving nature of the DARE points system.
+The JSONB metadata approach provides the best balance of flexibility, storage efficiency, and query capability for our use case. While there are some tradeoffs in terms of query complexity and foreign key constraints, the benefits of a more adaptable schema outweigh these drawbacks, especially considering the evolving nature of the points system.
 
 As the system grows, we can easily adapt the metadata structure without requiring schema migrations, making it more maintainable in the long term. 

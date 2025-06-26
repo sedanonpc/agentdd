@@ -1,12 +1,12 @@
-# DARE Points Transactions System
+# Points Transactions System
 
-This document describes how to use the `dare_points_transactions` table to track all DARE points movements in the AgentDD application.
+This document describes how to use the `points_transactions` table to track all points movements in the AgentDD application.
 
 ## Overview
 
-The transactions table provides a complete audit trail of all DARE points movements. For the table structure and transaction type definitions, see the migration files:
-- `supabase_migrations/008_create_dare_points_transactions_table.sql`
-- `src/types/darePoints.ts` for TypeScript definitions
+The transactions table provides a complete audit trail of all points movements. For the table structure and transaction type definitions, see the migration files:
+- `supabase_migrations/003_create_points_transactions_table.sql`
+- `src/types/points.ts` for TypeScript definitions
 
 ## Key Concepts
 
@@ -49,7 +49,7 @@ import {
   awardBetWinPoints, 
   awardBetPlacementBonus,
   awardBetWinBonus 
-} from '../services/darePointsService';
+} from '../services/pointsService';
 
 // When user places a bet
 const success = await deductBetPoints(userId, betAmount, betId);
@@ -73,7 +73,7 @@ import {
   awardSignupBonus,
   awardReferralBonus,
   awardDailyLoginBonus 
-} from '../services/darePointsConfigService';
+} from '../services/pointsConfigService';
 
 // When new user signs up
 await awardSignupBonus(userId);
@@ -88,7 +88,7 @@ await awardDailyLoginBonus(userId);
 ### 3. Manual Adjustments
 
 ```typescript
-import { awardPoints } from '../services/darePointsService';
+import { awardPoints } from '../services/pointsService';
 
 // Admin manual adjustment
 await awardPoints(userId, adjustmentAmount, 'Customer service adjustment');
@@ -98,7 +98,7 @@ await awardPoints(userId, adjustmentAmount, 'Customer service adjustment');
 
 ## Integration with Existing System
 
-The `dare_points_transactions` table complements the existing `user_accounts` table by providing a detailed audit trail of all points movements. While the `user_accounts` table maintains the current balance state, the transactions table records how that state changed over time.
+The `points_transactions` table complements the existing `user_accounts` table by providing a detailed audit trail of all points movements. While the `user_accounts` table maintains the current balance state, the transactions table records how that state changed over time.
 
 ## Querying Transaction Data
 
@@ -108,21 +108,21 @@ Use the following service functions to access transaction data:
 
 ```typescript
 import { 
-  getUserFreeDarePoints, 
-  getUserReservedDarePoints,
-  getUserDarePoints 
-} from '../services/darePointsService';
+  getUserFreePoints, 
+  getUserReservedPoints,
+  getTotalUserPoints 
+} from '../services/pointsService';
 
 // Get current balances
-const freeBalance = await getUserFreeDarePoints(userId);
-const reservedBalance = await getUserReservedDarePoints(userId);
-const totalBalance = await getUserDarePoints(userId);
+const freeBalance = await getUserFreePoints(userId);
+const reservedBalance = await getUserReservedPoints(userId);
+const totalBalance = await getTotalUserPoints(userId);
 ```
 
 ### Get Transaction History
 
 ```typescript
-import { getUserTransactions } from '../services/darePointsService';
+import { getUserTransactions } from '../services/pointsService';
 
 // Get user's transaction history
 const transactions = getUserTransactions(userId);

@@ -1,23 +1,23 @@
-# DARE Points Configuration System
+# Points Configuration System
 
-This document describes the configuration system for DARE points values in the AgentDD application.
+This document describes the configuration system for points values in the AgentDD application.
 
 ## Overview
 
-The DARE points configuration system allows for dynamic management of point values awarded for different actions in the application. Rather than hardcoding these values, they are stored in a database table and can be modified by administrators. All changes to point values are tracked in a history table for auditing purposes.
+The points configuration system allows for dynamic management of point values awarded for different actions in the application. Rather than hardcoding these values, they are stored in a database table and can be modified by administrators. All changes to point values are tracked in a history table for auditing purposes.
 
 ## Key Concepts
 
 - **Dynamic Configuration**: Point values are stored in the database and can be changed without code deployment
 - **Audit Trail**: All changes to point values are automatically tracked with timestamps and reasons
-- **Type Safety**: Uses the `dare_points_transaction_type` enum to ensure consistency
+- **Type Safety**: Uses the `points_transaction_type` enum to ensure consistency
 - **Admin Controls**: Only administrators can modify point values
 
 ## Configuration Overview
 
 The system stores configurable point values for different transaction types. For the complete list of transaction types and their current default values, see:
-- `supabase_migrations/009_create_dare_points_config_tables.sql` for the schema and initial values
-- `src/types/darePoints.ts` for TypeScript type definitions
+- `supabase_migrations/004_create_points_config_tables.sql` for the schema and initial values
+- `src/types/points.ts` for TypeScript type definitions
 
 **Key principle**: Bonus-awarding actions have configurable point values, while balance transfer actions (like `BET_PLACED`, `BET_WON`, `BET_LOST`) have zero values since they move existing points rather than create new ones.
 
@@ -28,7 +28,7 @@ Use the configuration service functions to access and modify point values:
 ### Getting Current Point Values
 
 ```typescript
-import { getPointValueForAction } from '../services/darePointsConfigService';
+import { getPointValueForAction } from '../services/pointsConfigService';
 
 // Get configured point values
 const signupBonus = await getPointValueForAction('SIGNUP');
@@ -39,19 +39,19 @@ const betPlacementBonus = await getPointValueForAction('BET_PLACEMENT_BONUS_AWAR
 ### Updating Point Values (Admin Only)
 
 ```typescript
-import { updatePointValue } from '../services/darePointsConfigService';
+import { updatePointValue } from '../services/pointsConfigService';
 
 // Update configuration values (admin only)
 await updatePointValue('SIGNUP', 750, 'Promotional signup bonus increase');
 await updatePointValue('DAILY_LOGIN', 10, 'Boosting daily engagement');
 ```
 
-**Note**: Point value updates automatically call `update_dare_points_value()` SQL function and create history records. See service function definitions for implementation details.
+**Note**: Point value updates automatically call `update_points_value()` SQL function and create history records. See service function definitions for implementation details.
 
 ## Viewing Configuration History
 
 ```typescript
-import { getConfigurationHistory } from '../services/darePointsConfigService';
+import { getConfigurationHistory } from '../services/pointsConfigService';
 
 // View configuration change history
 const signupHistory = await getConfigurationHistory('SIGNUP');
@@ -76,7 +76,7 @@ import {
   awardSignupBonus,
   awardReferralBonus,
   awardDailyLoginBonus 
-} from '../services/darePointsConfigService';
+} from '../services/pointsConfigService';
 
 // These functions automatically use current configured values
 await awardSignupBonus(userId);

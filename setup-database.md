@@ -1,6 +1,6 @@
 # Database Setup Guide
 
-This guide will help you set up the DARE points system database tables using Supabase CLI.
+This guide will help you set up the points system database tables using Supabase CLI.
 
 ## Prerequisites
 - ✅ Supabase CLI installed 
@@ -32,11 +32,10 @@ supabase db push
 ```
 
 This will run all the migration files in order:
-- `005_create_matches_table.sql` - Creates matches table
-- `006_update_matches_table_sport_columns.sql` - Updates matches table
-- `007_create_user_accounts_table.sql` - Creates user accounts table  
-- `008_create_dare_points_transactions_table.sql` - Creates transactions table and enums
-- `009_create_dare_points_config_tables.sql` - Creates config table and functions
+- `001_create_matches_table.sql` - Creates matches table
+- `002_create_user_accounts_table.sql` - Creates user accounts table  
+- `003_create_points_transactions_table.sql` - Creates transactions table and enums
+- `004_create_points_config_tables.sql` - Creates config table and functions
 
 ### 4. Verify the setup
 After successful migration, you should have:
@@ -44,13 +43,13 @@ After successful migration, you should have:
 **Tables:**
 - `matches` - Sports match data
 - `user_accounts` - User profile and points balances
-- `dare_points_transactions` - Transaction history
-- `dare_points_config` - Configurable point values
-- `dare_points_config_history` - Config change history
+- `points_transactions` - Transaction history
+- `points_config` - Configurable point values
+- `points_config_history` - Config change history
 
 **Functions:**
-- `get_dare_points_value(action)` - Get configured point value
-- `update_dare_points_value(action, value, reason)` - Update point values
+- `get_points_value(action)` - Get configured point value
+- `update_points_value(action, value, reason)` - Update point values
 
 **Initial Configuration:**
 - SIGNUP: 500 points
@@ -62,8 +61,8 @@ After successful migration, you should have:
 ### 5. Test the setup
 You can test by creating a new user account through your app. The signup process should:
 1. Create a user record in `user_accounts` 
-2. Award 500 DARE points automatically
-3. Create a transaction record in `dare_points_transactions` with type 'SIGNUP'
+2. Award 500 points automatically
+3. Create a transaction record in `points_transactions` with type 'SIGNUP'
 
 ## Troubleshooting
 
@@ -83,7 +82,7 @@ supabase db push
 
 ## Next Steps
 Once the database is set up, your signup bonus system will be fully functional:
-- Email signups automatically get 500 DARE points
-- Wallet signups automatically get 500 DARE points  
+- Email signups automatically get 500 points
+- Wallet signups automatically get 500 points  
 - All transactions are recorded for audit purposes
 - Point values are configurable via the admin interface 
