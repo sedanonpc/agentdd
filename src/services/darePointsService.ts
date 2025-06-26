@@ -282,47 +282,69 @@ export const freeDarePoints = async (userId: string, amount: number): Promise<bo
 };
 
 /**
- * Record a DARE points transaction
+ * Record a DARE points transaction in the database
  */
 export const recordTransaction = async (
-  transaction: Omit<DareTransaction, 'id' | 'timestamp' | 'status'>
-): Promise<DareTransaction | null> => {
+  userId: string,
+  transactionType: string,
+  balanceType: 'FREE' | 'RESERVED',
+  amount: number,
+  description: string,
+  metadata?: any
+): Promise<boolean> => {
   try {
-    const id = Date.now().toString(36) + Math.random().toString(36).substring(2);
-    const timestamp = Date.now();
-    const status = 'COMPLETED';
+    const commonEventId = crypto.randomUUID();
     
-    const newTransaction: DareTransaction = {
-      ...transaction,
-      id,
-      timestamp,
-      status
-    };
+    const { error } = await supabase
+      .from('dare_points_transactions')
+      .insert({
+        user_id: userId,
+        transaction_type: transactionType,
+        balance_type: balanceType,
+        amount: amount,
+        common_event_id: commonEventId,
+        metadata: metadata || {}
+      });
     
-    // In a real app, we'd store this in Supabase
-    // For now, we'll just store it in local storage
-    const storageKey = `dare_transactions_${transaction.userId}`;
-    const storedTransactions = localStorage.getItem(storageKey);
-    const transactions = storedTransactions ? JSON.parse(storedTransactions) : [];
+    if (error) {
+      console.error('Error recording transaction:', error);
+      return false;
+    }
     
-    transactions.push(newTransaction);
-    localStorage.setItem(storageKey, JSON.stringify(transactions));
-    
-    return newTransaction;
+    return true;
   } catch (error) {
     console.error('Error recording transaction:', error);
-    return null;
+    return false;
   }
 };
 
 /**
- * Get user's transaction history
+ * Get user's transaction history from the database
  */
-export const getUserTransactions = (userId: string): DareTransaction[] => {
+export const getUserTransactions = async (userId: string): Promise<DareTransaction[]> => {
   try {
-    const storageKey = `dare_transactions_${userId}`;
-    const storedTransactions = localStorage.getItem(storageKey);
-    return storedTransactions ? JSON.parse(storedTransactions) : [];
+    const { data, error } = await supabase
+      .from('dare_points_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error getting transactions:', error);
+      return [];
+    }
+    
+    // Convert database format to DareTransaction format for backward compatibility
+    return (data || []).map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      amount: parseFloat(row.amount),
+      type: row.transaction_type,
+      description: `${row.transaction_type}: ${row.amount} points`,
+      betId: row.metadata?.bet_id,
+      timestamp: new Date(row.created_at).getTime(),
+      status: 'COMPLETED' as const
+    }));
   } catch (error) {
     console.error('Error getting transactions:', error);
     return [];
@@ -339,13 +361,14 @@ export const addBetWinPoints = async (userId: string, amount: number, betId: str
     
     if (success) {
       // Record the transaction
-      await recordTransaction({
+      await recordTransaction(
         userId,
+        'BET_WON',
+        'FREE',
         amount,
-        type: 'BET_WON',
-        description: `Won ${amount} $DARE from bet ${betId}`,
-        betId
-      });
+        `Won ${amount} $DARE from bet ${betId}`,
+        { bet_id: betId }
+      );
     }
     
     return success;
@@ -384,13 +407,14 @@ export const deductBetPoints = async (userId: string, amount: number, betId: str
     }
     
     // Record the transaction
-    await recordTransaction({
+    await recordTransaction(
       userId,
-      amount: -amount,
-      type: 'BET_PLACED',
-      description: `Placed a bet of ${amount} $DARE`,
-      betId
-    });
+      'BET_PLACED',
+      'RESERVED',
+      -amount,
+      `Placed a bet of ${amount} $DARE`,
+      { bet_id: betId }
+    );
     
     return true;
   } catch (error) {
@@ -409,12 +433,13 @@ export const awardPoints = async (userId: string, amount: number, reason: string
     
     if (success) {
       // Record the transaction
-      await recordTransaction({
+      await recordTransaction(
         userId,
+        'SIGNUP',
+        'FREE',
         amount,
-        type: 'REWARD',
-        description: reason
-      });
+        reason
+      );
     }
     
     return success;

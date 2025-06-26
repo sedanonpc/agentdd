@@ -201,6 +201,21 @@ export const signUpWithEmail = async (email: string, password: string) => {
       await createUserAccount(data.user.id, {
         email: data.user.email,
       });
+      
+      // Award signup bonus DARE points based on configuration
+      try {
+        const { awardSignupBonus } = await import('./darePointsConfigService');
+        const bonusAwarded = await awardSignupBonus(data.user.id);
+        
+        if (bonusAwarded) {
+          console.log('Signup bonus awarded successfully to user:', data.user.id);
+        } else {
+          console.warn('Failed to award signup bonus to user:', data.user.id);
+        }
+      } catch (bonusError) {
+        // Don't fail the signup if bonus awarding fails
+        console.error('Error awarding signup bonus:', bonusError);
+      }
     } catch (profileError) {
       // If profile creation fails, but auth succeeded, just log error
       console.error('Error creating user account:', profileError);
@@ -255,7 +270,7 @@ export const createUserAccount = async (userId: string, account: Partial<UserAcc
     .from('user_accounts')
     .insert({
       user_id: userId,
-      free_dare_points: 500, // Default value for new users
+      free_dare_points: 0, // Points will be awarded separately via signup bonus
       reserved_dare_points: 0,
       ...account,
     })

@@ -134,9 +134,8 @@ export const awardPointsByAction = async (
     // Import these functions dynamically to avoid circular dependencies
     const { 
       getUserFreeDarePoints, 
-      getUserReservedDarePoints,
       updateUserDarePoints,
-      awardPoints  // Use awardPoints instead of recordTransaction for bonus transactions
+      recordTransaction
     } = await import('./darePointsService');
     
     // Get the current point value from configuration
@@ -153,8 +152,26 @@ export const awardPointsByAction = async (
     const success = await updateUserDarePoints(userId, freeDarePoints + pointsAmount);
     
     if (success) {
-      // Use the existing awardPoints function which handles the transaction recording
-      await awardPoints(userId, pointsAmount, description);
+      // Record the transaction with the specific action type
+      const metadata: any = {};
+      if (betId) metadata.bet_id = betId;
+      if (matchId) metadata.match_id = matchId;
+      if (relatedUserId) {
+        if (actionType === 'REFERRAL_BONUS') {
+          metadata.referred_user_id = relatedUserId;
+        } else {
+          metadata.related_user_id = relatedUserId;
+        }
+      }
+      
+      await recordTransaction(
+        userId,
+        actionType,
+        'FREE',
+        pointsAmount,
+        description,
+        metadata
+      );
       
       return true;
     }
