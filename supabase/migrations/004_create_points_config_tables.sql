@@ -154,8 +154,7 @@ VALUES
   ('DAILY_LOGIN', 5),
   ('BET_PLACED', 0),
   ('BET_WON', 0),
-  ('BET_LOST', 0),
-  ('MANUAL_ADJUSTMENT', 0);
+  ('BET_LOST', 0);
 
 -- Create a view for easy access to active configurations
 CREATE OR REPLACE VIEW public.active_points_config AS

@@ -7,8 +7,7 @@ export type PointsTransactionType =
   | 'BET_LOST'
   | 'SIGNUP'
   | 'REFERRAL_BONUS'
-  | 'DAILY_LOGIN'
-  | 'MANUAL_ADJUSTMENT';
+  | 'DAILY_LOGIN';
 
 export type PointsBalanceType = 'FREE' | 'RESERVED';
 

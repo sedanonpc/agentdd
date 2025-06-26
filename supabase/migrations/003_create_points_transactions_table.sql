@@ -28,10 +28,7 @@ BEGIN
           'REFERRAL_BONUS',
           
           -- When a user logs in daily, they receive 5 free points
-          'DAILY_LOGIN',
-          
-          -- For manual adjustments by administrators
-          'MANUAL_ADJUSTMENT'
+          'DAILY_LOGIN'
         );
     END IF;
 END$$;
@@ -182,16 +179,11 @@ BEGIN
         RAISE EXCEPTION 'BET_LOST transactions require bet_id, bettor_user_id, and opponent_user_id in metadata';
       END IF;
       
-    WHEN 'REFERRAL_BONUS' THEN
-      -- Additional validation for referral bonus
-      IF metadata->>'referrer_user_id' IS NULL OR metadata->>'referred_user_id' IS NULL THEN
-        RAISE EXCEPTION 'REFERRAL_BONUS transactions require referrer_user_id and referred_user_id in metadata';
-      END IF;
-      
-    WHEN 'MANUAL_ADJUSTMENT' THEN
-      -- Manual adjustments can be positive or negative, any balance type
-      -- No specific metadata requirements
-      NULL;
+          WHEN 'REFERRAL_BONUS' THEN
+        -- Additional validation for referral bonus
+        IF metadata->>'referrer_user_id' IS NULL OR metadata->>'referred_user_id' IS NULL THEN
+          RAISE EXCEPTION 'REFERRAL_BONUS transactions require referrer_user_id and referred_user_id in metadata';
+        END IF;
   END CASE;
   
   RETURN TRUE;
