@@ -19,8 +19,10 @@ $DARE Points are the in-app currency that users earn and spend throughout the ap
 The $DARE Points system is implemented using a layered architecture:
 
 1. **Database Layer** (Supabase)
-   - `user_profiles` table with `dare_points` column
-   - Default value of 500 points for new users
+   - `dare_points_transactions` table with full transaction history and audit trail
+   - `dare_points_config` table for configurable point values
+   - Balance calculated from transaction history for accuracy and transparency
+   - Default value of 500 points for new users via SIGNUP transaction
    - Row-level security policies for data protection
 
 2. **Service Layer**

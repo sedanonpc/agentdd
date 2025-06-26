@@ -29,25 +29,17 @@ import {
 } from '../services/escrowService';
 import { Escrow } from '../types';
 
-// Define the structure for the Reward Pool
-interface RewardPool {
-  totalPoints: number;
-  transactions: DareTransaction[];
-}
-
 // Define the context type
 interface DarePointsContextType {
   userBalance: number;
   freeDarePointsBalance: number;
   reservedDarePointsBalance: number;
   loadingBalance: boolean;
-  rewardPool: RewardPool;
   transactions: DareTransaction[];
   escrowedPoints: number;
   deductPoints: (amount: number, betId: string, description: string, silent?: boolean) => Promise<boolean>;
   addPoints: (amount: number, type: 'BET_WON' | 'REWARD', description: string, betId?: string) => Promise<boolean>;
   getTransactionHistory: () => DareTransaction[];
-  getRewardPoolInfo: () => RewardPool;
   exportTransactions: () => string; // Export transactions as JSON string
   createBetEscrow: (betId: string, amount: number, silent?: boolean) => Promise<Escrow | null>;
   acceptBetEscrow: (escrowId: string, amount: number) => Promise<Escrow | null>;
@@ -60,9 +52,6 @@ interface DarePointsContextType {
 // Create the context
 const DarePointsContext = createContext<DarePointsContextType | undefined>(undefined);
 
-// Local Storage Keys
-const REWARD_POOL_KEY = 'daredevil_reward_pool';
-
 // Provider component
 export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -71,7 +60,6 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
   const [reservedDarePointsBalance, setReservedDarePointsBalance] = useState<number>(0);
   const [loadingBalance, setLoadingBalance] = useState<boolean>(true);
   const [transactions, setTransactions] = useState<DareTransaction[]>([]);
-  const [rewardPool, setRewardPool] = useState<RewardPool>({ totalPoints: 0, transactions: [] });
   const [escrowedPoints, setEscrowedPoints] = useState<number>(0);
 
   // Load user balance and transactions when user changes
@@ -87,11 +75,6 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
       setLoadingBalance(false);
     }
   }, [user]);
-
-  // Load reward pool data
-  useEffect(() => {
-    loadRewardPoolData();
-  }, []);
 
   // Set up a real-time polling for balance updates
   useEffect(() => {
@@ -188,31 +171,6 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
     } catch (error) {
       console.error('Error updating escrowed points:', error);
     }
-  };
-
-  // Load reward pool data from local storage
-  const loadRewardPoolData = () => {
-    try {
-      const storedRewardPool = localStorage.getItem(REWARD_POOL_KEY);
-      if (storedRewardPool) {
-        setRewardPool(JSON.parse(storedRewardPool));
-      } else {
-        // Initialize reward pool with default values
-        const defaultRewardPool: RewardPool = {
-          totalPoints: 1000, // Initial reward pool amount
-          transactions: []
-        };
-        setRewardPool(defaultRewardPool);
-        localStorage.setItem(REWARD_POOL_KEY, JSON.stringify(defaultRewardPool));
-      }
-    } catch (error) {
-      console.error('Error loading reward pool data:', error);
-    }
-  };
-
-  // Save reward pool data to local storage
-  const saveRewardPoolData = (pool: RewardPool) => {
-    localStorage.setItem(REWARD_POOL_KEY, JSON.stringify(pool));
   };
 
   // Deduct points for placing a bet
@@ -333,11 +291,6 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
   // Get transaction history
   const getTransactionHistory = (): DareTransaction[] => {
     return transactions;
-  };
-
-  // Get reward pool info
-  const getRewardPoolInfo = (): RewardPool => {
-    return rewardPool;
   };
 
   // Export transactions as JSON
@@ -517,13 +470,11 @@ export const DarePointsProvider: React.FC<{ children: ReactNode }> = ({ children
     freeDarePointsBalance,
     reservedDarePointsBalance,
     loadingBalance,
-    rewardPool,
     transactions,
     escrowedPoints,
     deductPoints,
     addPoints,
     getTransactionHistory,
-    getRewardPoolInfo,
     exportTransactions,
     createBetEscrow,
     acceptBetEscrow,
