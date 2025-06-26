@@ -24,11 +24,11 @@ import {
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
-import { getUsersByDarePoints, getOpenBets, getClosedBets, LeaderboardEntry } from '../services/betStorageService';
+import { getUsersByPoints, getOpenBets, getClosedBets, LeaderboardEntry } from '../services/betStorageService';
 import { useAuth } from '../context/AuthContext';
 import { truncateAddress } from '../utils/addressUtils';
 import { useWeb3 } from '../context/Web3Context';
-import { useDarePoints } from '../context/DarePointsContext';
+import { usePoints } from '../context/PointsContext';
 import { Bet, BetStatus } from '../types';
 import MarketplaceBetCard from '../components/bet/MarketplaceBetCard';
 import { useBetting } from '../context/BettingContext';
@@ -171,7 +171,7 @@ const debounce = (fn: Function, ms = 300) => {
 };
 
 const Leaderboard = () => {
-  const [darePointsRanking, setDarePointsRanking] = useState<LeaderboardEntry[]>([]);
+  const [pointsRanking, setPointsRanking] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [openBets, setOpenBets] = useState<Bet[]>([]);
   const [closedBets, setClosedBets] = useState<Bet[]>([]);
@@ -184,7 +184,7 @@ const Leaderboard = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { account } = useWeb3();
-  const { userBalance } = useDarePoints();
+  const { userBalance } = usePoints();
   const [users, setUsers] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
@@ -198,7 +198,7 @@ const Leaderboard = () => {
       // Try to get the data from the API
       try {
         // Fetch up to 100 users for the leaderboard
-        leaderboardData = await getUsersByDarePoints(LEADERBOARD_LIMIT);
+        leaderboardData = await getUsersByPoints(LEADERBOARD_LIMIT);
         console.log(`📊 Leaderboard entries: ${leaderboardData.length}`);
         
         // Always add demo accounts to ensure the leaderboard is populated
@@ -240,29 +240,29 @@ const Leaderboard = () => {
       
       // Only update state if we have data and it's different from current state
       const shouldUpdate = leaderboardData.length > 0 && 
-        (darePointsRanking.length !== leaderboardData.length || 
-         JSON.stringify(darePointsRanking.map(u => u.user_id).sort()) !== 
+                (pointsRanking.length !== leaderboardData.length ||
+        JSON.stringify(pointsRanking.map(u => u.user_id).sort()) !== 
          JSON.stringify(leaderboardData.map(u => u.user_id).sort()));
       
       if (shouldUpdate) {
-        setDarePointsRanking(leaderboardData);
+        setPointsRanking(leaderboardData);
       }
       
       // If we have no data at all, force the mock data
-      if (leaderboardData.length === 0 && darePointsRanking.length === 0 && import.meta.env.DEV) {
+      if (leaderboardData.length === 0 && pointsRanking.length === 0 && import.meta.env.DEV) {
         const forcedMockData = getMockLeaderboardEntries().map(entry => ({
           ...entry,
           is_mock: true
         }));
         console.log('⚠️ No leaderboard entries found, forcing mock data:', forcedMockData.length);
-        setDarePointsRanking(forcedMockData);
+                  setPointsRanking(forcedMockData);
       }
     } catch (error) {
       console.error('❌ Fatal error in fetchLeaderboards:', error);
     } finally {
       setLoading(false);
     }
-  }, [darePointsRanking]);
+      }, [pointsRanking]);
 
   // Initial data load
   useEffect(() => {
@@ -285,7 +285,7 @@ const Leaderboard = () => {
   const getUserRank = () => {
     if (!account) return null;
     
-    const index = darePointsRanking.findIndex(user => 
+    const index = pointsRanking.findIndex(user => 
       user.wallet_address && user.wallet_address.toLowerCase() === account.toLowerCase()
     );
     
@@ -831,7 +831,7 @@ const Leaderboard = () => {
           <CircularProgress sx={{ color: '#1976d2' }} />
         </Box>
       ) : (
-        renderLeaderboardTable(darePointsRanking)
+        renderLeaderboardTable(pointsRanking)
       )}
       
       <Divider sx={{ my: 4, borderColor: 'rgba(255, 255, 255, 0.1)' }} />

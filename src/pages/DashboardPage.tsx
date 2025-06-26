@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Terminal, Users, Database, Activity, RefreshCw, Trophy, Wallet, Mail, Shield, MessageSquare } from 'lucide-react';
 import { useBetting } from '../context/BettingContext';
 import { useWeb3 } from '../context/Web3Context';
-import { useDarePoints } from '../context/DarePointsContext';
+import { usePoints } from '../context/PointsContext';
 import { Bet } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import BetCard from '../components/bet/BetCard';
@@ -13,7 +13,7 @@ import DareDevilChatModal from '../components/chat/DareDevilChatModal';
 const DashboardPage: React.FC = () => {
   const { userBets, loadingBets, loadingMatches, settleBet, refreshMatches, refreshBets, debugCache } = useBetting();
   const { account } = useWeb3();
-  const { userBalance, transactions } = useDarePoints();
+  const { userBalance, transactions } = usePoints();
   const [isSettling, setIsSettling] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [forceRender, setForceRender] = useState<boolean>(false);

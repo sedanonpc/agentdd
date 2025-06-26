@@ -123,7 +123,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                   
                   // Award signup bonus DARE points
                   try {
-                    const { awardSignupBonus } = await import('../services/darePointsConfigService');
+                    const { awardSignupBonus } = await import('../services/pointsConfigService');
                     const bonusAwarded = await awardSignupBonus(account);
                     
                     if (bonusAwarded) {
@@ -263,7 +263,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                   
                   // Award signup bonus DARE points
                   try {
-                    const { awardSignupBonus } = await import('../services/darePointsConfigService');
+                    const { awardSignupBonus } = await import('../services/pointsConfigService');
                     const bonusAwarded = await awardSignupBonus(account);
                     
                     if (bonusAwarded) {

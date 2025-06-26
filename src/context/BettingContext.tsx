@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { useWeb3 } from './Web3Context';
-import { useDarePoints } from './DarePointsContext';
+import { usePoints } from './PointsContext';
 import { useAuth } from './AuthContext';
 import { Match, Bet, BetStatus } from '../types';
 import { fetchNBAMatches } from '../services/oddsApi';
@@ -10,7 +10,7 @@ import { INITIAL_MOCK_BETS } from '../data/mockBets';
 import { MOCK_MATCHES } from '../data/mockMatches';
 import * as betStorageService from '../services/betStorageService';
 import { storeBet, updateBet } from '../services/betStorageService';
-import { updateDarePoints, storeMatches, getUpcomingMatches, getMatchById as getMatchByIdFromDB, updateMatchScores as updateMatchScoresInDB } from '../services/supabaseService';
+import { updatePoints, storeMatches, getUpcomingMatches, getMatchById as getMatchByIdFromDB, updateMatchScores as updateMatchScoresInDB } from '../services/supabaseService';
 
 interface BettingContextType {
   matches: Match[];
@@ -42,7 +42,7 @@ const debounce = (fn: Function, ms = 300) => {
 
 export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { account, isConnected } = useWeb3();
-  const { deductPoints, addPoints, createBetEscrow, acceptBetEscrow, settleBetEscrow, refundBetEscrow, getEscrowByBet } = useDarePoints();
+  const { deductPoints, addPoints, createBetEscrow, acceptBetEscrow, settleBetEscrow, refundBetEscrow, getEscrowByBet } = usePoints();
   const { user, isAuthenticated } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loadingMatches, setLoadingMatches] = useState<boolean>(false);
@@ -378,15 +378,15 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } else {
         console.log('Successfully stored bet in Supabase!');
         
-        // Try to update the user's DARE points in Supabase to match their wallet's record
+        // Try to update the user's points in Supabase to match their wallet's record
         // This helps keep the leaderboard up-to-date
         try {
           if (user?.id) {
-            await updateDarePoints(user.id, 0); // Update with 0 to sync the current balance
-            console.log('Updated user DARE points in Supabase for leaderboard');
+            await updatePoints(user.id, 0); // Update with 0 to sync the current balance
+            console.log('Updated user points in Supabase for leaderboard');
           }
         } catch (pointsError) {
-          console.error('Failed to update user DARE points for leaderboard:', pointsError);
+          console.error('Failed to update user points for leaderboard:', pointsError);
         }
       }
       
@@ -648,14 +648,14 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (!updateResult) {
         console.error('Failed to update bet in Supabase, but bet was accepted locally');
       } else {
-        // Try to update the user's DARE points in Supabase for the leaderboard
+        // Try to update the user's points in Supabase for the leaderboard
         try {
           if (user?.id) {
-            await updateDarePoints(user.id, 0); // Update with 0 to sync the current balance
-            console.log('Updated user DARE points in Supabase for leaderboard');
+            await updatePoints(user.id, 0); // Update with 0 to sync the current balance
+            console.log('Updated user points in Supabase for leaderboard');
           }
         } catch (pointsError) {
-          console.error('Failed to update user DARE points for leaderboard:', pointsError);
+          console.error('Failed to update user points for leaderboard:', pointsError);
         }
       }
       

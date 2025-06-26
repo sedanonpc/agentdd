@@ -204,7 +204,7 @@ export const signUpWithEmail = async (email: string, password: string) => {
       
       // Award signup bonus DARE points based on configuration
       try {
-        const { awardSignupBonus } = await import('./darePointsConfigService');
+        const { awardSignupBonus } = await import('./pointsConfigService');
         const bonusAwarded = await awardSignupBonus(data.user.id);
         
         if (bonusAwarded) {
@@ -258,8 +258,8 @@ interface UserAccount {
   user_id?: string;
   email?: string;
   wallet_address?: string;
-  reserved_dare_points?: number;
-  free_dare_points?: number;
+  reserved_points?: number;
+  free_points?: number;
   created_at?: string;
   updated_at?: string;
   [key: string]: any; // Allow for additional fields
@@ -270,8 +270,8 @@ export const createUserAccount = async (userId: string, account: Partial<UserAcc
     .from('user_accounts')
     .insert({
       user_id: userId,
-      free_dare_points: 0, // Points will be awarded separately via signup bonus
-      reserved_dare_points: 0,
+      free_points: 0, // Points will be awarded separately via signup bonus
+      reserved_points: 0,
       ...account,
     })
     .select()
@@ -316,60 +316,60 @@ export const isSupabaseConfigured = () => {
   return !shouldUseDummyClient;
 };
 
-// DARE Points functions
-export const getDarePoints = async (userId: string): Promise<number> => {
+// Points functions
+export const getPoints = async (userId: string): Promise<number> => {
   const account = await getUserAccount(userId);
-  return (account?.free_dare_points || 0) + (account?.reserved_dare_points || 0);
+  return (account?.free_points || 0) + (account?.reserved_points || 0);
 };
 
-export const getFreeDarePoints = async (userId: string): Promise<number> => {
+export const getFreePoints = async (userId: string): Promise<number> => {
   const account = await getUserAccount(userId);
-  return account?.free_dare_points || 0;
+  return account?.free_points || 0;
 };
 
-export const getReservedDarePoints = async (userId: string): Promise<number> => {
+export const getReservedPoints = async (userId: string): Promise<number> => {
   const account = await getUserAccount(userId);
-  return account?.reserved_dare_points || 0;
+  return account?.reserved_points || 0;
 };
 
-export const updateDarePoints = async (userId: string, points: number): Promise<number> => {
+export const updatePoints = async (userId: string, points: number): Promise<number> => {
   const account = await getUserAccount(userId);
-  const currentPoints = account?.free_dare_points || 0;
+  const currentPoints = account?.free_points || 0;
   const newPoints = currentPoints + points;
   
-  await updateUserAccount(userId, { free_dare_points: newPoints });
+  await updateUserAccount(userId, { free_points: newPoints });
   return newPoints;
 };
 
-export const reserveDarePoints = async (userId: string, amount: number): Promise<boolean> => {
+export const reservePoints = async (userId: string, amount: number): Promise<boolean> => {
   const account = await getUserAccount(userId);
-  const free = account?.free_dare_points || 0;
-  const reserved = account?.reserved_dare_points || 0;
+  const free = account?.free_points || 0;
+  const reserved = account?.reserved_points || 0;
   
   if (free < amount) {
     return false; // Not enough free points
   }
   
   await updateUserAccount(userId, { 
-    free_dare_points: free - amount,
-    reserved_dare_points: reserved + amount
+    free_points: free - amount,
+    reserved_points: reserved + amount
   });
   
   return true;
 };
 
-export const freeDarePoints = async (userId: string, amount: number): Promise<boolean> => {
+export const freePoints = async (userId: string, amount: number): Promise<boolean> => {
   const account = await getUserAccount(userId);
-  const free = account?.free_dare_points || 0;
-  const reserved = account?.reserved_dare_points || 0;
+  const free = account?.free_points || 0;
+  const reserved = account?.reserved_points || 0;
   
   if (reserved < amount) {
     return false; // Not enough reserved points
   }
   
   await updateUserAccount(userId, { 
-    free_dare_points: free + amount,
-    reserved_dare_points: reserved - amount
+    free_points: free + amount,
+    reserved_points: reserved - amount
   });
   
   return true;
