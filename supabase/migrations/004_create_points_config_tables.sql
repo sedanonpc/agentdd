@@ -27,27 +27,27 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_points_config_action_type
 ON public.points_config(action_type) 
 WHERE is_active = true;
 
--- Create points_config_history table to track changes to point values
+-- Create points_config_history table to track all configuration changes
 CREATE TABLE IF NOT EXISTS public.points_config_history (
   -- Unique identifier for the history record
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   
-  -- Reference to the configuration that was changed
-  config_id UUID REFERENCES public.points_config(id) NOT NULL,
+  -- Reference to the configuration that was changed (nullable for deletions)
+  config_id UUID REFERENCES public.points_config(id),
   
-  -- Type of action whose point value was changed
+  -- Type of action whose configuration changed
   action_type points_transaction_type NOT NULL,
   
-  -- Previous point value before the change
-  old_points_value DECIMAL(18,8),
+  -- Type of operation performed
+  operation_type TEXT NOT NULL CHECK (operation_type IN ('INSERT', 'UPDATE', 'DELETE')),
   
-  -- New point value after the change
-  new_points_value DECIMAL(18,8) NOT NULL,
+  -- Details about what changed in this operation
+  change_details JSONB NOT NULL,
   
   -- User who made the change
   changed_by UUID REFERENCES auth.users(id),
   
-  -- Reason for changing the point value
+  -- Reason for making the change
   change_reason TEXT NOT NULL,
   
   -- When the change was made
@@ -96,52 +96,111 @@ COMMENT ON COLUMN public.points_config.is_active IS 'Whether this configuration 
 COMMENT ON COLUMN public.points_config.created_at IS 'When the configuration was created';
 COMMENT ON COLUMN public.points_config.updated_at IS 'When the configuration was last updated';
 
-COMMENT ON TABLE public.points_config_history IS 'History of changes to points configuration values';
+COMMENT ON TABLE public.points_config_history IS 'Complete audit trail of all points configuration changes';
 COMMENT ON COLUMN public.points_config_history.id IS 'Unique identifier for the history record';
-COMMENT ON COLUMN public.points_config_history.config_id IS 'Reference to the configuration that was changed';
-COMMENT ON COLUMN public.points_config_history.action_type IS 'Type of action whose point value was changed';
-COMMENT ON COLUMN public.points_config_history.old_points_value IS 'Previous point value before the change';
-COMMENT ON COLUMN public.points_config_history.new_points_value IS 'New point value after the change';
+COMMENT ON COLUMN public.points_config_history.config_id IS 'Reference to the configuration that was changed (null for deletions)';
+COMMENT ON COLUMN public.points_config_history.action_type IS 'Type of action whose configuration was changed';
+COMMENT ON COLUMN public.points_config_history.operation_type IS 'Type of operation: INSERT, UPDATE, or DELETE';
+COMMENT ON COLUMN public.points_config_history.change_details IS 'JSON object containing details of what changed - field names as keys with old/new values';
 COMMENT ON COLUMN public.points_config_history.changed_by IS 'User who made the change';
-COMMENT ON COLUMN public.points_config_history.change_reason IS 'Reason for changing the point value';
+COMMENT ON COLUMN public.points_config_history.change_reason IS 'Reason for making the change';
 COMMENT ON COLUMN public.points_config_history.created_at IS 'When the change was made';
 
--- Create a function to automatically track changes to point values
+-- Create a function to automatically track all configuration changes
 CREATE OR REPLACE FUNCTION public.track_points_config_changes()
 RETURNS TRIGGER AS $$
+DECLARE
+  changes JSONB := '{}';
 BEGIN
-  -- Only track changes to existing records
+  -- Handle INSERT operations (new transaction types)
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO public.points_config_history (
+      config_id,
+      action_type,
+      operation_type,
+      change_details,
+      changed_by,
+      change_reason
+    ) VALUES (
+      NEW.id,
+      NEW.action_type,
+      'INSERT',
+      jsonb_build_object(
+        'points_value', NEW.points_value,
+        'is_active', NEW.is_active
+      ),
+      auth.uid(),
+      'New transaction type added'
+    );
+    RETURN NEW;
+  END IF;
+  
+  -- Handle UPDATE operations
   IF TG_OP = 'UPDATE' THEN
-    -- Only insert history if points_value actually changed
+    -- Always update the updated_at timestamp
+    NEW.updated_at := NOW();
+    
+    -- Build change details for any field that changed
     IF OLD.points_value <> NEW.points_value THEN
+      changes := changes || jsonb_build_object('points_value', jsonb_build_object('old', OLD.points_value, 'new', NEW.points_value));
+    END IF;
+    
+    IF OLD.is_active <> NEW.is_active THEN
+      changes := changes || jsonb_build_object('is_active', jsonb_build_object('old', OLD.is_active, 'new', NEW.is_active));
+    END IF;
+    
+    -- Only log if something actually changed
+    IF changes <> '{}' THEN
       INSERT INTO public.points_config_history (
-        config_id, 
-        action_type, 
-        old_points_value, 
-        new_points_value, 
+        config_id,
+        action_type,
+        operation_type,
+        change_details,
         changed_by,
         change_reason
       ) VALUES (
         NEW.id,
         NEW.action_type,
-        OLD.points_value,
-        NEW.points_value,
+        'UPDATE',
+        changes,
         auth.uid(),
-        'Manual update'
+        'Configuration updated'
       );
     END IF;
+    
+    RETURN NEW;
   END IF;
   
-  -- Always update the updated_at timestamp
-  NEW.updated_at := NOW();
+  -- Handle DELETE operations (removing transaction types)
+  IF TG_OP = 'DELETE' THEN
+    INSERT INTO public.points_config_history (
+      config_id,
+      action_type,
+      operation_type,
+      change_details,
+      changed_by,
+      change_reason
+    ) VALUES (
+      OLD.id,
+      OLD.action_type,
+      'DELETE',
+      jsonb_build_object(
+        'points_value', OLD.points_value,
+        'is_active', OLD.is_active
+      ),
+      auth.uid(),
+      'Transaction type removed'
+    );
+    RETURN OLD;
+  END IF;
   
-  RETURN NEW;
+  RETURN NULL;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create a trigger to track changes
+-- Create triggers to track all changes
 CREATE TRIGGER track_points_config_changes
-BEFORE UPDATE ON public.points_config
+AFTER INSERT OR UPDATE OR DELETE ON public.points_config
 FOR EACH ROW EXECUTE FUNCTION public.track_points_config_changes();
 
 -- Insert initial configuration values
