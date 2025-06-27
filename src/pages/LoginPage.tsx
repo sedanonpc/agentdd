@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWeb3 } from '../context/Web3Context';
-import { Lock, Mail, Wallet, AlertTriangle, Info, Smartphone } from 'lucide-react';
+import { Lock, Mail, Wallet, AlertTriangle, Smartphone } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
 import { toast } from 'react-toastify';
 
@@ -13,8 +13,6 @@ const LoginPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
-  const [showDebug, setShowDebug] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [checkingConnection, setCheckingConnection] = useState(false);
   
@@ -66,59 +64,6 @@ const LoginPage: React.FC = () => {
       navigate('/matches');
     }
   }, [isConnected, account, navigate]);
-
-  // Add debugging effect
-  useEffect(() => {
-    const getDebugInfo = async () => {
-      try {
-        console.log("Debug: Supabase URL =", import.meta.env.VITE_SUPABASE_URL);
-        console.log("Debug: Supabase Key Present =", !!import.meta.env.VITE_SUPABASE_ANON_KEY);
-        
-        // Try to make a simple query to check Supabase connection
-        let connectionError = null;
-        try {
-          // This will fail if the table doesn't exist, but that's expected
-          const { error } = await supabase.from('user_accounts').select('id').limit(1);
-          console.log("Debug: Supabase query result:", error ? "Error" : "Success");
-          if (error) {
-            console.error("Debug: Supabase query error:", error);
-            connectionError = String(error);
-          }
-        } catch (e: any) {
-          console.error("Debug: Supabase connection exception:", e);
-          connectionError = String(e);
-        }
-
-        // Try a basic auth call
-        try {
-          const { error: authError } = await supabase.auth.getSession();
-          console.log("Debug: Supabase auth check:", authError ? "Error" : "Success");
-          if (authError) {
-            console.error("Debug: Supabase auth error:", authError);
-          }
-        } catch (e: any) {
-          console.error("Debug: Supabase auth exception:", e);
-        }
-
-        setDebugInfo({
-          supabaseUrl: import.meta.env.VITE_SUPABASE_URL || 'Not set',
-          hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
-          error: connectionError,
-          isSupabaseAvailable
-        });
-      } catch (err: any) {
-        console.error("Debug: General error:", err);
-        setDebugInfo({
-          error: String(err),
-          supabaseUrl: import.meta.env.VITE_SUPABASE_URL || 'Not set',
-          hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
-          isSupabaseAvailable
-        });
-      }
-    };
-
-    getDebugInfo();
-  }, [isSupabaseAvailable]);
   
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,40 +186,6 @@ const LoginPage: React.FC = () => {
     <div className="container mx-auto px-4 py-8 max-w-md">
       <div className="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue p-6">
         <h1 className="text-2xl font-display text-console-white mb-6 text-center uppercase">ACCESS_TERMINAL</h1>
-        
-        {/* Debug Button */}
-        <div className="absolute top-2 right-2">
-          <button 
-            onClick={() => setShowDebug(!showDebug)}
-            className="text-console-blue-dim hover:text-console-blue-bright"
-          >
-            <Info size={20} />
-          </button>
-        </div>
-        
-        {/* Debug Info */}
-        {showDebug && debugInfo && (
-          <div className="mb-6 bg-gray-900/80 border border-console-blue p-3 text-xs font-mono">
-            <h3 className="text-console-blue-bright mb-2">DEBUG INFO</h3>
-            <p>Supabase URL: {debugInfo.supabaseUrl}</p>
-            <p>Anon Key Present: {debugInfo.hasAnonKey ? 'Yes' : 'No'}</p>
-            <p>isSupabaseAvailable: {debugInfo.isSupabaseAvailable ? 'Yes' : 'No'}</p>
-            <div className="mt-2">
-              <p className="text-console-blue-bright">Instructions:</p>
-              <ol className="list-decimal pl-4 mt-1 text-console-white-dim">
-                <li>Create a <code>.env</code> file in project root</li>
-                <li>Add proper Supabase URL and key (see env-instructions.txt)</li>
-                <li>Restart the dev server: <code>npm run dev</code></li>
-                <li>Clear browser cache and refresh</li>
-              </ol>
-            </div>
-            {debugInfo.error && (
-              <div className="mt-2 text-red-400">
-                <p>Error: {debugInfo.error}</p>
-              </div>
-            )}
-          </div>
-        )}
         
         {/* Supabase Status */}
         {!isSupabaseAvailable && (

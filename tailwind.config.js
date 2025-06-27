@@ -55,6 +55,10 @@ export default {
         'terminal-scan': 'terminal-scan 8s linear infinite',
         'pulse-blue': 'pulse-blue 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'fadeIn': 'fadeIn 0.3s ease-in-out',
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'pulse-subtle': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'typing': 'typing 3.5s steps(30, end), blink-caret .75s step-end infinite',
+        'spin-slow': 'spin 8s linear infinite',
       },
       keyframes: {
         'flicker': {
@@ -78,6 +82,14 @@ export default {
         'fadeIn': {
           '0%': { opacity: '0', transform: 'scale(0.95)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'typing': {
+          'from': { width: '0' },
+          'to': { width: '100%' }
+        },
+        'blink-caret': {
+          'from, to': { borderColor: 'transparent' },
+          '50%': { borderColor: 'rgba(220, 38, 38, 0.7)' }
         },
       },
       borderWidth: {
