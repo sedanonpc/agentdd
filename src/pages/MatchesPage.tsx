@@ -8,10 +8,12 @@ import { decimalToAmerican, formatDecimalOdds } from '../utils/oddsUtils';
 import MatchChatRoom from '../components/match/MatchChatRoom';
 import MatchBettingForm from '../components/match/MatchBettingForm';
 import Modal from '../components/common/Modal';
-import EmbeddedDareDevilTerminal from '../components/chat/EmbeddedDareDevilTerminal';
+
+const YAHOO_SPORTS_ODDS_URL = 'https://sports.yahoo.com/nba/odds/';
 
 const MatchesPage: React.FC = () => {
   const { matches, loadingMatches, refreshMatches, isLiveData, dataSource } = useBetting();
+  const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [forceRender, setForceRender] = useState<boolean>(false);
   
@@ -47,8 +49,11 @@ const MatchesPage: React.FC = () => {
     };
   }, []); // Empty dependency array to ensure it only runs once when mounted
   
-  // Use matches directly since search functionality was removed
-  const filteredMatches = matches || [];
+  // Use the filtered matches even if they're empty
+  const filteredMatches = matches ? matches.filter(match => 
+    match.home_team.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    match.away_team.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ) : [];
   
   const formatDate = (dateString: string) => {
     try {
@@ -138,10 +143,15 @@ const MatchesPage: React.FC = () => {
     let iconColor = 'text-yellow-400';
     let label = 'OFFLINE';
     let icon = <WifiOff className="w-3 h-3" />;
-    let tooltip = 'No live connection';
+    let tooltip = 'Using mock data - no live connection';
 
     if (isLiveData) {
-      if (dataSource === 'the_odds_api') {
+      if (dataSource === 'database') {
+        iconColor = 'text-green-400';
+        label = 'DB DATA';
+        icon = <Database className="w-3 h-3" />;
+        tooltip = 'Using persisted data from database';
+      } else if (dataSource === 'the_odds_api') {
         iconColor = 'text-green-400';
         label = 'API DATA';
         icon = <Wifi className="w-3 h-3" />;
@@ -162,22 +172,48 @@ const MatchesPage: React.FC = () => {
     );
   };
   
+  // Add a function to get a badge for the data source
+  const getDataSourceBadge = () => {
+    if (dataSource === 'database') {
+      return (
+        <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-mono ml-2">
+          DB
+        </span>
+      );
+    } else if (dataSource === 'yahoo') {
+      return (
+        <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-mono ml-2">
+          YAHOO
+        </span>
+      );
+    } else if (dataSource === 'the_odds_api') {
+      return (
+        <span className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-mono ml-2">
+          API
+        </span>
+      );
+    } else if (dataSource === 'mock') {
+      return (
+        <span className="bg-yellow-600 text-black px-2 py-1 rounded text-xs font-mono ml-2">
+          MOCK
+        </span>
+      );
+    }
+    return null;
+  };
+  
   return (
-    <div className="space-y-5">  {/* Increased spacing between components */}
+    <div className="space-y-6">
       {/* Header with title and banner */}
-      <section className="w-full bg-console-blue-bright/90 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
-        {/* Full-width image container */}
-        <div className="relative w-full border-b-1 border-console-blue bg-console-blue-bright/80 backdrop-blur-xs overflow-hidden">
-          <div className="relative max-w-6xl mx-auto">
-            <img 
-              src="https://i.ibb.co/rGh18fww/nba-banner-v3.png"
-              alt="Agent Daredevil - Wanna Bet?" 
-              className="w-full h-auto object-contain mx-auto relative z-0"
-            />
+      <div className="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
+        <div className="bg-console-blue/90 p-2 text-black flex items-center justify-between">
+          <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ NBA_TERMINAL ]</div>
+          <div className="flex items-center gap-4">
+            <LiveDataIndicator />
+            <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ SESSION: {getSessionID()} ]</div>
           </div>
         </div>
-      </section>
-      <div className="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
+        
         <div className="p-6 text-center">
           <div className="flex items-center justify-center mb-3">
             <Terminal className="text-console-blue-bright h-8 w-8 mr-2" />
@@ -191,23 +227,183 @@ const MatchesPage: React.FC = () => {
             <span>SYSTEM: ONLINE</span>
             <span className="h-1.5 w-1.5 bg-console-blue-bright rounded-full animate-pulse"></span>
             <span>TIME: {getTerminalTime()}</span>
-            <span className="h-1.5 w-1.5 bg-console-blue-bright rounded-full animate-pulse"></span>
-            <LiveDataIndicator />
+          </div>
+          
+          {/* Add clear data source indicator */}
+          {!loadingMatches && (
+            <div className="mt-4 p-2 bg-console-gray-terminal/80 border-1 border-console-blue inline-block">
+              <div className={`font-mono text-sm uppercase flex items-center ${
+                dataSource === 'database' ? 'text-green-500' :
+                dataSource === 'the_odds_api' ? 'text-green-500' : 
+                dataSource === 'yahoo' ? 'text-blue-500' : 
+                'text-yellow-500'
+              }`}>
+                {dataSource === 'database' ? (
+                  <>
+                    <Database className="h-4 w-4 mr-2" />
+                    <span>DATABASE_DATA: Using persisted matches from database</span>
+                  </>
+                ) : dataSource === 'the_odds_api' ? (
+                  <>
+                    <Wifi className="h-4 w-4 mr-2" />
+                    <span>LIVE_API_DATA: Using real-time The Odds API</span>
+                  </>
+                ) : dataSource === 'yahoo' ? (
+                  <>
+                    <Database className="h-4 w-4 mr-2" />
+                    <span>YAHOO_SPORTS_DATA: Using Yahoo Sports odds</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="h-4 w-4 mr-2" />
+                    <span>MOCK_DATA_MODE: Displaying simulated NBA matches</span>
+                  </>
+                )}
+              </div>
+              <div className="mt-2 text-xs text-console-white-dim font-mono">
+                {matches.length > 0 ? (
+                  <>DISPLAYING {matches.length} {isLiveData ? 'LIVE' : 'MOCK'} MATCHES</>
+                ) : (
+                  <>NO MATCHES AVAILABLE</>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Daredevil Banner - Added from photo */}
+      <section className="w-full bg-console-blue-bright/90 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
+        {/* Full-width image container */}
+        <div className="relative w-full border-b-1 border-console-blue bg-console-blue-bright/80 backdrop-blur-xs overflow-hidden">
+          <div className="relative max-w-6xl mx-auto">
+            <img 
+              src="https://i.ibb.co/Q7mKsRBc/nba-banner.png"
+              alt="Agent Daredevil - Wanna Bet?" 
+              className="w-full h-auto object-contain mx-auto relative z-0"
+            />
+          </div>
+        </div>
+      </section>
+      
+      {/* Featured Matches Banner */}
+      <div className="w-full bg-console-black/60 backdrop-blur-xs border-1 border-console-blue shadow-terminal">
+        <div className="bg-console-blue/90 p-2 text-black flex items-center justify-between">
+          <div className="text-xs text-console-white font-mono tracking-wide">[ FEATURED_MATCHES ]</div>
+          <div className="flex items-center gap-4">
+            <div className="text-xs text-console-white font-mono tracking-wide">[ TOP_ODDS ]</div>
+            <div className="text-xs text-console-white font-mono tracking-wide opacity-80">SYS_TIME: {getTerminalTime()}</div>
+          </div>
+        </div>
+        
+        <div className="relative py-8 w-full overflow-hidden min-h-[120px]">
+          {/* Overlay gradient */}
+          <div className="absolute inset-0 bg-gradient-to-r from-console-blue/40 to-console-black/40 z-0"></div>
+          
+          {/* Banner content */}
+          <div className="relative z-10 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-2xl md:text-3xl font-display uppercase text-console-white tracking-widest mb-4 text-shadow-glow">
+                UPCOMING MATCHUPS
+              </div>
+              <div className="bg-console-black/60 backdrop-blur-sm border-1 border-console-blue p-4 inline-block">
+                <div className="text-console-white font-mono">
+                  {matches && matches.length > 0 ? `${matches.length} AVAILABLE MATCHES` : 'LOADING MATCH DATA...'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Bottom bar with stats */}
+        <div className="bg-console-black/80 backdrop-blur-xs p-3 border-t border-console-blue/50">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-2 font-mono text-sm text-console-white-dim">
+            <div className="flex items-center gap-4">
+              <span className="text-console-blue-bright">TODAY'S MATCHES: {matches ? matches.filter(m => new Date(m.commence_time).toDateString() === new Date().toDateString()).length : 0}</span>
+              <span>|</span>
+              <span className="text-console-blue-bright">ACTIVE BETS: 12</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="px-2 py-0.5 bg-green-900/30 text-green-400 text-xs">ODDS UPDATED</span>
+              <button 
+                onClick={handleRefresh}
+                className="bg-yellow-500/90 text-black px-3 py-1 text-xs font-mono hover:bg-yellow-400 transition-colors"
+              >
+                REFRESH DATA
+              </button>
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Status bar with refresh button */}
-      <div className="bg-console-gray-terminal/60 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-3 flex justify-between items-center">
-        <div className="text-console-white font-mono text-sm">
-          MATCHES: {filteredMatches.length}
+      {/* Search and Data Source Indicator */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-console-gray-terminal/70 backdrop-blur-xs p-4 border-1 border-console-blue shadow-terminal">
+        <div className="w-full md:w-auto">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-console-blue h-4 w-4" />
+            <input
+              type="text"
+              placeholder="SEARCH_TEAMS.."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full md:w-64 pl-10 pr-4 py-2 bg-console-black/50 backdrop-blur-xs border-1 border-console-blue rounded-none text-console-white font-mono uppercase focus:outline-none focus:shadow-button"
+            />
+          </div>
         </div>
-        <button 
-          onClick={handleRefresh} 
-          className="flex items-center gap-1 bg-console-blue/30 hover:bg-console-blue/50 border-1 border-console-blue px-3 py-1 text-console-white font-mono text-sm transition-colors"
-        >
-          <span>REFRESH DATA</span>
-        </button>
+        
+        <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mt-3 md:mt-0">
+          <div className={`inline-flex items-center gap-2 px-3 py-1 font-mono text-sm ${
+            dataSource === 'database' ? 'text-green-500' : 
+            dataSource === 'the_odds_api' ? 'text-green-500' : 
+            dataSource === 'yahoo' ? 'text-blue-500' : 
+            'text-yellow-500'
+          }`}>
+            {dataSource === 'database' ? (
+              <>
+                <Database className="h-4 w-4" />
+                <span>DB_DATA</span>
+              </>
+            ) : dataSource === 'the_odds_api' ? (
+              <>
+                <Wifi className="h-4 w-4" />
+                <span>API_DATA</span>
+              </>
+            ) : dataSource === 'yahoo' ? (
+              <>
+                <Database className="h-4 w-4" />
+                <span>YAHOO_DATA</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-4 w-4" />
+                <span>MOCK_DATA</span>
+              </>
+            )}
+          </div>
+          
+          <button 
+            onClick={handleRefresh}
+            className="bg-console-black/50 backdrop-blur-xs border-1 border-console-blue p-2 hover:shadow-button transition-all"
+            aria-label="Refresh matches"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-console-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+              <path d="M16 21h5v-5" />
+            </svg>
+          </button>
+          
+          <a 
+            href={YAHOO_SPORTS_ODDS_URL} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-console-blue-bright font-mono hover:text-console-white transition-colors"
+          >
+            <span>[YAHOO_SPORTS]</span>
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
       </div>
       
       {error && (
@@ -223,19 +419,12 @@ const MatchesPage: React.FC = () => {
         </div>
       ) : filteredMatches.length === 0 ? (
         <div className="text-center py-12 bg-console-gray-terminal/60 backdrop-blur-xs border-1 border-console-blue shadow-terminal">
-          <Terminal className="h-10 w-10 text-console-blue-bright mx-auto mb-4" />
-          <p className="text-console-white font-mono mb-4">
-            NO_UPCOMING_MATCHES_AVAILABLE
+          <p className="text-console-white-muted font-mono">
+            {searchTerm ? 'NO_MATCHES_FOUND. ADJUST_SEARCH_PARAMETERS.' : 'NO_UPCOMING_MATCHES_AVAILABLE.'}
           </p>
-          <button 
-            onClick={handleRefresh} 
-            className="inline-block bg-console-blue/30 hover:bg-console-blue/50 border-1 border-console-blue px-4 py-2 text-console-white font-mono"
-          >
-            REFRESH_DATA
-          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMatches.map((match) => (
             <MatchCard 
               key={match.id} 
@@ -252,12 +441,9 @@ const MatchesPage: React.FC = () => {
         </div>
       )}
       
-      {/* DareDevil Analysis Terminal */}
-      <EmbeddedDareDevilTerminal />
-      
       {/* Chat Room Section */}
       {selectedMatch && (
-        <div className="mt-12 mb-10">
+        <div className="mt-8">
           <MatchChatRoom match={selectedMatch} onClose={handleCloseChat} />
         </div>
       )}
@@ -310,6 +496,12 @@ const MatchCard: React.FC<MatchCardProps> = ({
         return { home: null, away: null };
       }
       
+      // Log the team names and available outcomes for debugging
+      console.log('=== MATCH CARD DEBUG: Team names vs outcomes ===');
+      console.log('Home team:', match.home_team.name);
+      console.log('Away team:', match.away_team.name);
+      console.log('Available outcomes:', h2hMarket.outcomes.map(o => o.name));
+      
       // First try exact match
       let homeOutcome = h2hMarket.outcomes.find(o => o.name === match.home_team.name);
       let awayOutcome = h2hMarket.outcomes.find(o => o.name === match.away_team.name);
@@ -320,6 +512,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
           o.name.toLowerCase().includes(match.home_team.name.toLowerCase()) ||
           match.home_team.name.toLowerCase().includes(o.name.toLowerCase())
         );
+        console.log('Using fuzzy match for home team:', homeOutcome?.name);
       }
       
       if (!awayOutcome) {
@@ -327,10 +520,12 @@ const MatchCard: React.FC<MatchCardProps> = ({
           o.name.toLowerCase().includes(match.away_team.name.toLowerCase()) ||
           match.away_team.name.toLowerCase().includes(o.name.toLowerCase())
         );
+        console.log('Using fuzzy match for away team:', awayOutcome?.name);
       }
       
       // If we still have no matches, just take the first two outcomes in order
       if (!homeOutcome && !awayOutcome && h2hMarket.outcomes.length >= 2) {
+        console.log('Using fallback outcome assignment');
         homeOutcome = h2hMarket.outcomes[0];
         awayOutcome = h2hMarket.outcomes[1];
       }
@@ -372,9 +567,10 @@ const MatchCard: React.FC<MatchCardProps> = ({
             <span className="text-sm text-console-white font-mono">{formatTime(match.commence_time)}</span>
             {match.bookmakers && match.bookmakers.length > 0 && (
               <span className={`text-xs font-mono px-1 py-0.5 ${
-                match.bookmakers[0].key === 'yahoo_sports' ? 'bg-blue-600 text-white' : 'bg-green-600 text-white'
+                match.bookmakers[0].key === 'yahoo_sports' ? 'bg-blue-600 text-white' :
+                !isLiveData ? 'bg-yellow-600 text-black' : 'bg-green-600 text-white'
               } rounded`}>
-                {match.bookmakers[0].key === 'yahoo_sports' ? 'YAHOO' : 'API'}
+                {match.bookmakers[0].key === 'yahoo_sports' ? 'YAHOO' : !isLiveData ? 'MOCK' : 'API'}
               </span>
             )}
             </div>

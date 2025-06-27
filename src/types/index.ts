@@ -25,6 +25,8 @@ export interface BookmakerOdds {
 export interface Match {
   id: string;
   sport_key: string;
+  sport_name?: string;
+  league_name?: string;
   sport_title: string;
   commence_time: string;
   home_team: Team;

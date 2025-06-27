@@ -365,7 +365,7 @@ export const getUserBettingStats = async (userId: string): Promise<LeaderboardEn
 /**
  * Get users ranked by their $DARE points
  */
-export const getUsersByDarePoints = async (limit: number = 10): Promise<LeaderboardEntry[]> => {
+export const getUsersByPoints = async (limit: number = 10): Promise<LeaderboardEntry[]> => {
   try {
     console.log('Fetching leaderboard data from Supabase...');
     
@@ -381,9 +381,9 @@ export const getUsersByDarePoints = async (limit: number = 10): Promise<Leaderbo
     
     // Get users ranked by their $DARE points
     const { data, error } = await supabaseClient
-      .from('user_profiles')
-      .select('user_id, username, wallet_address, dare_points')
-      .order('dare_points', { ascending: false })
+      .from('user_accounts')
+              .select('user_id, email, wallet_address, reserved_points, free_points')
+              .order('free_points', { ascending: false })
       .limit(limit);
 
     // Create an array to hold our result (real + mock)
@@ -391,7 +391,7 @@ export const getUsersByDarePoints = async (limit: number = 10): Promise<Leaderbo
     
     // Handle error case
     if (error) {
-      logSupabaseError('getUsersByDarePoints', error);
+      logSupabaseError('getUsersByPoints', error);
       console.log('Will use mock data for leaderboard');
     } else if (data && data.length > 0) {
       // Process real data if available
@@ -400,15 +400,15 @@ export const getUsersByDarePoints = async (limit: number = 10): Promise<Leaderbo
       // Convert to LeaderboardEntry format with available fields
       const realUsers = data.map(user => ({
         user_id: user.user_id,
-        username: user.username,
+        username: user.email,
         wallet_address: user.wallet_address,
-        total_bets: 0, // Default values for fields not directly in user_profiles
+        total_bets: 0, // Default values for fields not directly in user_accounts
         wins: 0,
         losses: 0,
         total_wagered: 0,
         total_won: 0,
         win_rate: 0,
-        dare_points: user.dare_points || 0,
+        dare_points: (user.reserved_points || 0) + (user.free_points || 0),
         is_mock: false
       }));
       
@@ -455,22 +455,22 @@ export const getAllLeaderboardData = async (limit: number = 10): Promise<{
   topWinners: LeaderboardEntry[];
   topEarners: LeaderboardEntry[];
   mostActive: LeaderboardEntry[];
-  darePointsRanking: LeaderboardEntry[];
+  pointsRanking: LeaderboardEntry[];
 }> => {
   try {
     // Get all leaderboard data in parallel
-    const [winners, earners, active, darePointsUsers] = await Promise.all([
+    const [winners, earners, active, pointsUsers] = await Promise.all([
       getTopWinners(limit),
       getTopEarners(limit),
       getMostActiveBettors(limit),
-      getUsersByDarePoints(limit)
+      getUsersByPoints(limit)
     ]);
 
     return {
       topWinners: winners,
       topEarners: earners,
       mostActive: active,
-      darePointsRanking: darePointsUsers
+              pointsRanking: pointsUsers
     };
   } catch (error) {
     console.error('Error getting all leaderboard data:', error);
@@ -478,7 +478,7 @@ export const getAllLeaderboardData = async (limit: number = 10): Promise<{
       topWinners: [],
       topEarners: [],
       mostActive: [],
-      darePointsRanking: []
+              pointsRanking: []
     };
   }
 };

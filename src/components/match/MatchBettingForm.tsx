@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Match } from '../../types';
 import { useBetting } from '../../context/BettingContext';
 import { useWeb3 } from '../../context/Web3Context';
-import { useDarePoints } from '../../context/DarePointsContext';
+import { usePoints } from '../../context/PointsContext';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { toast } from 'react-toastify';
@@ -19,7 +19,7 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
   const { createNewBet } = useBetting();
   const { isConnected } = useWeb3();
   const { isAuthenticated, authMethod } = useAuth();
-  const { userBalance } = useDarePoints();
+  const { userBalance } = usePoints();
   
   const [selectedTeam, setSelectedTeam] = useState<string>(match.home_team.id);
   const [betAmount, setBetAmount] = useState<string>('100');

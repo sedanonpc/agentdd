@@ -4,7 +4,7 @@ import { Check, X, AlertTriangle, Loader2, ShieldCheck, Calendar, Clock, Trendin
 import { useBetting } from '../context/BettingContext';
 import { useWeb3 } from '../context/Web3Context';
 import { useAuth } from '../context/AuthContext';
-import { useDarePoints } from '../context/DarePointsContext';
+import { usePoints } from '../context/PointsContext';
 import { Bet, BetStatus } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { formatDecimalOdds, decimalToAmerican } from '../utils/oddsUtils';
@@ -16,7 +16,7 @@ const AcceptBetPage: React.FC = () => {
   const { getMatchById, acceptBet } = useBetting();
   const { account, connectWallet } = useWeb3();
   const { isAuthenticated, loginWithEmail, authMethod } = useAuth();
-  const { userBalance, deductPoints, createBetEscrow } = useDarePoints();
+  const { userBalance, deductPoints, createBetEscrow } = usePoints();
   
   const [loading, setLoading] = useState<boolean>(true);
   const [accepting, setAccepting] = useState<boolean>(false);

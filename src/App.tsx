@@ -15,9 +15,8 @@ import { Web3Provider } from './context/Web3Context';
 import { AuthProvider } from './context/AuthContext';
 import { BettingProvider } from './context/BettingContext';
 import { ChatProvider } from './context/ChatContext';
-import { DarePointsProvider } from './context/DarePointsContext';
+import { PointsProvider } from './context/PointsContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
-import { setupDatabase } from './services/setupDatabaseService';
 import { isSupabaseConfigured } from './services/supabaseService';
 import { ConsoleThemeProvider } from './theme/muiTheme';
 
@@ -49,29 +48,18 @@ function App() {
     };
   }, []);
 
-  // Setup database schema when app initializes
+  // Check Supabase configuration
   useEffect(() => {
-    const initializeDatabase = async () => {
-      try {
-        if (isSupabaseConfigured()) {
-          await setupDatabase();
-        } else {
-          console.warn('Supabase not configured - skipping database setup');
-          toast.info('Running in local mode - data will not be saved to the cloud');
-        }
-      } catch (error) {
-        console.error('Database initialization error:', error);
-        toast.warning('Could not connect to the database - some features may be unavailable');
-      }
-    };
-    
-    initializeDatabase();
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase not configured');
+      toast.info('Running in local mode - data will not be saved to the cloud');
+    }
   }, []);
 
   return (
     <Web3Provider>
       <AuthProvider>
-        <DarePointsProvider>
+        <PointsProvider>
           <BettingProvider>
             <ChatProvider>
               <ConsoleThemeProvider>
@@ -144,7 +132,7 @@ function App() {
               </ConsoleThemeProvider>
             </ChatProvider>
           </BettingProvider>
-        </DarePointsProvider>
+        </PointsProvider>
       </AuthProvider>
     </Web3Provider>
   );
