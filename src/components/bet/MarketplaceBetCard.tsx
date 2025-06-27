@@ -5,7 +5,7 @@ import { Bet, BetStatus } from '../../types';
 import { truncateAddress } from '../../utils/addressUtils';
 import { formatDistanceToNow } from 'date-fns';
 import { useWeb3 } from '../../context/Web3Context';
-import { useDarePoints } from '../../context/DarePointsContext';
+import { usePoints } from '../../context/PointsContext';
 import { toast } from 'react-toastify';
 
 interface MarketplaceBetCardProps {
@@ -98,7 +98,7 @@ const MarketplaceBetCard: React.FC<MarketplaceBetCardProps> = ({
 }) => {
   const [expanded, setExpanded] = useState<boolean>(showExpanded);
   const { account } = useWeb3();
-  const { userBalance } = useDarePoints();
+  const { userBalance } = usePoints();
   
   const isCreator = account && account.toLowerCase() === bet.creator.toLowerCase();
   const isAcceptor = account && bet.acceptor && account.toLowerCase() === bet.acceptor.toLowerCase();

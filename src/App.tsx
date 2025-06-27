@@ -15,7 +15,7 @@ import { Web3Provider } from './context/Web3Context';
 import { AuthProvider } from './context/AuthContext';
 import { BettingProvider } from './context/BettingContext';
 import { ChatProvider } from './context/ChatContext';
-import { DarePointsProvider } from './context/DarePointsContext';
+import { PointsProvider } from './context/PointsContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { isSupabaseConfigured } from './services/supabaseService';
 import { ConsoleThemeProvider } from './theme/muiTheme';
@@ -59,7 +59,7 @@ function App() {
   return (
     <Web3Provider>
       <AuthProvider>
-        <DarePointsProvider>
+        <PointsProvider>
           <BettingProvider>
             <ChatProvider>
               <ConsoleThemeProvider>
@@ -132,7 +132,7 @@ function App() {
               </ConsoleThemeProvider>
             </ChatProvider>
           </BettingProvider>
-        </DarePointsProvider>
+        </PointsProvider>
       </AuthProvider>
     </Web3Provider>
   );

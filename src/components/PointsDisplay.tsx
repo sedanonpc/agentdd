@@ -1,18 +1,18 @@
 import React from 'react';
-import { useDarePoints } from '../context/DarePointsContext';
+import { usePoints } from '../context/PointsContext';
 
-interface DarePointsDisplayProps {
+interface PointsDisplayProps {
   variant?: 'default' | 'compact' | 'large';
   className?: string;
   showReserved?: boolean;
 }
 
-const DarePointsDisplay: React.FC<DarePointsDisplayProps> = ({ 
+const PointsDisplay: React.FC<PointsDisplayProps> = ({ 
   variant = 'default',
   className = '',
   showReserved = true
 }) => {
-  const { userBalance, freeDarePointsBalance, reservedDarePointsBalance, loadingBalance } = useDarePoints();
+  const { userBalance, freePointsBalance, reservedPointsBalance, loadingBalance } = usePoints();
 
   if (loadingBalance) {
     return (
@@ -37,16 +37,16 @@ const DarePointsDisplay: React.FC<DarePointsDisplayProps> = ({
         <span className="text-console-blue-bright text-lg font-display">$DARE POINTS</span>
         <span className="text-3xl font-bold text-console-white">{userBalance?.toLocaleString() || '0'}</span>
         
-        {showReserved && reservedDarePointsBalance > 0 && (
+        {showReserved && reservedPointsBalance > 0 && (
           <div className="mt-2">
             <span className="text-console-yellow text-sm font-display">RESERVED:</span>
-            <span className="ml-2 text-console-yellow-dim text-lg">{reservedDarePointsBalance.toLocaleString()}</span>
+            <span className="ml-2 text-console-yellow-dim text-lg">{reservedPointsBalance.toLocaleString()}</span>
           </div>
         )}
         
         <div className="mt-1">
           <span className="text-console-green text-sm font-display">FREE:</span>
-          <span className="ml-2 text-console-green-dim text-lg">{freeDarePointsBalance.toLocaleString()}</span>
+          <span className="ml-2 text-console-green-dim text-lg">{freePointsBalance.toLocaleString()}</span>
         </div>
       </div>
     );
@@ -59,19 +59,19 @@ const DarePointsDisplay: React.FC<DarePointsDisplayProps> = ({
         <span className="ml-2 text-xl text-console-white">{userBalance?.toLocaleString() || '0'}</span>
       </div>
       
-      {showReserved && reservedDarePointsBalance > 0 && (
+      {showReserved && reservedPointsBalance > 0 && (
         <div className="inline-flex items-center mt-1">
           <span className="text-console-yellow text-xs font-display">RESERVED:</span>
-          <span className="ml-1 text-sm text-console-yellow-dim">{reservedDarePointsBalance.toLocaleString()}</span>
+          <span className="ml-1 text-sm text-console-yellow-dim">{reservedPointsBalance.toLocaleString()}</span>
         </div>
       )}
       
       <div className="inline-flex items-center mt-1">
         <span className="text-console-green text-xs font-display">FREE:</span>
-        <span className="ml-1 text-sm text-console-green-dim">{freeDarePointsBalance.toLocaleString()}</span>
+        <span className="ml-1 text-sm text-console-green-dim">{freePointsBalance.toLocaleString()}</span>
       </div>
     </div>
   );
 };
 
-export default DarePointsDisplay; 
+export default PointsDisplay; 

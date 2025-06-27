@@ -2,14 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Activity, User, Database, MessageSquare, Terminal, LogOut, Trophy, RefreshCw, Star } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useDarePoints } from '../../context/DarePointsContext';
-import DarePointsDisplay from '../../components/DarePointsDisplay';
-import { getUsersByDarePoints, LeaderboardEntry } from '../../services/betStorageService';
+import { usePoints } from '../../context/PointsContext';
+import PointsDisplay from '../../components/PointsDisplay';
+import { getUsersByPoints, LeaderboardEntry } from '../../services/betStorageService';
 import { getMockLeaderboardEntries } from '../../mockSupabase';
 
 const Navbar: React.FC = () => {
   const { user, authMethod, isAuthenticated, logout } = useAuth();
-  const { userBalance } = useDarePoints();
+  const { userBalance } = usePoints();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
@@ -44,7 +44,7 @@ const Navbar: React.FC = () => {
       // Get leaderboard data
       let leaderboardData: LeaderboardEntry[] = [];
       try {
-        leaderboardData = await getUsersByDarePoints(100);
+        leaderboardData = await getUsersByPoints(100);
         
         // If no real data, add mock data in development mode
         if (leaderboardData.length === 0 && import.meta.env.DEV) {

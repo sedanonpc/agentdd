@@ -1,7 +1,8 @@
 -- Create matches table to persist scraped match data
 CREATE TABLE IF NOT EXISTS matches (
   id TEXT PRIMARY KEY,
-  sport_key TEXT NOT NULL,
+  sport_name TEXT NOT NULL,
+  league_name TEXT NOT NULL,
   sport_title TEXT NOT NULL,
   commence_time TIMESTAMP WITH TIME ZONE NOT NULL,
   home_team_id TEXT NOT NULL,
@@ -17,11 +18,11 @@ CREATE TABLE IF NOT EXISTS matches (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create index for faster querying of upcoming matches
+-- Create indexes for faster querying
 CREATE INDEX IF NOT EXISTS idx_matches_commence_time ON matches(commence_time);
-
--- Create index for completed matches
 CREATE INDEX IF NOT EXISTS idx_matches_completed ON matches(completed);
+CREATE INDEX IF NOT EXISTS idx_matches_sport_name ON matches(sport_name);
+CREATE INDEX IF NOT EXISTS idx_matches_league_name ON matches(league_name);
 
 -- Add RLS policies
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;

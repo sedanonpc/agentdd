@@ -1,10 +1,10 @@
-import { getUsersByDarePoints } from './betStorageService';
+import { getUsersByPoints } from './betStorageService';
 
 // Function to get top users for the leaderboard
 export const getTopUsers = async (isFullRefresh: boolean = false): Promise<any[]> => {
   try {
     // Get users sorted by DARE points
-    const users = await getUsersByDarePoints();
+    const users = await getUsersByPoints();
     
     // Process users if needed
     return users.map(user => ({

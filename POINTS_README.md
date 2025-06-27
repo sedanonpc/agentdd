@@ -19,21 +19,23 @@ $DARE Points are the in-app currency that users earn and spend throughout the ap
 The $DARE Points system is implemented using a layered architecture:
 
 1. **Database Layer** (Supabase)
-   - `user_profiles` table with `dare_points` column
-   - Default value of 500 points for new users
+   - `points_transactions` table with full transaction history and audit trail
+   - `points_config` table for configurable point values
+   - Balance calculated from transaction history for accuracy and transparency
+   - Default value of 500 points for new users via SIGNUP transaction
    - Row-level security policies for data protection
 
 2. **Service Layer**
-   - `darePointsService.ts`: Core functions for interacting with points
+   - `pointsService.ts`: Core functions for interacting with points
    - Local storage caching for offline functionality
    - Transaction recording and history management
 
 3. **Context Layer**
-   - `DarePointsContext.tsx`: React Context for global state management
-   - `useDarePoints()` hook for easy access in components
+   - `PointsContext.tsx`: React Context for global state management
+   - `usePoints()` hook for easy access in components
 
 4. **UI Components**
-   - `DarePointsDisplay.tsx`: Standardized component for displaying points
+   - `PointsDisplay.tsx`: Standardized component for displaying points
    - Multiple display variants (default, compact, large)
 
 ## Usage in Components
@@ -41,22 +43,22 @@ The $DARE Points system is implemented using a layered architecture:
 To display $DARE points in any component:
 
 ```tsx
-import DarePointsDisplay from '../components/DarePointsDisplay';
+import PointsDisplay from '../components/PointsDisplay';
 
 // Default display
-<DarePointsDisplay />
+<PointsDisplay />
 
 // Compact display (for headers, etc.)
-<DarePointsDisplay variant="compact" />
+<PointsDisplay variant="compact" />
 
 // Large display (for dashboards)
-<DarePointsDisplay variant="large" />
+<PointsDisplay variant="large" />
 ```
 
 To interact with $DARE points in any component:
 
 ```tsx
-import { useDarePoints } from '../context/DarePointsContext';
+import { usePoints } from '../context/PointsContext';
 
 function MyComponent() {
   const { 
@@ -64,7 +66,7 @@ function MyComponent() {
     deductPoints, 
     addPoints,
     getTransactionHistory 
-  } = useDarePoints();
+  } = usePoints();
 
   // Check balance
   console.log(`Current balance: ${userBalance}`);
