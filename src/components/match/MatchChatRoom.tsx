@@ -60,7 +60,7 @@ const MatchChatRoom: React.FC<MatchChatRoomProps> = ({ match, onClose }) => {
   }
   
   return (
-    <div className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden h-[400px] flex flex-col">
+    <div className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden h-[550px] flex flex-col max-w-4xl mx-auto">
       {/* Chat Header */}
       <div className="bg-[#00A4FF]/90 p-2 text-black flex items-center justify-between">
         <div className="flex items-center">

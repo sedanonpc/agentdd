@@ -276,11 +276,11 @@ const MatchesPage: React.FC = () => {
       <section className="w-full bg-console-blue-bright/90 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
         {/* Full-width image container */}
         <div className="relative w-full border-b-1 border-console-blue bg-console-blue-bright/80 backdrop-blur-xs overflow-hidden">
-          <div className="relative max-w-6xl mx-auto">
+          <div className="relative w-full mx-auto px-0">
             <img 
-              src="https://i.ibb.co/Q7mKsRBc/nba-banner.png"
+              src="https://i.ibb.co/rGh18fww/nba-banner-v3.png"
               alt="Agent Daredevil - Wanna Bet?" 
-              className="w-full h-auto object-contain mx-auto relative z-0"
+              className="w-full h-auto object-cover mx-auto relative z-0"
             />
           </div>
         </div>

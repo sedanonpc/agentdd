@@ -3,6 +3,7 @@ export interface Team {
   id: string;
   name: string;
   logo?: string;
+  record?: string;
 }
 
 export interface Odds {

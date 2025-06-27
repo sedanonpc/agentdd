@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Terminal, Cpu, Code } from 'lucide-react';
+import { ArrowRight, Shield, Terminal, Cpu, Code, MessageSquare } from 'lucide-react';
 import { Conference, Division, StandingsTeam, Match } from '../types';
 import { fetchNBAStandings } from '../services/standingsService';
 import { fetchFeaturedMatch } from '../services/featuredMatchService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import DareDevilChatModal from '../components/chat/DareDevilChatModal';
 
 const HomePage: React.FC = () => {
   const [activeConference, setActiveConference] = useState<'Eastern' | 'Western'>('Eastern');
@@ -12,6 +13,7 @@ const HomePage: React.FC = () => {
   const [loadingStandings, setLoadingStandings] = useState<boolean>(true);
   const [isLiveData, setIsLiveData] = useState<boolean>(false);
   const [dataSource, setDataSource] = useState<string>('mock');
+  const [isDareDevilModalOpen, setIsDareDevilModalOpen] = useState<boolean>(false);
   
   // Featured match state
   const [featuredMatch, setFeaturedMatch] = useState<Match | null>(null);
@@ -190,45 +192,41 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Original Image Banner Section - brought back */}
-      <section className="w-full bg-console-blue-bright/90 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
-        {/* Full-width image container */}
-        <div className="relative w-full border-b-1 border-console-blue bg-console-blue-bright/80 backdrop-blur-xs overflow-hidden flex justify-center">
-          <div className="relative inline-block">
-            <img 
-              src="https://i.ibb.co/xt9yq9RJ/Agent-dd2-v2.png" 
-              alt="NBA Betting Agent" 
-              className="w-auto h-auto object-contain relative z-0"
-            />
-          </div>
+      {/* Original Image Banner Section - Optimized for transparency */}
+      <section className="w-full bg-transparent overflow-hidden px-2 sm:px-0">
+        {/* Full-width image container with transparent background */}
+        <div className="relative w-full flex justify-center max-w-6xl mx-auto">
+          <img 
+            src="https://i.ibb.co/JRf70N7Z/daredevil-png.png" 
+            alt="NBA Betting Agent" 
+            className="w-full h-auto object-contain relative z-0"
+          />
         </div>
       </section>
       
-      {/* Daredevil Banner - Added from photo */}
-      <section className="w-full bg-console-blue-bright/90 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
-        {/* Full-width image container */}
-        <div className="relative w-full border-b-1 border-console-blue bg-console-blue-bright/80 backdrop-blur-xs overflow-hidden flex justify-center">
-          <div className="relative inline-block">
-            <img 
-              src="https://i.ibb.co/rGh18fww/nba-banner-v3.png"
-              alt="Agent Daredevil - Wanna Bet?" 
-              className="w-auto max-h-[350px] object-contain relative z-0"
-            />
-          </div>
+      {/* Daredevil Banner - Optimized for transparency */}
+      <section className="w-full bg-transparent overflow-hidden px-2 sm:px-0">
+        {/* Full-width image container with transparent background */}
+        <div className="relative w-full flex justify-center max-w-6xl mx-auto">
+          <img 
+            src="https://i.ibb.co/rGh18fww/nba-banner-v3.png"
+            alt="Agent Daredevil - Wanna Bet?" 
+            className="w-full h-auto object-contain relative z-0"
+          />
         </div>
       </section>
       
       {/* Game Banner Section - Updated with dynamic data */}
-      <div className="w-full bg-console-black/60 backdrop-blur-xs border-1 border-console-blue shadow-terminal">
-        <div className="bg-console-blue/90 p-2 text-black flex items-center justify-between flex-wrap gap-2">
+      <div className="w-full bg-console-black/60 backdrop-blur-xs border-1 border-console-blue shadow-terminal max-w-6xl mx-auto px-2 sm:px-0">
+        <div className="bg-console-blue/90 p-1 text-black flex items-center justify-between flex-wrap gap-1">
           <div className="text-xs text-console-white font-mono tracking-wide">[ FEATURED_MATCH ]</div>
-          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
             <div className="text-xs text-console-white font-mono tracking-wide">
               {matchDataSource === 'yahoo' && matchIsLive && (
-                <span className="px-2 py-0.5 bg-blue-600 text-white text-[10px] font-mono rounded mr-2">YAHOO DATA</span>
+                <span className="px-1 py-0.5 bg-blue-600 text-white text-[10px] font-mono rounded mr-1">YAHOO DATA</span>
               )}
               {!matchIsLive && (
-                <span className="px-2 py-0.5 bg-yellow-600 text-black text-[10px] font-mono rounded mr-2">MOCK DATA</span>
+                <span className="px-1 py-0.5 bg-yellow-600 text-black text-[10px] font-mono rounded mr-1">MOCK DATA</span>
               )}
               [ {featuredMatch?.sport_title || 'NBA'} ]
             </div>
@@ -237,71 +235,71 @@ const HomePage: React.FC = () => {
         </div>
         
         {loadingFeaturedMatch ? (
-          <div className="flex justify-center items-center h-40">
-            <LoadingSpinner size={6} color="text-console-blue-bright" />
+          <div className="flex justify-center items-center h-24">
+            <LoadingSpinner size={5} color="text-console-blue-bright" />
           </div>
         ) : featuredMatch ? (
           <div className="relative w-full overflow-hidden">
-            {/* Teams logo display */}
-            <div className="flex justify-center items-center py-4 bg-gradient-to-r from-console-blue/20 to-console-black/20">
-              <div className="flex items-center gap-4 bg-white/10 backdrop-blur-sm py-3 px-10 border-1 border-console-blue/50 rounded-sm">
-                <div className="text-2xl font-bold text-console-blue-bright">{featuredMatch.home_team.name.substring(0, 3).toUpperCase()}</div>
-                <span className="text-xl text-console-white-dim">VS</span>
-                <div className="text-2xl font-bold text-console-blue-bright">{featuredMatch.away_team.name.substring(0, 3).toUpperCase()}</div>
+            {/* Teams logo display - more compact */}
+            <div className="flex justify-center items-center py-2 bg-gradient-to-r from-console-blue/20 to-console-black/20">
+              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm py-2 px-6 border-1 border-console-blue/50 rounded-sm">
+                <div className="text-xl font-bold text-console-blue-bright">{featuredMatch.home_team.name.substring(0, 3).toUpperCase()}</div>
+                <span className="text-lg text-console-white-dim">VS</span>
+                <div className="text-xl font-bold text-console-blue-bright">{featuredMatch.away_team.name.substring(0, 3).toUpperCase()}</div>
               </div>
             </div>
             
             {/* Overlay gradient */}
             <div className="absolute inset-0 bg-gradient-to-r from-console-blue/40 to-console-black/40 z-10"></div>
             
-            {/* Game info overlay */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-console-black/90 to-transparent p-4 sm:p-6 z-20">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 max-w-4xl mx-auto">
+            {/* Game info overlay - more compact */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-console-black/90 to-transparent p-2 sm:p-3 z-20">
+              <div className="flex flex-row justify-between items-center gap-2 max-w-4xl mx-auto">
                 <div className="font-mono text-console-white">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-sm text-console-blue-bright">PLAYOFF SERIES</span>
-                    <span className="bg-yellow-500/80 text-black text-xs px-2 py-0.5">FEATURED GAME</span>
+                  <div className="flex items-center gap-1 mb-0.5 flex-wrap">
+                    <span className="text-xs text-console-blue-bright">PLAYOFF SERIES</span>
+                    <span className="bg-yellow-500/80 text-black text-[10px] px-1 py-0.5">FEATURED GAME</span>
                   </div>
-                  <div className="text-lg sm:text-2xl mb-2">
+                  <div className="text-sm sm:text-base mb-1">
                     {featuredMatch.home_team.name} vs {featuredMatch.away_team.name}
                   </div>
-                  <div className="flex items-center gap-3 text-console-white-dim flex-wrap">
+                  <div className="flex items-center gap-2 text-xs text-console-white-dim flex-wrap">
                     <span>Game 1</span>
                     <span className="hidden sm:inline">•</span>
                     <span>Series tied 0-0</span>
                   </div>
-                  <div className="flex items-center gap-2 sm:gap-3 mt-2 flex-wrap">
-                    <div className="bg-console-black/50 px-2 py-1 border-1 border-console-blue">
-                      <span className="text-console-white-dim text-xs">{featuredMatch.home_team.name.substring(0, 3).toUpperCase()}</span>
-                      <span className="text-console-white ml-1">{getSpread(featuredMatch.home_team.name)}</span>
+                  <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
+                    <div className="bg-console-black/50 px-1 py-0.5 border-1 border-console-blue">
+                      <span className="text-console-white-dim text-[10px]">{featuredMatch.home_team.name.substring(0, 3).toUpperCase()}</span>
+                      <span className="text-console-white ml-1 text-xs">{getSpread(featuredMatch.home_team.name)}</span>
                     </div>
-                    <div className="bg-console-black/50 px-2 py-1 border-1 border-console-blue">
-                      <span className="text-console-white-dim text-xs">{featuredMatch.away_team.name.substring(0, 3).toUpperCase()}</span>
-                      <span className="text-console-white ml-1">{getSpread(featuredMatch.away_team.name)}</span>
+                    <div className="bg-console-black/50 px-1 py-0.5 border-1 border-console-blue">
+                      <span className="text-console-white-dim text-[10px]">{featuredMatch.away_team.name.substring(0, 3).toUpperCase()}</span>
+                      <span className="text-console-white ml-1 text-xs">{getSpread(featuredMatch.away_team.name)}</span>
                     </div>
-                    <div className="bg-console-black/50 px-2 py-1 border-1 border-console-blue">
-                      <span className="text-console-white-dim text-xs">O/U</span>
-                      <span className="text-console-white ml-1">{getTotalPoints()}</span>
+                    <div className="bg-console-black/50 px-1 py-0.5 border-1 border-console-blue">
+                      <span className="text-console-white-dim text-[10px]">O/U</span>
+                      <span className="text-console-white ml-1 text-xs">{getTotalPoints()}</span>
                     </div>
                   </div>
                 </div>
-                <div className="bg-console-blue/20 backdrop-blur-xs border-1 border-console-blue p-3 text-console-white font-mono">
-                  <div className="text-xs text-console-white-dim mb-1">TIPOFF</div>
-                  <div className="text-xl text-yellow-300">{formatGameTime(featuredMatch.commence_time)}</div>
+                <div className="bg-console-blue/20 backdrop-blur-xs border-1 border-console-blue p-2 text-console-white font-mono">
+                  <div className="text-[10px] text-console-white-dim mb-0.5">TIPOFF</div>
+                  <div className="text-base text-yellow-300">{formatGameTime(featuredMatch.commence_time)}</div>
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="h-40 flex items-center justify-center text-console-white-dim font-mono">
+          <div className="h-24 flex items-center justify-center text-console-white-dim font-mono">
             No featured match available
           </div>
         )}
         
-        {/* Bottom bar with quick stats */}
-        <div className="bg-console-black/80 backdrop-blur-xs p-3 border-t border-console-blue/50">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 font-mono text-sm text-console-white-dim max-w-4xl mx-auto">
-            <div className="flex items-center gap-4">
+        {/* Bottom bar with quick stats - more compact */}
+        <div className="bg-console-black/80 backdrop-blur-xs p-2 border-t border-console-blue/50">
+          <div className="flex flex-row justify-between items-center gap-2 font-mono text-xs text-console-white-dim max-w-4xl mx-auto">
+            <div className="flex items-center gap-2">
               {featuredMatch && (
                 <>
                   <span className="text-console-blue-bright">
@@ -314,18 +312,18 @@ const HomePage: React.FC = () => {
                 </>
               )}
             </div>
-            <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-              <span className="px-2 py-0.5 bg-red-900/30 text-red-400 text-xs">LIVE</span>
+            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+              <span className="px-1 py-0.5 bg-red-900/30 text-red-400 text-[10px]">LIVE</span>
               <Link 
                 to="/matches" 
-                className="bg-red-600/90 text-white px-3 py-1 text-xs font-mono hover:bg-red-500 transition-colors flex items-center gap-1"
+                className="bg-red-600/90 text-white px-2 py-0.5 text-[10px] font-mono hover:bg-red-500 transition-colors flex items-center gap-1"
               >
-                <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                <span className="inline-block w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
                 <span>WATCH LIVE</span>
               </Link>
               <Link 
                 to="/matches"
-                className="bg-yellow-500/90 text-black px-3 py-1 text-xs font-mono hover:bg-yellow-400 transition-colors"
+                className="bg-yellow-500/90 text-black px-2 py-0.5 text-[10px] font-mono hover:bg-yellow-400 transition-colors"
               >
                 BET NOW
               </Link>
@@ -334,96 +332,174 @@ const HomePage: React.FC = () => {
         </div>
       </div>
       
-      {/* Hero Section */}
-      <section className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-4 sm:p-6 mx-auto max-w-5xl">
-        <div className="space-y-4 sm:space-y-6">
-          <div className="flex items-center justify-center md:justify-start">
-            <Terminal className="text-console-blue-bright h-6 w-6 md:h-8 md:w-8 mr-2 md:mr-3" />
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-display uppercase text-console-white tracking-wider text-center md:text-left">
-              P2P <span className="text-console-blue-bright"> WAGERING </span> AI AGENT
-            </h1>
+      {/* DareDevil Chat Button */}
+      <div className="flex justify-center my-6 max-w-6xl mx-auto px-2 sm:px-0">
+        <button
+          onClick={() => setIsDareDevilModalOpen(true)}
+          className="bg-red-900/80 text-white px-6 py-3 font-mono text-sm hover:bg-red-800 transition-all duration-300 flex items-center gap-3 border-1 border-red-500 shadow-glow-red w-full sm:w-auto justify-center relative overflow-hidden group"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-red-900/0 via-red-500/20 to-red-900/0 opacity-0 group-hover:opacity-100 animate-pulse-slow transition-opacity"></div>
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-red-900/0 via-red-500/90 to-red-900/0 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+          <div className="absolute bottom-0 right-0 w-full h-[1px] bg-gradient-to-r from-red-900/0 via-red-500/90 to-red-900/0 transform translate-x-[100%] group-hover:translate-x-[-100%] transition-transform duration-1000"></div>
+          
+          {/* Console glitch effect */}
+          <div className="absolute inset-0 bg-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="absolute inset-0 bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100"></div>
+          
+          {/* Animated icon */}
+          <div className="relative">
+            <MessageSquare className="h-5 w-5 animate-pulse text-red-400" />
+            <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span>
           </div>
           
-          <p className="text-console-white-dim font-mono text-sm sm:text-base md:text-lg text-center md:text-left max-w-3xl mx-auto md:mx-0">
-            CREATE SECURE PEER-TO-PEER BETS ON SPORTS GAMES WITH BLOCKCHAIN ESCROW AND AI ANALYSIS FOR OPTIMAL DECISION MAKING & BET MANAGEMENT.
-          </p>
+          {/* Text - removed hover animation */}
+          <span className="relative">
+            CHAT WITH AGENT DAREDEVIL
+          </span>
           
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4 justify-center md:justify-start">
-            <Link 
-              to="/matches" 
-              className="bg-console-blue/90 backdrop-blur-xs text-console-white font-mono uppercase tracking-wider px-4 sm:px-6 py-2 sm:py-3 shadow-button hover:shadow-glow transition-all duration-300 flex items-center justify-center gap-2 text-sm sm:text-base"
-            >
-              <span>ACCESS_MATCHES</span>
-                <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
-            </Link>
-            <Link
-              to="/matches"
-              className="bg-black/50 backdrop-blur-xs border-1 border-yellow-400 text-yellow-300 font-mono uppercase tracking-wider px-4 sm:px-6 py-2 sm:py-3 hover:shadow-yellow transition-all flex items-center justify-center gap-2 shadow-yellow-glow animate-pulse-subtle text-sm sm:text-base"
-            >
-              <span>MAKE A BET NOW!</span>
-            </Link>
-          </div>
-        </div>
-      </section>
+          {/* Terminal decorations */}
+          <span className="absolute top-0 right-0 text-[8px] text-red-400 opacity-80 px-1">v1.3</span>
+          <span className="absolute top-1 left-1 w-1 h-1 bg-red-500 rounded-full"></span>
+          <span className="absolute bottom-1 right-1 w-1 h-1 bg-red-500 rounded-full"></span>
+        </button>
+      </div>
 
-      {/* Live Game Updates Section */}
-      {liveScore && (
-        <div className="mt-3 sm:mt-4 bg-console-black/40 border-1 border-console-blue p-2 sm:p-3 text-xs font-mono max-w-6xl mx-auto">
-          <div className="flex justify-between items-center border-b border-console-blue/30 pb-1 mb-2">
-            <span className="text-console-blue-bright">LIVE GAMES</span>
-            <span className="animate-pulse text-red-400">● LIVE</span>
-          </div>
-          <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0">
-            {featuredMatch && (
-              <>
-                <span className="text-console-white">
-                  {featuredMatch.away_team.name.substring(0, 3).toUpperCase()} @ {featuredMatch.home_team.name.substring(0, 3).toUpperCase()}
-                </span>
-                <span className="text-yellow-300">
-                  {featuredMatch.away_team.name.substring(0, 3).toUpperCase()} {liveScore.away} - {liveScore.home} {featuredMatch.home_team.name.substring(0, 3).toUpperCase()}
-                </span>
-                <span className="text-console-white-dim">{liveScore.quarter} {liveScore.timeRemaining}</span>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {/* DareDevil Chat Modal */}
+      <DareDevilChatModal 
+        isOpen={isDareDevilModalOpen} 
+        onClose={() => setIsDareDevilModalOpen(false)} 
+      />
       
       {/* Features Section */}
       <section className="py-4 sm:py-6 max-w-6xl mx-auto px-2 sm:px-0">
-        <div className="bg-console-gray-terminal/30 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-3 sm:p-4 mb-4 sm:mb-6">
-          <h2 className="text-lg sm:text-xl font-display uppercase text-console-white tracking-wider text-center">SYSTEM_FEATURES</h2>
+        <div className="bg-console-black/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-3 sm:p-4 mb-4 sm:mb-6 relative overflow-hidden">
+          {/* Animated background scan effect */}
+          <div className="absolute inset-0 bg-gradient-to-b from-console-blue/5 to-transparent opacity-50 animate-terminal-scan"></div>
+          
+          {/* Grid overlay */}
+          <div className="absolute inset-0 bg-terminal-grid bg-grid opacity-30"></div>
+          
+          <h2 className="text-lg sm:text-xl font-display uppercase text-console-white tracking-wider text-center relative z-10">
+            <span className="text-console-blue-bright mr-1">_</span>
+            SYSTEM<span className="text-console-blue-bright">_</span>FEATURES
+            <span className="absolute -bottom-1 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-console-blue-bright to-transparent"></span>
+          </h2>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-          <div className="bg-console-gray-terminal/50 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-3 sm:p-4 flex flex-col items-center text-center transition-all duration-300 hover:bg-console-blue/10">
-            <div className="bg-console-blue/10 backdrop-blur-xs border-1 border-console-blue p-2 rounded-full mb-2 sm:mb-3">
-              <Code className="h-4 w-4 sm:h-5 sm:w-5 text-console-blue-bright" />
+          {/* P2P Betting Feature Card */}
+          <div className="bg-console-black/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-4 sm:p-5 flex flex-col items-center text-center transition-all duration-300 hover:shadow-glow group relative overflow-hidden">
+            {/* Animated corner accents */}
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-console-blue-bright opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-console-blue-bright opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            
+            {/* Animated background scan */}
+            <div className="absolute inset-0 bg-gradient-to-r from-console-blue/0 via-console-blue/10 to-console-blue/0 opacity-0 group-hover:opacity-100 animate-pulse-slow"></div>
+            
+            {/* Icon with dynamic effects */}
+            <div className="bg-console-black/70 backdrop-blur-xs border-1 border-console-blue p-3 rounded-full mb-3 sm:mb-4 relative group-hover:shadow-glow transition-all duration-300">
+              <div className="absolute inset-0 rounded-full bg-console-blue/20 animate-pulse-slow opacity-0 group-hover:opacity-100"></div>
+              <Code className="h-6 w-6 sm:h-7 sm:w-7 text-console-blue-bright relative z-10" />
+              
+              {/* Rotating accent ring */}
+              <div className="absolute inset-0 rounded-full border-2 border-dashed border-console-blue/30 group-hover:border-console-blue/60 transition-colors opacity-0 group-hover:opacity-100 animate-spin-slow"></div>
             </div>
-            <h3 className="text-base sm:text-lg font-display uppercase text-console-white mb-1">P2P_BETTING</h3>
-            <p className="text-console-white-muted font-mono text-xs">
+            
+            <h3 className="text-base sm:text-lg font-display uppercase text-console-blue-bright mb-2 relative">
+              P2P<span className="text-console-white">_</span>BETTING
+              <span className="absolute -bottom-1 left-1/4 right-1/4 h-px bg-console-blue/50 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+            </h3>
+            
+            <p className="text-console-white-muted font-mono text-xs leading-relaxed">
               CREATE SECURE BETS ON NBA GAMES AND MATCH WITH USERS ON THE OPPOSITE SIDE.
             </p>
+            
+            {/* Data visualization accent */}
+            <div className="absolute bottom-2 left-2 right-2 h-1 flex space-x-0.5 opacity-40 group-hover:opacity-80 transition-opacity">
+              <div className="h-full bg-console-blue-bright flex-grow-0 flex-shrink-0 w-1/6"></div>
+              <div className="h-full bg-console-blue-bright flex-grow-0 flex-shrink-0 w-2/6"></div>
+              <div className="h-full bg-console-blue-bright flex-grow-0 flex-shrink-0 w-1/6"></div>
+              <div className="h-full bg-console-blue-bright flex-grow-0 flex-shrink-0 w-3/6"></div>
+              <div className="h-full bg-console-blue-bright flex-grow-0 flex-shrink-0 w-1/6"></div>
+            </div>
           </div>
           
-          <div className="bg-console-gray-terminal/50 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-3 sm:p-4 flex flex-col items-center text-center transition-all duration-300 hover:bg-console-blue/10">
-            <div className="bg-console-blue/10 backdrop-blur-xs border-1 border-console-blue p-2 rounded-full mb-2 sm:mb-3">
-              <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-console-blue-bright" />
+          {/* Secure Escrow Feature Card */}
+          <div className="bg-console-black/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-4 sm:p-5 flex flex-col items-center text-center transition-all duration-300 hover:shadow-glow group relative overflow-hidden">
+            {/* Animated corner accents */}
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-console-blue-bright opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-console-blue-bright opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            
+            {/* Animated background scan */}
+            <div className="absolute inset-0 bg-gradient-to-l from-console-blue/0 via-console-blue/10 to-console-blue/0 opacity-0 group-hover:opacity-100 animate-pulse-slow"></div>
+            
+            {/* Icon with dynamic effects */}
+            <div className="bg-console-black/70 backdrop-blur-xs border-1 border-console-blue p-3 rounded-full mb-3 sm:mb-4 relative group-hover:shadow-glow transition-all duration-300">
+              <div className="absolute inset-0 rounded-full bg-console-blue/20 animate-pulse-slow opacity-0 group-hover:opacity-100"></div>
+              <Shield className="h-6 w-6 sm:h-7 sm:w-7 text-console-blue-bright relative z-10" />
+              
+              {/* Shield animation effect */}
+              <div className="absolute inset-1 rounded-full bg-console-blue/10 transform scale-0 group-hover:scale-100 transition-transform duration-700 opacity-0 group-hover:opacity-100"></div>
+              <div className="absolute inset-0 rounded-full border-2 border-console-blue/30 group-hover:border-console-blue/60 transition-colors opacity-0 group-hover:opacity-100"></div>
             </div>
-            <h3 className="text-base sm:text-lg font-display uppercase text-console-white mb-1">SECURE_ESCROW</h3>
-            <p className="text-console-white-muted font-mono text-xs">
+            
+            <h3 className="text-base sm:text-lg font-display uppercase text-console-blue-bright mb-2 relative">
+              SECURE<span className="text-console-white">_</span>ESCROW
+              <span className="absolute -bottom-1 left-1/4 right-1/4 h-px bg-console-blue/50 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+            </h3>
+            
+            <p className="text-console-white-muted font-mono text-xs leading-relaxed">
               FUNDS HELD IN SMART CONTRACT ESCROW UNTIL GAME COMPLETION FOR SECURE PAYOUTS.
             </p>
+            
+            {/* Security code visualization */}
+            <div className="absolute bottom-2 left-2 right-2 h-1 flex items-center justify-center space-x-1 opacity-40 group-hover:opacity-80 transition-opacity">
+              <div className="h-full w-1 bg-console-blue-bright"></div>
+              <div className="h-full w-2 bg-console-blue-bright"></div>
+              <div className="h-full w-3 bg-console-blue-bright"></div>
+              <div className="h-full w-4 bg-console-blue-bright"></div>
+              <div className="h-full w-3 bg-console-blue-bright"></div>
+              <div className="h-full w-2 bg-console-blue-bright"></div>
+              <div className="h-full w-1 bg-console-blue-bright"></div>
+            </div>
           </div>
           
-          <div className="bg-console-gray-terminal/50 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-3 sm:p-4 flex flex-col items-center text-center transition-all duration-300 hover:bg-console-blue/10">
-            <div className="bg-console-blue/10 backdrop-blur-xs border-1 border-console-blue p-2 rounded-full mb-2 sm:mb-3">
-              <Cpu className="h-4 w-4 sm:h-5 sm:w-5 text-console-blue-bright" />
+          {/* AI Analytics Feature Card */}
+          <div className="bg-console-black/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-4 sm:p-5 flex flex-col items-center text-center transition-all duration-300 hover:shadow-glow group relative overflow-hidden">
+            {/* Animated corner accents */}
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-console-blue-bright opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-console-blue-bright opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            
+            {/* Animated background scan */}
+            <div className="absolute inset-0 bg-gradient-to-t from-console-blue/0 via-console-blue/10 to-console-blue/0 opacity-0 group-hover:opacity-100 animate-pulse-slow"></div>
+            
+            {/* Icon with dynamic effects */}
+            <div className="bg-console-black/70 backdrop-blur-xs border-1 border-console-blue p-3 rounded-full mb-3 sm:mb-4 relative group-hover:shadow-glow transition-all duration-300">
+              <div className="absolute inset-0 rounded-full bg-console-blue/20 animate-pulse-slow opacity-0 group-hover:opacity-100"></div>
+              <Cpu className="h-6 w-6 sm:h-7 sm:w-7 text-console-blue-bright relative z-10" />
+              
+              {/* CPU processing animation */}
+              <div className="absolute inset-2 rounded-full border-2 border-dashed border-console-blue/30 group-hover:border-console-blue/60 transition-colors opacity-0 group-hover:opacity-100 animate-spin-slow"></div>
+              <div className="absolute inset-0 rounded-full border-2 border-console-blue/30 group-hover:border-console-blue/60 transition-colors opacity-0 group-hover:opacity-100"></div>
             </div>
-            <h3 className="text-base sm:text-lg font-display uppercase text-console-white mb-1">AI_ANALYTICS</h3>
-            <p className="text-console-white-muted font-mono text-xs">
+            
+            <h3 className="text-base sm:text-lg font-display uppercase text-console-blue-bright mb-2 relative">
+              AI<span className="text-console-white">_</span>ANALYTICS
+              <span className="absolute -bottom-1 left-1/4 right-1/4 h-px bg-console-blue/50 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+            </h3>
+            
+            <p className="text-console-white-muted font-mono text-xs leading-relaxed">
               ADVANCED ALGORITHMS PROVIDE REAL-TIME INSIGHTS ON GAMES AND BETTING PATTERNS.
             </p>
+            
+            {/* Data visualization accent */}
+            <div className="absolute bottom-2 left-2 right-2 h-1 flex space-x-0.5 opacity-40 group-hover:opacity-80 transition-opacity">
+              <div className="h-full bg-console-blue-bright flex-grow-0 flex-shrink-0 w-1/12 group-hover:animate-pulse"></div>
+              <div className="h-full bg-console-blue-bright flex-grow-0 flex-shrink-0 w-2/12 group-hover:animate-pulse"></div>
+              <div className="h-full bg-console-blue-bright flex-grow-0 flex-shrink-0 w-3/12 group-hover:animate-pulse"></div>
+              <div className="h-full bg-console-blue-bright flex-grow-0 flex-shrink-0 w-4/12 group-hover:animate-pulse"></div>
+              <div className="h-full bg-console-blue-bright flex-grow-0 flex-shrink-0 w-2/12 group-hover:animate-pulse"></div>
+            </div>
           </div>
         </div>
       </section>

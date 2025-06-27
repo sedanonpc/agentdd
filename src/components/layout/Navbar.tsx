@@ -118,7 +118,6 @@ const Navbar: React.FC = () => {
     { path: '/', label: 'TERMINAL', icon: Terminal },
     { path: '/matches', label: 'MATCHES', icon: Activity },
     { path: '/leaderboard', label: 'RANKS', icon: Trophy },
-    { path: '/dashboard', label: 'DASHBOARD', icon: Database, requiresAuth: true },
     { path: '/chat', label: 'COMMS', icon: MessageSquare, requiresAuth: true },
   ];
 

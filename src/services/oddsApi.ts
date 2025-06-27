@@ -1,6 +1,7 @@
 import { Match } from '../types';
 import { fetchNBAMatchesFromYahoo } from './yahooSportsApi';
 import { MOCK_MATCHES as BET_MATCHES } from '../data/mockMatches';
+import { getMatchesWithAutoRefresh, forceRefreshData } from './dataRefreshService';
 
 // Define API URLs and key
 const THE_ODDS_API_KEY = 'b5d8a665a982b70bf18902db4de795ad';
@@ -188,18 +189,36 @@ const getFallbackData = (): Promise<MatchesResponse> => {
   });
 };
 
-// Try the Yahoo Sports scraper as a secondary data source
+// Try the Yahoo Sports scraper as a secondary data source with auto-refresh
 const tryYahooSportsScraper = async (): Promise<MatchesResponse> => {
-  console.log('Attempting to use Yahoo Sports scraper as backup...');
+  console.log('Attempting to use Yahoo Sports scraper with auto-refresh...');
   try {
-    const yahooData = await fetchNBAMatchesFromYahoo();
+    // Use the auto-refresh mechanism
+    const yahooData = await getMatchesWithAutoRefresh();
+    
+    console.log(`Yahoo data ${yahooData.refreshed ? 'was refreshed' : 'came from cache'}`);
+    
     return {
-      ...yahooData,
-      dataSource: 'yahoo'
+      matches: yahooData.matches,
+      isLive: yahooData.isLive,
+      dataSource: yahooData.dataSource
     };
   } catch (error) {
-    console.error('Yahoo Sports scraper failed:', error);
-    return getFallbackData();
+    console.error('Yahoo Sports scraper with auto-refresh failed:', error);
+    
+    // Try direct fetch as a backup
+    try {
+      console.log('Falling back to direct Yahoo Sports scraper...');
+      const directYahooData = await fetchNBAMatchesFromYahoo();
+      return {
+        matches: directYahooData.matches,
+        isLive: directYahooData.isLive,
+        dataSource: 'yahoo'
+      };
+    } catch (directError) {
+      console.error('Direct Yahoo Sports scraper failed:', directError);
+      return getFallbackData();
+    }
   }
 };
 
@@ -249,16 +268,44 @@ export const fetchNBAMatches = async (): Promise<MatchesResponse> => {
     
     return {
       matches,
-      isLive: true, // This is real data
+      isLive: true,
       dataSource: 'the_odds_api'
     };
   } catch (error) {
-    console.error('Error fetching NBA matches from The Odds API:', error);
+    console.error('Error fetching from The Odds API:', error);
     return tryYahooSportsScraper();
   }
 };
 
-// Function to fetch upcoming games (can be used for scheduled refresh)
+// Function to force refresh data regardless of cache status
+export const forceRefreshNBAMatches = async (): Promise<MatchesResponse> => {
+  console.log('Force refreshing NBA match data...');
+  
+  try {
+    // First try The Odds API
+    const oddsApiResponse = await fetchNBAMatches();
+    
+    // If we got data from The Odds API, return it
+    if (oddsApiResponse.dataSource === 'the_odds_api') {
+      return oddsApiResponse;
+    }
+    
+    // Otherwise, force refresh Yahoo data
+    console.log('The Odds API unavailable, force refreshing Yahoo data...');
+    const yahooData = await forceRefreshData();
+    
+    return {
+      matches: yahooData.matches,
+      isLive: yahooData.isLive,
+      dataSource: yahooData.dataSource
+    };
+  } catch (error) {
+    console.error('Error during force refresh:', error);
+    return getFallbackData();
+  }
+};
+
+// Simplified function to get upcoming NBA matches
 export const fetchUpcomingNBAMatches = async (): Promise<MatchesResponse> => {
-  return fetchNBAMatches(); // Currently the same, but could be modified to only fetch upcoming games
+  return fetchNBAMatches();
 };

@@ -7,12 +7,24 @@ const fixedSupabaseUrl = 'https://qiasnpjpkzhretlyymgh.supabase.co';
 const fixedSupabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpYXNucGpwa3pocmV0bHl5bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMzI5MDksImV4cCI6MjA2NDgwODkwOX0.BEOkmjVpGHo37omVsWEgvsCnXB0FIVqZQvDNCuy3qYo';
 
 // Try to use environment variables, fall back to fixed values if there's an issue
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || fixedSupabaseUrl;
+let supabaseUrl = '';
+try {
+  supabaseUrl = import.meta.env.VITE_SUPABASE_URL || fixedSupabaseUrl;
+  // Validate URL format
+  if (supabaseUrl && !supabaseUrl.startsWith('https://')) {
+    console.error('Invalid Supabase URL format:', supabaseUrl);
+    supabaseUrl = fixedSupabaseUrl;
+  }
+} catch (error) {
+  console.error('Error accessing Supabase URL:', error);
+  supabaseUrl = fixedSupabaseUrl;
+}
+
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || fixedSupabaseAnonKey;
 
 // When in development mode and no proper keys are set, use a dummy client
 const isDevelopment = import.meta.env.DEV;
-const isProperlyConfigured = supabaseUrl.startsWith('https://') && supabaseAnonKey.length > 10;
+const isProperlyConfigured = supabaseUrl && supabaseUrl.startsWith('https://') && supabaseAnonKey && supabaseAnonKey.length > 10;
 const shouldUseDummyClient = isDevelopment && !isProperlyConfigured;
 
 // Log the Supabase URL for debugging
@@ -21,7 +33,17 @@ console.log('Supabase Anon Key present:', !!supabaseAnonKey && !shouldUseDummyCl
 console.log('Using dummy client:', shouldUseDummyClient);
 
 // Initialize the Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+let supabase = createClient(fixedSupabaseUrl, fixedSupabaseAnonKey); // Default initialization
+try {
+  if (supabaseUrl && supabaseAnonKey) {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('Supabase client initialized successfully');
+  }
+} catch (error) {
+  console.error('Failed to initialize Supabase client:', error);
+  // Already using the default client
+}
+export { supabase };
 
 // Create a dummy Supabase client for offline/development mode
 const createDummyClient = () => {
