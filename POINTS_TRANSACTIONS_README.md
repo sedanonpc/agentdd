@@ -47,15 +47,16 @@ The transaction system is accessed through high-level service functions that han
 import { 
   deductBetPoints, 
   awardBetWinPoints, 
-  awardBetPlacementBonus,
+  awardBetAcceptanceBonus,
   awardBetWinBonus 
 } from '../services/pointsService';
 
-// When user places a bet
+// When user places a bet (no bonus awarded)
 const success = await deductBetPoints(userId, betAmount, betId);
-if (success) {
-  // Optionally award placement bonus
-  await awardBetPlacementBonus(userId, betId, matchId);
+
+// When another user accepts a bet (bonus awarded to both users)
+if (betAccepted) {
+  await awardBetAcceptanceBonus(bettorUserId, acceptorUserId, betId, matchId);
 }
 
 // When user wins a bet
@@ -72,7 +73,8 @@ if (winSuccess) {
 import { 
   awardSignupBonus,
   awardReferralBonus,
-  awardDailyLoginBonus 
+  awardDailyLoginBonus,
+  awardBetAcceptanceBonus 
 } from '../services/pointsConfigService';
 
 // When new user signs up
@@ -83,6 +85,9 @@ await awardReferralBonus(referrerId, newUserId, referralCode);
 
 // Daily login bonus
 await awardDailyLoginBonus(userId);
+
+// Bet acceptance bonus (awarded to both users when a bet is accepted)
+await awardBetAcceptanceBonus(bettorUserId, acceptorUserId, betId, matchId);
 ```
 
 ### 3. Manual Adjustments

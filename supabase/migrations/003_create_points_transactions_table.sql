@@ -9,8 +9,8 @@ BEGIN
           -- When a user places a bet, their free points are reserved in the amount of the bet
           'BET_PLACED',
           
-          -- When a user places a bet, they are awarded bonus points
-          'BET_PLACEMENT_BONUS_AWARDED',
+          -- When a bet is accepted by another user, both users are awarded bonus points
+          'BET_ACCEPTANCE_BONUS_AWARDED',
           
           -- When a user wins a bet, their reserved points (the bet amount) are released back to free points
           'BET_WON',
@@ -153,7 +153,7 @@ BEGIN
         RAISE EXCEPTION 'BET_PLACED transactions require bet_id and bettor_user_id in metadata';
       END IF;
       
-         WHEN 'BET_PLACEMENT_BONUS_AWARDED', 'BET_WIN_BONUS_AWARDED', 'SIGNUP', 'REFERRAL_BONUS', 'DAILY_LOGIN' THEN
+         WHEN 'BET_ACCEPTANCE_BONUS_AWARDED', 'BET_WIN_BONUS_AWARDED', 'SIGNUP', 'REFERRAL_BONUS', 'DAILY_LOGIN' THEN
       -- Bonus transactions should have positive amount and FREE balance
       IF amount <= 0 OR balance_type != 'FREE' THEN
         RAISE EXCEPTION '% transactions must have positive amount and FREE balance type', transaction_type;

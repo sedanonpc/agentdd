@@ -11,7 +11,7 @@ import { MOCK_MATCHES } from '../data/mockMatches';
 import * as betStorageService from '../services/betStorageService';
 import { storeBet, updateBet } from '../services/betStorageService';
 import { updatePoints, storeMatches, getUpcomingMatches, getMatchById as getMatchByIdFromDB, updateMatchScores as updateMatchScoresInDB } from '../services/supabaseService';
-import { awardBetPlacementBonus } from '../services/pointsConfigService';
+import { awardBetAcceptanceBonus } from '../services/pointsConfigService';
 
 interface BettingContextType {
   matches: Match[];
@@ -376,14 +376,7 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
       
-      // Award bet placement bonus
-      try {
-        await awardBetPlacementBonus(userId, createdBet.id, matchId);
-        console.log('Bet placement bonus awarded');
-      } catch (bonusError) {
-        console.error('Failed to award bet placement bonus:', bonusError);
-        // Don't fail the entire operation if bonus fails
-      }
+
       
       toast.success('Bet created successfully');
       
@@ -611,6 +604,15 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
       
+      // Award bet acceptance bonus to both users
+      try {
+        await awardBetAcceptanceBonus(bet.creator, userId, bet.id, bet.matchId);
+        console.log('Bet acceptance bonus awarded to both users');
+      } catch (bonusError) {
+        console.error('Failed to award bet acceptance bonus:', bonusError);
+        // Don't fail the entire operation if bonus fails
+      }
+
       toast.success('Bet accepted successfully');
       
       // Refresh bets to reflect the changes
