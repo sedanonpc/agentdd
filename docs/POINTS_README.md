@@ -8,11 +8,27 @@ $DARE Points are the in-app currency that users earn and spend throughout the ap
 
 ## Key Features
 
-- **Initial Allocation**: New users automatically receive 500 $DARE Points upon registration
+- **Initial Allocation**: New users automatically receive 500 $DARE Points upon registration via database triggers
 - **Persistent Storage**: Points are stored in Supabase with local caching for offline use
 - **Transaction History**: All point transactions are recorded and can be viewed by users
 - **Betting Integration**: Users can place bets using their $DARE Points balance
 - **Reward System**: Users earn additional points for winning bets and other activities
+
+## Signup Bonus System
+
+The signup bonus is automatically awarded through database-level functions:
+
+### Email Signups
+- **Trigger**: `insert_rows_after_signup_from_email()` function fires automatically when user is created in `auth.users`
+- **Process**: Creates user account + awards 500 points + records transaction atomically
+- **Security**: Runs with elevated privileges, bypasses RLS
+
+### Wallet Signups  
+- **Function**: `insert_rows_after_signup_from_wallet()` called via RPC from frontend
+- **Process**: Creates user account + awards 500 points + records transaction atomically
+- **Security**: Runs with elevated privileges, bypasses RLS
+
+Both methods ensure users receive their signup bonus without permission errors.
 
 ## Technical Implementation
 
@@ -21,12 +37,15 @@ The $DARE Points system is implemented using a layered architecture:
 1. **Database Layer** (Supabase)
    - `points_transactions` table with full transaction history and audit trail
    - `points_config` table for configurable point values
+   - Database triggers for automatic signup bonus awarding
+   - PostgreSQL functions with SECURITY DEFINER for elevated operations
    - Balance calculated from transaction history for accuracy and transparency
    - Default value of 500 points for new users via SIGNUP transaction
    - Row-level security policies for data protection
 
 2. **Service Layer**
    - `pointsService.ts`: Core functions for interacting with points
+   - `insertRowsAfterSignupFromWallet()`: RPC function for wallet signup bonuses
    - Local storage caching for offline functionality
    - Transaction recording and history management
 
@@ -99,7 +118,7 @@ function MyComponent() {
 
 ## Point System Rules
 
-- **Starting Balance**: 500 $DARE Points for new users
+- **Starting Balance**: 500 $DARE Points for new users (awarded automatically via database triggers)
 - **Minimum Bet**: 10 $DARE Points
 - **Earning Opportunities**:
   - Win a bet: Earn points based on odds

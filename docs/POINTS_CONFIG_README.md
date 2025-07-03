@@ -73,16 +73,24 @@ The configuration system automatically integrates with point-awarding functions:
 
 ```typescript
 import { 
-  awardSignupBonus,
   awardReferralBonus,
-  awardDailyLoginBonus 
+  awardDailyLoginBonus,
+  awardBetAcceptanceBonus,
+  awardBetWinBonus
 } from '../services/pointsConfigService';
 
 // These functions automatically use current configured values
-await awardSignupBonus(userId);
 await awardReferralBonus(referrerId, newUserId, referralCode);
 await awardDailyLoginBonus(userId);
+await awardBetAcceptanceBonus(bettorUserId, acceptorUserId, betId);
+await awardBetWinBonus(userId, betId);
 ```
+
+**Note**: Signup bonuses are now handled automatically by database triggers:
+- **Email signups**: `insert_rows_after_signup_from_email()` trigger function
+- **Wallet signups**: `insertRowsAfterSignupFromWallet()` RPC function  
+
+Both methods automatically use the configured SIGNUP point value from the database.
 
 Point values can be changed in the database without code deployment - the functions always use current configured amounts.
 

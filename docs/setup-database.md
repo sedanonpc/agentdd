@@ -36,6 +36,7 @@ This will run all the migration files in order:
 - `002_create_user_accounts_table.sql` - Creates user accounts table  
 - `003_create_points_transactions_table.sql` - Creates transactions table and enums
 - `004_create_points_config_tables.sql` - Creates config table and functions
+- `005_create_auth_triggers.sql` - Creates database triggers for automatic signup bonuses
 
 ### 4. Verify the setup
 After successful migration, you should have:
@@ -50,19 +51,33 @@ After successful migration, you should have:
 **Functions:**
 - `get_points_value(action)` - Get configured point value
 - `update_points_value(action, value, reason)` - Update point values
+- `insert_rows_after_signup_from_email()` - Database trigger for email signups
+- `insert_rows_after_signup_from_wallet()` - RPC function for wallet signups
+
+**Triggers:**
+- `on_auth_user_created` - Automatically fires when new user created via email signup
 
 **Initial Configuration:**
 - SIGNUP: 500 points
 - REFERRAL_BONUS: 100 points  
-- BET_PLACEMENT_BONUS_AWARDED: 10 points
+- BET_ACCEPTANCE_BONUS_AWARDED: 15 points
 - BET_WIN_BONUS_AWARDED: 50 points
 - DAILY_LOGIN: 5 points
 
 ### 5. Test the setup
 You can test by creating a new user account through your app. The signup process should:
-1. Create a user record in `user_accounts` 
-2. Award 500 points automatically
-3. Create a transaction record in `points_transactions` with type 'SIGNUP'
+
+**Email Signups:**
+1. Create user in `auth.users` table
+2. Database trigger automatically fires
+3. Creates user account in `user_accounts` with 500 points
+4. Creates transaction record in `points_transactions` with type 'SIGNUP'
+
+**Wallet Signups:**
+1. Frontend calls `insertRowsAfterSignupFromWallet()` RPC function
+2. Database function executes with elevated privileges
+3. Creates user account in `user_accounts` with 500 points
+4. Creates transaction record in `points_transactions` with type 'SIGNUP'
 
 ## Troubleshooting
 
@@ -82,7 +97,8 @@ supabase db push
 
 ## Next Steps
 Once the database is set up, your signup bonus system will be fully functional:
-- Email signups automatically get 500 points
-- Wallet signups automatically get 500 points  
+- Email signups automatically get 500 points via database trigger
+- Wallet signups automatically get 500 points via RPC function
 - All transactions are recorded for audit purposes
-- Point values are configurable via the admin interface 
+- Point values are configurable via the admin interface
+- No permission errors due to elevated database function privileges 

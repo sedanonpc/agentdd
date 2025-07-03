@@ -147,4 +147,29 @@ const betTransactions = transactions.filter(t =>
 
 ## Security Considerations
 
-The table uses Row Level Security (RLS) to ensure users can only view their own transactions or transactions where they are the related user. System-level services can insert transactions for any user to facilitate point transfers and adjustments. 
+The table uses Row Level Security (RLS) to ensure users can only view their own transactions or transactions where they are the related user. System-level services can insert transactions for any user to facilitate point transfers and adjustments.
+
+## Integration with Configuration Service
+
+The transaction service automatically integrates with the configuration system to use current configured point values:
+
+```typescript
+import { 
+  awardReferralBonus,
+  awardDailyLoginBonus,
+  awardBetAcceptanceBonus,
+  awardBetWinBonus
+} from '../services/pointsConfigService';
+
+// These functions use current configured values and create appropriate transactions
+await awardReferralBonus(referrerId, newUserId, referralCode);
+await awardDailyLoginBonus(userId);
+await awardBetAcceptanceBonus(bettorUserId, acceptorUserId, betId);
+await awardBetWinBonus(userId, betId);
+```
+
+**Note**: Signup bonuses are now handled automatically by database triggers and don't require manual service function calls:
+- **Email signups**: Database trigger `insert_rows_after_signup_from_email()` automatically creates user account and SIGNUP transaction
+- **Wallet signups**: RPC function `insertRowsAfterSignupFromWallet()` handles account creation and SIGNUP transaction
+
+Both methods ensure atomic operations and proper transaction recording. 
