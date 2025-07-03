@@ -160,5 +160,4 @@ CREATE TRIGGER on_auth_user_created
 
 -- Add comments for documentation
 COMMENT ON FUNCTION public.insert_rows_after_signup_from_email() IS 'Inserts user_accounts and points_transactions rows after email signup';
-COMMENT ON FUNCTION public.insert_rows_after_signup_from_wallet(TEXT, TEXT) IS 'Inserts user_accounts and points_transactions rows after wallet signup';
-COMMENT ON TRIGGER on_auth_user_created ON auth.users IS 'Triggers automatic user account creation and signup bonus on new user registration'; 
+COMMENT ON FUNCTION public.insert_rows_after_signup_from_wallet(TEXT, TEXT) IS 'Inserts user_accounts and points_transactions rows after wallet signup'; 
