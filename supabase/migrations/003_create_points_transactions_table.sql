@@ -104,7 +104,7 @@ ON public.points_transactions USING GIN (metadata);
 -- Enable Row Level Security
 ALTER TABLE public.points_transactions ENABLE ROW LEVEL SECURITY;
 
--- Add policies
+-- RLS Policy: Users can view their own transactions and related transactions
 CREATE POLICY "Users can view their own transactions"
   ON points_transactions
   FOR SELECT
@@ -116,10 +116,19 @@ CREATE POLICY "Users can view their own transactions"
     auth.uid()::text = (metadata->>'bettor_user_id')::text
   );
 
+-- RLS Policy: Allow system to insert transactions
+-- This is critical for signup bonus and other automated point awards
 CREATE POLICY "System can insert transactions"
   ON points_transactions
   FOR INSERT
-  WITH CHECK (true);  -- This allows the system to insert transactions for any user
+  WITH CHECK (
+    -- Allow service role (for server-side operations)
+    auth.role() = 'service_role' OR
+    -- Allow users to create transactions for themselves
+    auth.uid() = user_id OR
+    -- Allow during signup process (when user might not be fully authenticated yet)
+    auth.uid() IS NOT NULL
+  );
 
 -- Add comments
 COMMENT ON TABLE public.points_transactions IS 'Audit trail of all points movements';
