@@ -25,7 +25,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || fixedSupabaseA
 // When in development mode and no proper keys are set, use a dummy client
 const isDevelopment = import.meta.env.DEV;
 const isProperlyConfigured = supabaseUrl && supabaseUrl.startsWith('https://') && supabaseAnonKey && supabaseAnonKey.length > 10;
-const shouldUseDummyClient = isDevelopment && !isProperlyConfigured;
+const shouldUseDummyClient = false; // Force real Supabase client
 
 // Log the Supabase URL for debugging
 console.log('Supabase URL:', supabaseUrl ? (shouldUseDummyClient ? 'USING DUMMY CLIENT' : supabaseUrl.substring(0, 15) + '...') : 'NOT SET');
@@ -203,9 +203,6 @@ export const signUpWithEmail = async (email: string, password: string) => {
   
   // Special handling for existing user error
   if (error) {
-    // Log the error for debugging
-    console.error('Registration error:', error);
-    
     // Check if this is an existing user error
     if (error.message?.includes('User already registered')) {
       // Try to sign in instead
@@ -217,33 +214,7 @@ export const signUpWithEmail = async (email: string, password: string) => {
     throw error;
   }
   
-  // If successful, create a user profile record
-  if (data.user) {
-    try {
-      await createUserAccount(data.user.id, {
-        email: data.user.email,
-      });
-      
-      // Award signup bonus DARE points based on configuration
-      try {
-        const { awardSignupBonus } = await import('./pointsConfigService');
-        const bonusAwarded = await awardSignupBonus(data.user.id);
-        
-        if (bonusAwarded) {
-          console.log('Signup bonus awarded successfully to user:', data.user.id);
-        } else {
-          console.warn('Failed to award signup bonus to user:', data.user.id);
-        }
-      } catch (bonusError) {
-        // Don't fail the signup if bonus awarding fails
-        console.error('Error awarding signup bonus:', bonusError);
-      }
-    } catch (profileError) {
-      // If profile creation fails, but auth succeeded, just log error
-      console.error('Error creating user account:', profileError);
-    }
-  }
-  
+  // Database trigger automatically handles account creation and signup bonus
   return data;
 };
 
@@ -288,19 +259,40 @@ interface UserAccount {
 }
 
 export const createUserAccount = async (userId: string, account: Partial<UserAccount>) => {
-  const { data, error } = await supabase
-    .from('user_accounts')
-    .insert({
-      user_id: userId,
-      free_points: 0, // Points will be awarded separately via signup bonus
-      reserved_points: 0,
-      ...account,
-    })
-    .select()
-    .single();
+  console.log('=== CREATE ACCOUNT DEBUG: Starting createUserAccount ===');
+  console.log('User ID:', userId);
+  console.log('Account data:', account);
   
-  if (error) throw error;
-  return data;
+  try {
+    console.log('=== CREATE ACCOUNT DEBUG: About to call supabase.from(user_accounts).insert ===');
+    
+    const { data, error } = await supabase
+      .from('user_accounts')
+      .insert({
+        user_id: userId,
+        free_points: 0, // Points will be awarded separately via signup bonus
+        reserved_points: 0,
+        ...account,
+      })
+      .select()
+      .single();
+    
+    console.log('=== CREATE ACCOUNT DEBUG: Insert completed ===');
+    console.log('Data:', data);
+    console.log('Error:', error);
+    
+    if (error) {
+      console.log('=== CREATE ACCOUNT DEBUG: Throwing error ===');
+      throw error;
+    }
+    
+    console.log('=== CREATE ACCOUNT DEBUG: Returning data ===');
+    return data;
+  } catch (err) {
+    console.log('=== CREATE ACCOUNT DEBUG: Caught exception ===');
+    console.error('Exception in createUserAccount:', err);
+    throw err;
+  }
 };
 
 export const getUserAccount = async (userId: string) => {
@@ -331,6 +323,32 @@ export const updateUserAccount = async (userId: string, updates: Partial<UserAcc
 
 export const linkWalletToUser = async (userId: string, walletAddress: string) => {
   return updateUserAccount(userId, { wallet_address: walletAddress });
+};
+
+// Create wallet account with signup bonus using database function
+export const insertRowsAfterSignupFromWallet = async (userId: string, walletAddress: string) => {
+  try {
+    const { data, error } = await supabase.rpc('insert_rows_after_signup_from_wallet', {
+      wallet_user_id: userId,
+      wallet_address: walletAddress
+    });
+
+    if (error) {
+      console.error('Error inserting rows after wallet signup:', error);
+      throw error;
+    }
+
+    if (data && !data.success) {
+      console.error('Wallet signup row insertion failed:', data.error);
+      throw new Error(data.error);
+    }
+
+    console.log('Rows inserted after wallet signup:', data);
+    return data;
+  } catch (error) {
+    console.error('Exception in insertRowsAfterSignupFromWallet:', error);
+    throw error;
+  }
 };
 
 // Helper function to check if Supabase is properly configured

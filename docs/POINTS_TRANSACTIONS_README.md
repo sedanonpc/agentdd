@@ -47,15 +47,16 @@ The transaction system is accessed through high-level service functions that han
 import { 
   deductBetPoints, 
   awardBetWinPoints, 
-  awardBetPlacementBonus,
+  awardBetAcceptanceBonus,
   awardBetWinBonus 
 } from '../services/pointsService';
 
-// When user places a bet
+// When user places a bet (no bonus awarded)
 const success = await deductBetPoints(userId, betAmount, betId);
-if (success) {
-  // Optionally award placement bonus
-  await awardBetPlacementBonus(userId, betId, matchId);
+
+// When another user accepts a bet (bonus awarded to both users)
+if (betAccepted) {
+  await awardBetAcceptanceBonus(bettorUserId, acceptorUserId, betId, matchId);
 }
 
 // When user wins a bet
@@ -72,7 +73,8 @@ if (winSuccess) {
 import { 
   awardSignupBonus,
   awardReferralBonus,
-  awardDailyLoginBonus 
+  awardDailyLoginBonus,
+  awardBetAcceptanceBonus 
 } from '../services/pointsConfigService';
 
 // When new user signs up
@@ -83,6 +85,9 @@ await awardReferralBonus(referrerId, newUserId, referralCode);
 
 // Daily login bonus
 await awardDailyLoginBonus(userId);
+
+// Bet acceptance bonus (awarded to both users when a bet is accepted)
+await awardBetAcceptanceBonus(bettorUserId, acceptorUserId, betId, matchId);
 ```
 
 ### 3. Manual Adjustments
@@ -142,4 +147,29 @@ const betTransactions = transactions.filter(t =>
 
 ## Security Considerations
 
-The table uses Row Level Security (RLS) to ensure users can only view their own transactions or transactions where they are the related user. System-level services can insert transactions for any user to facilitate point transfers and adjustments. 
+The table uses Row Level Security (RLS) to ensure users can only view their own transactions or transactions where they are the related user. System-level services can insert transactions for any user to facilitate point transfers and adjustments.
+
+## Integration with Configuration Service
+
+The transaction service automatically integrates with the configuration system to use current configured point values:
+
+```typescript
+import { 
+  awardReferralBonus,
+  awardDailyLoginBonus,
+  awardBetAcceptanceBonus,
+  awardBetWinBonus
+} from '../services/pointsConfigService';
+
+// These functions use current configured values and create appropriate transactions
+await awardReferralBonus(referrerId, newUserId, referralCode);
+await awardDailyLoginBonus(userId);
+await awardBetAcceptanceBonus(bettorUserId, acceptorUserId, betId);
+await awardBetWinBonus(userId, betId);
+```
+
+**Note**: Signup bonuses are now handled automatically by database triggers and don't require manual service function calls:
+- **Email signups**: Database trigger `insert_rows_after_signup_from_email()` automatically creates user account and SIGNUP transaction
+- **Wallet signups**: RPC function `insertRowsAfterSignupFromWallet()` handles account creation and SIGNUP transaction
+
+Both methods ensure atomic operations and proper transaction recording. 

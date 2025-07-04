@@ -1,7 +1,7 @@
 // TypeScript enums that match the SQL enums exactly
 export type PointsTransactionType = 
   | 'BET_PLACED'
-  | 'BET_PLACEMENT_BONUS_AWARDED' 
+  | 'BET_ACCEPTANCE_BONUS_AWARDED' 
   | 'BET_WON'
   | 'BET_WIN_BONUS_AWARDED'
   | 'BET_LOST'
