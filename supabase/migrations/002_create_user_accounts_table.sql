@@ -60,4 +60,8 @@ FOR INSERT WITH CHECK (
 -- Add comments for documentation
 COMMENT ON TABLE public.user_accounts IS 'User accounts with points information';
 COMMENT ON COLUMN public.user_accounts.reserved_points IS 'Points that are reserved (e.g., held in escrow) and can no longer be spent';
-COMMENT ON COLUMN public.user_accounts.free_points IS 'Points that are not yet reserved and can still be spent'; 
+COMMENT ON COLUMN public.user_accounts.free_points IS 'Points that are not yet reserved and can still be spent';
+
+-- Grant necessary permissions to authenticated users
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT, UPDATE ON public.user_accounts TO authenticated; 

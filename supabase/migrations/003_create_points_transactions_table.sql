@@ -218,4 +218,8 @@ $$ LANGUAGE plpgsql;
 -- Create the trigger
 CREATE TRIGGER validate_points_transaction
   BEFORE INSERT ON public.points_transactions
-  FOR EACH ROW EXECUTE FUNCTION public.validate_transaction_before_insert(); 
+  FOR EACH ROW EXECUTE FUNCTION public.validate_transaction_before_insert();
+
+-- Grant necessary permissions to authenticated users
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT ON public.points_transactions TO authenticated; 
