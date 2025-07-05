@@ -280,4 +280,10 @@ BEGIN
   
   RETURN true;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER; 
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant necessary permissions to authenticated users
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT ON public.points_config TO authenticated;
+GRANT SELECT ON public.points_config_history TO authenticated;
+GRANT SELECT ON public.active_points_config TO authenticated; 

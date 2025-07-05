@@ -41,4 +41,8 @@ CREATE POLICY "Allow authenticated users to insert matches"
 CREATE POLICY "Allow authenticated users to update matches" 
   ON matches FOR UPDATE 
   TO authenticated 
-  USING (true); 
+  USING (true);
+
+-- Grant necessary permissions to authenticated users
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT ON public.matches TO authenticated; 
