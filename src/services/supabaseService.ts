@@ -282,6 +282,7 @@ interface UserAccount {
   wallet_address?: string;
   reserved_points?: number;
   free_points?: number;
+  is_admin?: boolean;
   created_at?: string;
   updated_at?: string;
   [key: string]: any; // Allow for additional fields

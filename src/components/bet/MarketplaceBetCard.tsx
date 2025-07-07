@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Box, Typography, Button, Chip, Collapse, IconButton, CircularProgress, Avatar, Tooltip } from '@mui/material';
-import { ChevronDown, ChevronUp, Check, X, Clock, Trophy, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, X, Clock, Trophy, AlertTriangle, Share2 } from 'lucide-react';
 import { Bet, BetStatus } from '../../types';
 import { truncateAddress } from '../../utils/addressUtils';
 import { formatDistanceToNow } from 'date-fns';
 import { useWeb3 } from '../../context/Web3Context';
 import { usePoints } from '../../context/PointsContext';
 import { toast } from 'react-toastify';
+import BetShareModal from './BetShareModal';
 
 interface MarketplaceBetCardProps {
   bet: Bet;
@@ -97,6 +98,7 @@ const MarketplaceBetCard: React.FC<MarketplaceBetCardProps> = ({
   showExpanded = false
 }) => {
   const [expanded, setExpanded] = useState<boolean>(showExpanded);
+  const [showShareModal, setShowShareModal] = useState<boolean>(false);
   const { account } = useWeb3();
   const { userBalance } = usePoints();
   
@@ -111,6 +113,16 @@ const MarketplaceBetCard: React.FC<MarketplaceBetCardProps> = ({
     } else if (userBalance < bet.amount) {
       toast.error(`Insufficient balance. You need ${bet.amount} $DARE points.`);
     }
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowShareModal(true);
+  };
+
+  const handleCloseShareModal = () => {
+    setShowShareModal(false);
   };
   
   const getTimeAgo = (timestamp: number) => {
@@ -262,33 +274,28 @@ const MarketplaceBetCard: React.FC<MarketplaceBetCardProps> = ({
           flexWrap: 'nowrap',
           mr: { xs: 0, sm: 2 }
         }}>
-          {bet.status === BetStatus.OPEN && canAccept && !expanded && (
-            <Tooltip title="Accept this bet">
+          {bet.status === BetStatus.OPEN && !expanded && (
+            <Tooltip title="Share this bet">
               <Button
                 size="small"
                 variant="contained"
-                onClick={handleAccept}
-                disabled={isProcessing}
+                onClick={handleShare}
                 sx={{
                   minWidth: 'unset',
                   px: 1.5,
                   py: 0.5,
-                  bgcolor: isProcessing ? 'rgba(229, 255, 3, 0.5)' : '#E5FF03',
-                  color: 'black',
+                  bgcolor: '#1976d2',
+                  color: 'white',
                   fontSize: '0.75rem',
                   height: '24px',
                   transition: 'all 0.3s ease',
                   '&:hover': {
-                    bgcolor: '#c9e200'
-                  },
-                  '&.Mui-disabled': {
-                    bgcolor: 'rgba(229, 255, 3, 0.3)',
-                    color: 'rgba(0, 0, 0, 0.5)'
+                    bgcolor: '#1565c0'
                   },
                   display: { xs: 'none', sm: 'flex' }
                 }}
               >
-                {isProcessing ? <CircularProgress size={16} color="inherit" /> : 'Accept'}
+                <Share2 size={14} style={{ marginRight: '4px' }} /> Share
               </Button>
             </Tooltip>
           )}
@@ -379,31 +386,31 @@ const MarketplaceBetCard: React.FC<MarketplaceBetCardProps> = ({
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
               <Button
                 variant="contained"
-                onClick={handleAccept}
-                disabled={!canAccept || isProcessing}
-                startIcon={isProcessing ? <CircularProgress size={16} color="inherit" /> : null}
+                onClick={handleShare}
+                startIcon={<Share2 size={16} />}
                 sx={{
-                  bgcolor: isProcessing ? 'rgba(229, 255, 3, 0.5)' : '#E5FF03',
-                  color: 'black',
+                  bgcolor: '#1976d2',
+                  color: 'white',
                   fontSize: '0.875rem',
                   py: 0.75,
                   px: 2,
                   transition: 'all 0.3s ease',
                   '&:hover': {
-                    bgcolor: '#c9e200'
-                  },
-                  '&.Mui-disabled': {
-                    bgcolor: 'rgba(229, 255, 3, 0.3)',
-                    color: 'rgba(0, 0, 0, 0.5)'
+                    bgcolor: '#1565c0'
                   }
                 }}
               >
-                {isProcessing ? 'Processing...' : 'Accept Bet'}
+                Share Bet
               </Button>
             </Box>
           )}
         </Box>
       </Collapse>
+      
+      {/* Share Modal */}
+      {showShareModal && (
+        <BetShareModal bet={bet} onClose={handleCloseShareModal} />
+      )}
     </Box>
   );
 };

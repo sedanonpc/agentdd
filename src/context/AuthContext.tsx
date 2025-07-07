@@ -17,6 +17,7 @@ interface AuthUser {
   id: string;
   email?: string;
   walletAddress?: string;
+  isAdmin?: boolean;
 }
 
 interface AuthContextType {
@@ -25,6 +26,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isSupabaseAvailable: boolean;
+  isAdmin: boolean;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   registerWithEmail: (email: string, password: string) => Promise<void>;
   loginWithWallet: () => Promise<void>;
@@ -39,6 +41,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authMethod, setAuthMethod] = useState<'email' | 'wallet' | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSupabaseAvailable, setIsSupabaseAvailable] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   // Check Supabase configuration on load
   useEffect(() => {
@@ -62,8 +65,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               setUser({
                 id: supabaseUser.id,
                 email: supabaseUser.email,
-                walletAddress: account?.wallet_address
+                walletAddress: account?.wallet_address,
+                isAdmin: account?.is_admin || false
               });
+              
+              // Update admin status
+              setIsAdmin(account?.is_admin || false);
               setAuthMethod('email');
             }
           } else if (isConnected && account) {
@@ -179,8 +186,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setUser({
             id: supabaseUser.id,
             email: supabaseUser.email,
-            walletAddress: account?.wallet_address
+            walletAddress: account?.wallet_address,
+            isAdmin: account?.is_admin || false
           });
+          
+          // Update admin status
+          setIsAdmin(account?.is_admin || false);
           setAuthMethod('email');
         }
       } else {
@@ -331,6 +342,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!user,
         isLoading,
         isSupabaseAvailable,
+        isAdmin,
         loginWithEmail,
         registerWithEmail,
         loginWithWallet,
