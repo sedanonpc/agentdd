@@ -21,6 +21,7 @@ import {
   Divider,
   Alert
 } from '@mui/material';
+import { keyframes } from '@mui/system';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
@@ -40,6 +41,22 @@ const LEADERBOARD_LIMIT = 100;
 
 // Refresh interval in ms (10 seconds for more frequent updates)
 const REFRESH_INTERVAL = 10000;
+
+// Define pulse animation for cyberpunk elements
+const pulseAnimation = keyframes`
+  0% {
+    box-shadow: 0 0 0 0 rgba(229, 255, 3, 0.7);
+    opacity: 0.8;
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(229, 255, 3, 0);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(229, 255, 3, 0);
+    opacity: 0.8;
+  }
+`;
 
 // Create a global refresh counter
 let globalRefreshCount = 0;
@@ -484,13 +501,69 @@ const Leaderboard = () => {
 
   const renderLeaderboardTable = (data: LeaderboardEntry[]) => {
     return (
-      <Box sx={{ position: 'relative', height: { xs: '400px', md: '500px' } }}>
+      <Box sx={{ 
+        position: 'relative', 
+        height: { xs: '400px', md: '500px' },
+      }}>
+        {/* Terminal-style header */}
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: 'rgba(10, 25, 41, 0.95)',
+          borderTop: '1px solid #1976d2',
+          borderLeft: '1px solid #1976d2',
+          borderRight: '1px solid #1976d2',
+          borderTopLeftRadius: '4px',
+          borderTopRightRadius: '4px',
+          px: 2,
+          py: 1,
+          boxShadow: '0 -2px 8px rgba(25, 118, 210, 0.2)',
+          position: 'relative',
+          zIndex: 2
+        }}>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: '#a0e0ff', 
+              fontFamily: "'VT323', monospace",
+              fontSize: '0.9rem',
+              letterSpacing: '1px'
+            }}
+          >
+            LEADERBOARD_DATA.SYS
+          </Typography>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: '#a0e0ff', 
+                fontFamily: "'VT323', monospace",
+                fontSize: '0.9rem'
+              }}
+            >
+              USERS: {data.length}
+            </Typography>
+            
+            <Box sx={{ 
+              width: 8, 
+              height: 8, 
+              borderRadius: '50%', 
+              backgroundColor: '#E5FF03',
+              boxShadow: '0 0 5px #E5FF03',
+              animation: `${pulseAnimation} 2s infinite`
+            }} />
+          </Box>
+        </Box>
+        
         <TableContainer 
           component={Paper} 
           sx={{ 
             backgroundColor: 'rgba(10, 25, 41, 0.9)', 
             border: '1px solid #1976d2',
-            boxShadow: '0 0 10px rgba(25, 118, 210, 0.4)',
+            borderTop: 'none',
+            boxShadow: '0 4px 12px rgba(25, 118, 210, 0.4)',
             overflow: 'auto',
             height: '100%',
             position: 'relative',
@@ -504,6 +577,19 @@ const Leaderboard = () => {
               '&:hover': {
                 backgroundColor: 'rgba(25, 118, 210, 0.7)'
               }
+            },
+            // Terminal-style scanlines effect
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,30,60,0.1) 2px, rgba(0,30,60,0.1) 4px)',
+              pointerEvents: 'none',
+              zIndex: 1,
+              opacity: 0.15
             }
           }}
         >
@@ -707,19 +793,93 @@ const Leaderboard = () => {
   const renderBetMarketplace = () => {
     return (
       <Box sx={{ mt: 4 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ 
+          borderBottom: 1, 
+          borderColor: 'rgba(25, 118, 210, 0.4)',
+          position: 'relative',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            width: '100%',
+            height: '1px',
+            background: 'linear-gradient(90deg, #1976d2, transparent)',
+            opacity: 0.6
+          }
+        }}>
           <Tabs 
             value={marketplaceTab} 
             onChange={handleMarketplaceTabChange}
             aria-label="bet marketplace tabs"
+            variant="fullWidth"
             sx={{ 
-              '& .MuiTabs-indicator': { backgroundColor: '#E5FF03' },
-              '& .MuiTab-root': { color: '#FFFFFF' },
-              '& .Mui-selected': { color: '#E5FF03' }
+              '& .MuiTabs-indicator': { 
+                backgroundColor: '#E5FF03',
+                height: 3,
+                boxShadow: '0 0 8px rgba(229, 255, 3, 0.7)'
+              },
+              '& .MuiTab-root': { 
+                color: '#FFFFFF',
+                fontFamily: "'VT323', monospace",
+                fontSize: '1.1rem',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                py: 1.5,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  color: '#a0e0ff',
+                  backgroundColor: 'rgba(25, 118, 210, 0.1)'
+                }
+              },
+              '& .Mui-selected': { 
+                color: '#E5FF03',
+                fontWeight: 'bold'
+              }
             }}
           >
-            <Tab label={`Open Bets (${openBets.length})`} {...a11yProps(0)} />
-            <Tab label={`Closed Bets (${closedBets.length})`} {...a11yProps(1)} />
+            <Tab 
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <span>Open Bets</span>
+                  <Chip 
+                    label={openBets.length} 
+                    size="small" 
+                    sx={{ 
+                      bgcolor: 'rgba(229, 255, 3, 0.2)', 
+                      color: '#E5FF03',
+                      height: 20,
+                      minWidth: 28,
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      border: '1px solid rgba(229, 255, 3, 0.3)'
+                    }} 
+                  />
+                </Box>
+              } 
+              {...a11yProps(0)} 
+            />
+            <Tab 
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <span>Closed Bets</span>
+                  <Chip 
+                    label={closedBets.length} 
+                    size="small" 
+                    sx={{ 
+                      bgcolor: 'rgba(25, 118, 210, 0.2)', 
+                      color: '#a0e0ff',
+                      height: 20,
+                      minWidth: 28,
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      border: '1px solid rgba(25, 118, 210, 0.3)'
+                    }} 
+                  />
+                </Box>
+              } 
+              {...a11yProps(1)} 
+            />
           </Tabs>
         </Box>
         
@@ -798,31 +958,120 @@ const Leaderboard = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 2, mb: 8, px: { xs: 1, sm: 2, md: 4 } }}>
-      <Box sx={{ mb: { xs: 2, md: 4 }, textAlign: 'center' }}>
-        <Typography variant={isMobile ? "h4" : "h3"} component="h1" gutterBottom fontWeight="bold" color="#FFFFFF">
-          <AccountBalanceWalletIcon fontSize={isMobile ? "medium" : "large"} sx={{ verticalAlign: 'middle', mr: 1 }} />
+      {/* Stylized Title Banner */}
+      <Box 
+        sx={{ 
+          mb: { xs: 3, md: 5 }, 
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+          backgroundColor: 'rgba(10, 25, 41, 0.8)',
+          borderRadius: '4px',
+          border: '1px solid #1976d2',
+          boxShadow: '0 0 15px rgba(25, 118, 210, 0.3)',
+          p: { xs: 2, md: 3 }
+        }}
+      >
+        {/* Terminal-style header decoration */}
+        <Box sx={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          height: '4px', 
+          background: 'linear-gradient(90deg, #E5FF03, #1976d2, #E5FF03)',
+          opacity: 0.8
+        }} />
+        
+        {/* Scanline effect */}
+        <Box sx={{ 
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          opacity: 0.05,
+          zIndex: 1,
+          background: 'repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(255,255,255,0.2) 1px, rgba(255,255,255,0.2) 2px)',
+          pointerEvents: 'none'
+        }} />
+        
+        <Box sx={{ position: 'relative', zIndex: 2 }}>
+          {/* Title with icon */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+            <AccountBalanceWalletIcon 
+              fontSize={isMobile ? "medium" : "large"} 
+              sx={{ 
+                color: '#E5FF03', 
+                mr: 1.5,
+                filter: 'drop-shadow(0 0 3px rgba(229, 255, 3, 0.7))'
+              }} 
+            />
+            <Typography 
+              variant={isMobile ? "h4" : "h3"} 
+              component="h1" 
+              fontWeight="bold" 
+              sx={{ 
+                color: '#FFFFFF',
+                textShadow: '0 0 10px rgba(25, 118, 210, 0.7)',
+                fontFamily: "'Orbitron', sans-serif",
+                letterSpacing: '2px',
+                textTransform: 'uppercase'
+              }}
+            >
           $DARE Points Leaderboard
         </Typography>
-        <Typography variant="subtitle1" color="#CCCCCC" sx={{ display: { xs: 'none', sm: 'block' } }}>
+          </Box>
+          
+          {/* Subtitle with terminal-style decoration */}
+          <Box sx={{ 
+            position: 'relative', 
+            display: { xs: 'none', sm: 'block' },
+            mx: 'auto',
+            maxWidth: '90%',
+            mb: 2
+          }}>
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                color: '#a0e0ff',
+                fontFamily: "'VT323', monospace",
+                fontSize: '1.1rem',
+                letterSpacing: '0.5px'
+              }}
+            >
           See who's at the top of the betting world with the most $DARE points! Build your fortune and climb the ranks.
         </Typography>
+          </Box>
         
-        {/* Debug buttons - available to all users */}
+          {/* Refresh button styled as terminal command */}
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
           <Button
             variant="contained"
             size="small"
-            color="primary"
             onClick={() => {
               toast.info('Refreshing data...');
               fetchLeaderboards();
               fetchBets();
             }}
             startIcon={<RefreshIcon />}
-            sx={{ fontSize: '0.75rem' }}
+              sx={{ 
+                fontSize: '0.8rem',
+                backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                border: '1px solid #1976d2',
+                color: '#E5FF03',
+                fontFamily: "'VT323', monospace",
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                '&:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.4)',
+                  boxShadow: '0 0 10px rgba(25, 118, 210, 0.5)'
+                }
+              }}
           >
-            Refresh Data
+              REFRESH DATA
           </Button>
+          </Box>
         </Box>
       </Box>
 
@@ -834,13 +1083,58 @@ const Leaderboard = () => {
         renderLeaderboardTable(pointsRanking)
       )}
       
-      <Divider sx={{ my: 4, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+      <Divider sx={{ my: 4, borderColor: 'rgba(25, 118, 210, 0.3)' }} />
       
-      <Box sx={{ mb: 2 }}>
-        <Typography variant={isMobile ? "h5" : "h4"} component="h2" fontWeight="bold" color="#FFFFFF">
+      {/* Stylized Marketplace Header */}
+      <Box 
+        sx={{ 
+          mb: 3,
+          position: 'relative',
+          backgroundColor: 'rgba(10, 25, 41, 0.7)',
+          borderLeft: '4px solid #E5FF03',
+          borderBottom: '1px solid rgba(25, 118, 210, 0.5)',
+          p: { xs: 2, md: 2.5 },
+          borderRadius: '0 4px 4px 0',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+        }}
+      >
+        {/* Terminal decoration */}
+        <Box sx={{ 
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '30%',
+          height: '2px',
+          background: 'linear-gradient(90deg, transparent, #1976d2)'
+        }} />
+        
+        <Typography 
+          variant={isMobile ? "h5" : "h4"} 
+          component="h2" 
+          fontWeight="bold" 
+          sx={{ 
+            color: '#FFFFFF',
+            textShadow: '0 0 8px rgba(25, 118, 210, 0.6)',
+            fontFamily: "'Orbitron', sans-serif",
+            letterSpacing: '1px',
+            display: 'flex',
+            alignItems: 'center'
+          }}
+        >
+          <SportsEsportsIcon sx={{ mr: 1, color: '#E5FF03' }} />
           Bet Marketplace
         </Typography>
-        <Typography variant="subtitle1" color="#CCCCCC">
+        
+        <Typography 
+          variant="subtitle1" 
+          sx={{ 
+            color: '#a0e0ff',
+            fontFamily: "'VT323', monospace",
+            fontSize: '1rem',
+            mt: 0.5,
+            ml: 4
+          }}
+        >
           Browse open bets to accept or view closed bet history
         </Typography>
       </Box>

@@ -133,4 +133,14 @@ MIT License - see LICENSE file for details.
 
 ## Maintainer
 
-Built and maintained by sedanoNPC 
+agentdd.vercel.app 
+
+## Deployment Status
+
+- Latest updates include UI improvements with fixed navbar layout
+- Added fallback.html for error handling in Vercel deployments
+- Fixed Git configuration to ensure correct user attribution
+- Deployed and maintained by sedanoNPC 
+
+## Branch v05a
+This is a change made on the v05a branch. 

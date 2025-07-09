@@ -11,6 +11,7 @@ import ChatPage from './pages/ChatPage';
 import AcceptBetPage from './pages/AcceptBetPage';
 import LoginPage from './pages/LoginPage';
 import LeaderboardPage from './pages/Leaderboard';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 import { Web3Provider } from './context/Web3Context';
 import { AuthProvider } from './context/AuthContext';
 import { BettingProvider } from './context/BettingContext';
@@ -88,6 +89,12 @@ function App() {
                           <ProtectedRoute>
                             <DashboardPage />
                           </ProtectedRoute>
+                        } 
+                      />
+                      <Route 
+                        path="/admin" 
+                        element={
+                          <AdminDashboardPage />
                         } 
                       />
                       <Route 

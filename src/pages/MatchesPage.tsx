@@ -207,7 +207,7 @@ const MatchesPage: React.FC = () => {
       {/* Header with title and banner */}
       <div className="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
         <div className="bg-console-blue/90 p-2 text-black flex items-center justify-between">
-          <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ NBA_TERMINAL ]</div>
+          <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ SPORTS_TERMINAL ]</div>
           <div className="flex items-center gap-4">
             <LiveDataIndicator />
             <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ SESSION: {getSessionID()} ]</div>
@@ -218,7 +218,7 @@ const MatchesPage: React.FC = () => {
           <div className="flex items-center justify-center mb-3">
             <Terminal className="text-console-blue-bright h-8 w-8 mr-2" />
             <h1 className="text-2xl md:text-3xl font-display uppercase text-console-white tracking-widest">
-              NBA BETTING SYSTEM
+              SPORTS BETTING SYSTEM
             </h1>
           </div>
           <div className="font-mono text-console-white-muted text-sm flex flex-wrap justify-center items-center gap-2">
@@ -568,12 +568,22 @@ const MatchCard: React.FC<MatchCardProps> = ({
             {match.bookmakers && match.bookmakers.length > 0 && (
               <span className={`text-xs font-mono px-1 py-0.5 ${
                 match.bookmakers[0].key === 'yahoo_sports' ? 'bg-blue-600 text-white' :
+                match.bookmakers[0].key === 'admin_created' ? 'bg-purple-600 text-white' :
                 !isLiveData ? 'bg-yellow-600 text-black' : 'bg-green-600 text-white'
               } rounded`}>
-                {match.bookmakers[0].key === 'yahoo_sports' ? 'YAHOO' : !isLiveData ? 'MOCK' : 'API'}
+                {match.bookmakers[0].key === 'yahoo_sports' ? 'YAHOO' : 
+                 match.bookmakers[0].key === 'admin_created' ? 'ADMIN' :
+                 !isLiveData ? 'MOCK' : 'API'}
               </span>
             )}
             </div>
+          </div>
+          
+          {/* Sport title badge */}
+          <div className="mt-1 flex justify-end">
+            <span className="bg-console-black/40 px-2 py-0.5 text-xs font-mono text-console-blue-bright">
+              {match.sport_title || (match.sport_name ? `${match.sport_name.toUpperCase()} ${match.league_name?.toUpperCase() || ''}` : 'SPORTS')}
+            </span>
           </div>
         </div>
         
