@@ -113,16 +113,17 @@ CREATE TRIGGER update_straight_bets_updated_at_trigger
 -- Create view for open bets that can be accepted by other users
 CREATE VIEW open_straight_bets AS
 SELECT 
-    sb.*,
-    creator.username as creator_username,
-    creator.wallet_address as creator_wallet_address,
-    m.home_team,
-    m.away_team,
-    m.start_time as match_start_time,
-    m.status as match_status
+    sb.id,
+    sb.creator_id,
+    sb.match_id,
+    sb.creators_pick_id,
+    sb.amount,
+    sb.amount_currency,
+    sb.creators_note,
+    sb.created_at,
+    creator.username as creator_username
 FROM straight_bets sb
 JOIN user_accounts creator ON sb.creator_id = creator.id
-JOIN matches m ON sb.match_id = m.id
 WHERE sb.status = 'open'
 ORDER BY sb.created_at DESC;
 
