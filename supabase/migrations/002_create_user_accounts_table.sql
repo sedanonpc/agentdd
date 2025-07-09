@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.user_accounts (
     email TEXT,
     wallet_address TEXT UNIQUE,
     reserved_points DECIMAL(18,8) DEFAULT 0,
-    free_points DECIMAL(18,8) DEFAULT 500,
+    free_points DECIMAL(18,8) DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -31,19 +31,37 @@ ON public.user_accounts(email);
 -- Enable Row Level Security
 ALTER TABLE public.user_accounts ENABLE ROW LEVEL SECURITY;
 
--- Create policy to allow users to see their own accounts
+-- RLS Policy: Users can view their own account
 CREATE POLICY "Users can view own account" ON public.user_accounts
-FOR SELECT USING (auth.uid() = user_id);
+FOR SELECT USING (
+  auth.uid() = user_id OR 
+  auth.uid()::text = wallet_address
+);
 
--- Create policy to allow users to update their own accounts
+-- RLS Policy: Users can update their own account
 CREATE POLICY "Users can update own account" ON public.user_accounts
-FOR UPDATE USING (auth.uid() = user_id);
+FOR UPDATE USING (
+  auth.uid() = user_id OR 
+  auth.uid()::text = wallet_address
+);
 
--- Create policy to allow users to insert their own accounts
-CREATE POLICY "Users can insert own account" ON public.user_accounts
-FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- RLS Policy: Allow account creation during signup
+-- This is the critical policy for signup to work
+CREATE POLICY "Allow account creation during signup" ON public.user_accounts
+FOR INSERT WITH CHECK (
+  -- Allow if the user_id matches the authenticated user
+  auth.uid() = user_id OR
+  -- Allow if inserting wallet-only account (for wallet-first users)
+  (user_id IS NULL AND wallet_address IS NOT NULL) OR
+  -- Allow service role (for server-side operations)
+  auth.role() = 'service_role'
+);
 
 -- Add comments for documentation
 COMMENT ON TABLE public.user_accounts IS 'User accounts with points information';
 COMMENT ON COLUMN public.user_accounts.reserved_points IS 'Points that are reserved (e.g., held in escrow) and can no longer be spent';
-COMMENT ON COLUMN public.user_accounts.free_points IS 'Points that are not yet reserved and can still be spent'; 
+COMMENT ON COLUMN public.user_accounts.free_points IS 'Points that are not yet reserved and can still be spent';
+
+-- Grant necessary permissions to authenticated users
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT, UPDATE ON public.user_accounts TO authenticated; 

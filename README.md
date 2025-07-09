@@ -1,115 +1,137 @@
-# NBA Betting System
+# AgentDD - NBA Betting Platform
 
-A modern NBA betting platform with a cyberpunk terminal aesthetic, providing odds, match information, and betting capabilities.
+A modern NBA betting platform with a cyberpunk terminal aesthetic, featuring DARE points, real-time odds, and an integrated chat system.
 
 ## Features
 
-- NBA match data with simulated odds
-- Terminal-inspired UI with cyberpunk aesthetic
-- User betting system with transaction tracking
-- Match chat rooms and global chat
-- Responsive design for all devices
+- **NBA Betting System** with real-time odds and match data
+- **DARE Points Economy** with automatic signup bonuses and configurable rewards
+- **Dual Authentication** - Email and Web3 wallet support
+- **Chat System** with match-specific and global channels
+- **Terminal-inspired UI** with cyberpunk aesthetic
+- **Real-time Updates** via Supabase
+- **Responsive Design** for all devices
 
-## Setup Instructions
+## Quick Start
 
 ### Prerequisites
-
 - Node.js (v16 or higher)
 - npm or yarn
+- Supabase account (for full functionality)
 
 ### Installation
 
-1. Clone the repository
-   ```
+1. **Clone and install**
+   ```bash
    git clone <repository-url>
-   cd nba-betting-system
-   ```
-
-2. Install dependencies
-   ```
+   cd agentdd
    npm install
    ```
 
-### Supabase Setup (Optional)
-
-The application uses Supabase for authentication and database storage. To enable this functionality:
-
-1. Create a Supabase account at [https://supabase.com](https://supabase.com) and start a new project
-   
-2. Create the required tables in Supabase:
-
-   - Create a `user_profiles` table with the following columns:
-     - `id` (uuid, primary key)
-     - `user_id` (uuid, foreign key to auth.users, not null)
-     - `email` (text)
-     - `wallet_address` (text)
-     - `created_at` (timestamp with time zone, default: now())
-     - `updated_at` (timestamp with time zone, default: now())
-
-3. Create a `.env` file in the project root with the following variables:
-   ```
-   VITE_SUPABASE_URL=your_supabase_project_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
-   
-   You can find these values in your Supabase dashboard under Project Settings > API.
-
-4. Set up Row Level Security (RLS) policies for the `user_profiles` table:
-   
-   ```sql
-   -- Enable read access for authenticated users to their own profile
-   CREATE POLICY "Users can view their own profile"
-   ON user_profiles
-   FOR SELECT
-   USING (auth.uid() = user_id);
-   
-   -- Enable insert access for authenticated users
-   CREATE POLICY "Users can insert their own profile"
-   ON user_profiles
-   FOR INSERT
-   WITH CHECK (auth.uid() = user_id);
-   
-   -- Enable update access for authenticated users to their own profile
-   CREATE POLICY "Users can update their own profile"
-   ON user_profiles
-   FOR UPDATE
-   USING (auth.uid() = user_id);
+2. **Environment Setup**
+   ```bash
+   cp src/env.example .env
+   # Add your Supabase credentials to .env
    ```
 
-5. Enable Email Auth in Supabase:
-   - Go to Authentication > Providers
-   - Enable Email provider
-   - Configure any additional settings as needed
+3. **Database Setup**
+   ```bash
+   npx supabase db push
+   ```
+   
+   See `docs/setup-database.md` for detailed instructions.
 
-If Supabase is not configured, the application will fall back to using local storage for demonstration purposes.
+4. **Start Development**
+   ```bash
+   npm run dev
+   ```
 
-### Running the Application
+## Documentation
 
-Start the development server:
+Comprehensive documentation is available in the `docs/` folder:
+
+### System Documentation
+- **[Points System](docs/POINTS_README.md)** - DARE points economy and rewards
+- **[Database Setup](docs/setup-database.md)** - Database configuration and deployment
+- **[User Accounts](docs/USER_ACCOUNTS_README.md)** - User account system and authentication
+- **[Matches System](docs/MATCHES_TABLE_README.md)** - NBA match data and betting
+
+### Technical Documentation  
+- **[Points Configuration](docs/POINTS_CONFIG_README.md)** - Configurable point values and admin controls
+- **[Points Transactions](docs/POINTS_TRANSACTIONS_README.md)** - Transaction system and audit trail
+- **[Schema Design](docs/POINTS_SCHEMA_DESIGN.md)** - Database schema and relationships
+
+## Key Features
+
+### DARE Points System
+- **Automatic Signup Bonus**: 500 points via database triggers
+- **Betting Rewards**: Configurable bonuses for bets and wins
+- **Audit Trail**: Complete transaction history
+- **Dual Signup Support**: Email and wallet users both get bonuses
+
+### Authentication
+- **Email Authentication** via Supabase Auth
+- **Web3 Wallet Connection** with automatic account creation
+- **Unified User Experience** across both auth methods
+
+### Database Architecture
+- **PostgreSQL** with Supabase hosting
+- **Database Triggers** for automatic bonus awarding
+- **RPC Functions** for complex operations
+- **Row Level Security** for data protection
+
+## Technologies
+
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, Real-time)
+- **State Management**: React Context API
+- **Web3**: Wallet connection and authentication
+- **Deployment**: Vercel
+
+## Development
+
+### Project Structure
 ```
-npm run dev
+agentdd/
+├── docs/              # Documentation
+├── src/
+│   ├── components/    # React components
+│   ├── context/       # React contexts
+│   ├── services/      # API and business logic
+│   ├── pages/         # Page components
+│   └── types/         # TypeScript types
+├── supabase/
+│   └── migrations/    # Database migrations
+└── public/           # Static assets
 ```
 
-The application will be available at http://localhost:5173 by default.
+### Database Migrations
+All database changes are managed through Supabase migrations:
+```bash
+npx supabase db diff     # See pending changes
+npx supabase db push    # Apply migrations
+npx supabase db reset   # Reset and reapply all
+```
 
-## Data Source
+## Deployment
 
-The application uses simulated NBA match data that closely resembles real-world data. The UI clearly indicates when mock data is being used with a "MOCK" label.
+The application is deployed on Vercel with automatic deployments from the main branch.
 
-## Technologies Used
+**Live URL**: agentdd.vercel.app
 
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
-- React Router
-- Context API for state management
+## Contributing
+
+1. Read the documentation in `docs/`
+2. Set up your development environment
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License - see LICENSE file for details.
 
-## About
+## Maintainer
 
 agentdd.vercel.app 
 

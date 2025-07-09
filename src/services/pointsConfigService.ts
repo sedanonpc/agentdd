@@ -220,17 +220,24 @@ export const awardReferralBonus = async (
 };
 
 /**
- * Award bet placement bonus
+ * Award bet acceptance bonus to both bettor and acceptor
  */
-export const awardBetPlacementBonus = async (
-  userId: string, 
+export const awardBetAcceptanceBonus = async (
+  bettorUserId: string,
+  acceptorUserId: string, 
   betId: string,
   matchId?: string
 ): Promise<boolean> => {
-     return awardPointsByAction(
-     userId, 
-     'BET_PLACEMENT_BONUS_AWARDED'
-   );
+  try {
+    // Award bonus to both the bettor and acceptor
+    const bettorSuccess = await awardPointsByAction(bettorUserId, 'BET_ACCEPTANCE_BONUS_AWARDED');
+    const acceptorSuccess = await awardPointsByAction(acceptorUserId, 'BET_ACCEPTANCE_BONUS_AWARDED');
+    
+    return bettorSuccess && acceptorSuccess;
+  } catch (error) {
+    console.error('Error awarding bet acceptance bonus:', error);
+    return false;
+  }
 };
 
 /**

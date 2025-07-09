@@ -11,6 +11,7 @@ import { MOCK_MATCHES } from '../data/mockMatches';
 import * as betStorageService from '../services/betStorageService';
 import { storeBet, updateBet } from '../services/betStorageService';
 import { updatePoints, storeMatches, getUpcomingMatches, getMatchById as getMatchByIdFromDB, updateMatchScores as updateMatchScoresInDB } from '../services/supabaseService';
+import { awardBetAcceptanceBonus } from '../services/pointsConfigService';
 
 interface BettingContextType {
   matches: Match[];
@@ -338,34 +339,19 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return null;
       }
       
-      // Create escrow for the bet - silently to avoid duplicate notifications
-      const escrow = await createBetEscrow(newBet.id, numericAmount, true);
-      
-      if (!escrow) {
-        toast.error('Failed to create escrow');
-        return null;
-      }
-      
-      // Add escrow ID to the bet before creating it
-      newBet.escrowId = escrow.id;
-      
       // Save the bet using the service
       const createdBet = await createBet(
         newBet.creator,
         newBet.matchId,
         newBet.teamId,
         newBet.amount,
-        newBet.description || '',
-        escrow.id // Pass the escrow ID as an argument
+        newBet.description || ''
       );
       
       if (!createdBet) {
         toast.error('Failed to create bet');
         return null;
       }
-      
-      // Make sure the escrow ID is included in the created bet
-      createdBet.escrowId = escrow.id;
       
       // Log the bet before storing
       console.log('Storing bet in Supabase:', createdBet);
@@ -389,6 +375,8 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           console.error('Failed to update user points for leaderboard:', pointsError);
         }
       }
+      
+
       
       toast.success('Bet created successfully');
       
@@ -465,23 +453,7 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
-      // Get the escrow for this bet
-      const escrow = await getEscrowByBet(bet.id);
-      
-      if (!escrow) {
-        toast.error('Escrow not found for this bet');
-        return false;
-      }
-      
-      // Settle the bet's escrow
-      const settleEscrowResult = await settleBetEscrow(escrow.id, winnerId);
-      
-      if (!settleEscrowResult) {
-        toast.error('Failed to settle bet escrow');
-        return false;
-      }
-      
-      // Call the service to settle the bet
+      // Settle the bet
       const settledBet = await settleBetService(bet.id, winnerId);
       
       if (!settledBet) {
@@ -517,23 +489,8 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       try {
         console.log(`=== BETTING CONTEXT: Fetching match ${matchId} from database ===`);
         
-        // First try to find the match in the current matches list to get team names and time
-        const currentMatch = matches.find(match => match.id === matchId);
-        let homeTeamName, awayTeamName, commenceTime;
-        
-        if (currentMatch) {
-          homeTeamName = currentMatch.home_team.name;
-          awayTeamName = currentMatch.away_team.name;
-          commenceTime = currentMatch.commence_time;
-        }
-        
-        // Call the enhanced getMatchById that can find matches by team names and time
-        const match = await getMatchByIdFromDB(
-          matchId, 
-          homeTeamName, 
-          awayTeamName, 
-          commenceTime
-        );
+        // Fetch the match from database
+        const match = await getMatchByIdFromDB(matchId);
         
         if (match) {
           // Add to cache
@@ -616,19 +573,8 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
-      // Create escrow for the acceptor
-      const escrow = bet.escrowId || await createBetEscrow(bet.id, bet.amount, true);
-      
-      if (!escrow) {
-        toast.error('Failed to create escrow');
-        return false;
-      }
-      
-      // Get the escrow ID based on whether it's a string or an object
-      const escrowId = typeof escrow === 'string' ? escrow : escrow.id;
-      
-      // Update the bet in the local state
-      const acceptedBet = await acceptBetService(bet.id, userId, escrowId);
+      // Accept the bet
+      const acceptedBet = await acceptBetService(bet.id, userId, '');
       
       if (!acceptedBet) {
         toast.error('Failed to accept bet');
@@ -639,8 +585,7 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updatedBet = {
         ...bet,
         acceptor: userId,
-        status: BetStatus.ACTIVE,
-        escrowId: escrowId
+        status: BetStatus.ACTIVE
       };
       
       const updateResult = await updateBet(updatedBet);
@@ -659,6 +604,15 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
       
+      // Award bet acceptance bonus to both users
+      try {
+        await awardBetAcceptanceBonus(bet.creator, userId, bet.id, bet.matchId);
+        console.log('Bet acceptance bonus awarded to both users');
+      } catch (bonusError) {
+        console.error('Failed to award bet acceptance bonus:', bonusError);
+        // Don't fail the entire operation if bonus fails
+      }
+
       toast.success('Bet accepted successfully');
       
       // Refresh bets to reflect the changes
@@ -698,24 +652,11 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       console.log(`=== BETTING CONTEXT: Updating match ${matchId} scores: home=${homeScore}, away=${awayScore}, completed=${completed} ===`);
       
-      // Try to find the match in the current matches list to get team names and time
-      const match = matches.find(match => match.id === matchId);
-      let homeTeamName, awayTeamName, commenceTime;
-      
-      if (match) {
-        homeTeamName = match.home_team.name;
-        awayTeamName = match.away_team.name;
-        commenceTime = match.commence_time;
-      }
-      
-      // Call the enhanced updateMatchScores that can find matches by team names and time
+      // Update the match scores
       const success = await updateMatchScoresInDB(
         matchId, 
         homeScore, 
         awayScore, 
-        homeTeamName, 
-        awayTeamName, 
-        commenceTime, 
         completed
       );
       

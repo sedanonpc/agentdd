@@ -8,6 +8,7 @@ import {
   getCurrentSession,
   getUserAccount,
   createUserAccount,
+  insertRowsAfterSignupFromWallet,
   linkWalletToUser,
   isSupabaseConfigured
 } from '../services/supabaseService';
@@ -114,41 +115,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (isConnected && account) {
         // User connected their wallet
         if (authMethod === 'wallet' || authMethod === null) {
-          // Check if this is a first-time wallet user and create account if needed
+          // Check if this is a first-time wallet user and insert rows if needed
           if (isSupabaseAvailable) {
             try {
               const existingAccount = await getUserAccount(account);
               
               if (!existingAccount) {
-                // First time wallet user - create account and award signup bonus
-                console.log('First-time wallet user detected via auto-connection:', account);
+                // First time wallet user - insert rows after signup
+                console.log('First-time wallet user detected, inserting rows after signup:', account);
                 
                 try {
-                  await createUserAccount(account, {
-                    wallet_address: account,
-                  });
-                  
-                  // Award signup bonus DARE points
-                  try {
-                    const { awardSignupBonus } = await import('../services/pointsConfigService');
-                    const bonusAwarded = await awardSignupBonus(account);
-                    
-                    if (bonusAwarded) {
-                      console.log('Signup bonus awarded successfully to auto-connected wallet user:', account);
-                    } else {
-                      console.warn('Failed to award signup bonus to auto-connected wallet user:', account);
-                    }
-                  } catch (bonusError) {
-                    console.error('Error awarding signup bonus to auto-connected wallet user:', bonusError);
+                  const result = await insertRowsAfterSignupFromWallet(account, account);
+                  if (result.success) {
+                    console.log('Rows inserted after wallet signup, bonus awarded:', result.signup_bonus_awarded, 'points');
                   }
                 } catch (accountError) {
-                  console.error('Error creating auto-connected wallet user account:', accountError);
+                  console.error('Error inserting rows after wallet signup:', accountError);
+                  // Continue with login even if account creation fails
                 }
               }
             } catch (error) {
-              console.error('Error checking for existing auto-connected wallet account:', error);
+              console.error('Error checking for existing wallet account:', error);
+              // Continue with login even if database check fails
             }
-                      }
+          }
           
           // Set or update the user with wallet info
           setUser({
@@ -221,7 +211,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(true);
       
       if (isSupabaseAvailable) {
-        // Use Supabase authentication
+        // Use Supabase authentication - database trigger inserts rows after signup
         const { user: supabaseUser } = await signUpWithEmail(email, password);
         if (supabaseUser) {
           setUser({
@@ -264,30 +254,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               const existingAccount = await getUserAccount(account);
               
               if (!existingAccount) {
-                // First time wallet user - create account and award signup bonus
-                console.log('First-time wallet user detected, creating account:', account);
+                // First time wallet user - insert rows after signup
+                console.log('First-time wallet user detected, inserting rows after signup:', account);
                 
                 try {
-                  await createUserAccount(account, {
-                    wallet_address: account,
-                  });
-                  
-                  // Award signup bonus DARE points
-                  try {
-                    const { awardSignupBonus } = await import('../services/pointsConfigService');
-                    const bonusAwarded = await awardSignupBonus(account);
-                    
-                    if (bonusAwarded) {
-                      console.log('Signup bonus awarded successfully to wallet user:', account);
-                    } else {
-                      console.warn('Failed to award signup bonus to wallet user:', account);
-                    }
-                  } catch (bonusError) {
-                    // Don't fail the login if bonus awarding fails
-                    console.error('Error awarding signup bonus to wallet user:', bonusError);
+                  const result = await insertRowsAfterSignupFromWallet(account, account);
+                  if (result.success) {
+                    console.log('Rows inserted after wallet signup, bonus awarded:', result.signup_bonus_awarded, 'points');
                   }
                 } catch (accountError) {
-                  console.error('Error creating wallet user account:', accountError);
+                  console.error('Error inserting rows after wallet signup:', accountError);
                   // Continue with login even if account creation fails
                 }
               }
@@ -295,7 +271,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               console.error('Error checking for existing wallet account:', error);
               // Continue with login even if database check fails
             }
-                      }
+          }
           
           // Set user state
           setUser({

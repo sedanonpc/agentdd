@@ -9,8 +9,8 @@ BEGIN
           -- When a user places a bet, their free points are reserved in the amount of the bet
           'BET_PLACED',
           
-          -- When a user places a bet, they are awarded bonus points
-          'BET_PLACEMENT_BONUS_AWARDED',
+          -- When a bet is accepted by another user, both users are awarded bonus points
+          'BET_ACCEPTANCE_BONUS_AWARDED',
           
           -- When a user wins a bet, their reserved points (the bet amount) are released back to free points
           'BET_WON',
@@ -104,7 +104,7 @@ ON public.points_transactions USING GIN (metadata);
 -- Enable Row Level Security
 ALTER TABLE public.points_transactions ENABLE ROW LEVEL SECURITY;
 
--- Add policies
+-- RLS Policy: Users can view their own transactions and related transactions
 CREATE POLICY "Users can view their own transactions"
   ON points_transactions
   FOR SELECT
@@ -116,10 +116,19 @@ CREATE POLICY "Users can view their own transactions"
     auth.uid()::text = (metadata->>'bettor_user_id')::text
   );
 
+-- RLS Policy: Allow system to insert transactions
+-- This is critical for signup bonus and other automated point awards
 CREATE POLICY "System can insert transactions"
   ON points_transactions
   FOR INSERT
-  WITH CHECK (true);  -- This allows the system to insert transactions for any user
+  WITH CHECK (
+    -- Allow service role (for server-side operations)
+    auth.role() = 'service_role' OR
+    -- Allow users to create transactions for themselves
+    auth.uid() = user_id OR
+    -- Allow during signup process (when user might not be fully authenticated yet)
+    auth.uid() IS NOT NULL
+  );
 
 -- Add comments
 COMMENT ON TABLE public.points_transactions IS 'Audit trail of all points movements';
@@ -153,7 +162,7 @@ BEGIN
         RAISE EXCEPTION 'BET_PLACED transactions require bet_id and bettor_user_id in metadata';
       END IF;
       
-         WHEN 'BET_PLACEMENT_BONUS_AWARDED', 'BET_WIN_BONUS_AWARDED', 'SIGNUP', 'REFERRAL_BONUS', 'DAILY_LOGIN' THEN
+         WHEN 'BET_ACCEPTANCE_BONUS_AWARDED', 'BET_WIN_BONUS_AWARDED', 'SIGNUP', 'REFERRAL_BONUS', 'DAILY_LOGIN' THEN
       -- Bonus transactions should have positive amount and FREE balance
       IF amount <= 0 OR balance_type != 'FREE' THEN
         RAISE EXCEPTION '% transactions must have positive amount and FREE balance type', transaction_type;
@@ -209,4 +218,8 @@ $$ LANGUAGE plpgsql;
 -- Create the trigger
 CREATE TRIGGER validate_points_transaction
   BEFORE INSERT ON public.points_transactions
-  FOR EACH ROW EXECUTE FUNCTION public.validate_transaction_before_insert(); 
+  FOR EACH ROW EXECUTE FUNCTION public.validate_transaction_before_insert();
+
+-- Grant necessary permissions to authenticated users
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT ON public.points_transactions TO authenticated; 
