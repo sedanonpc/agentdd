@@ -61,9 +61,9 @@ The following functions are available in `supabaseService.ts` for interacting wi
 
 The matches table is integrated with the application through:
 
-1. `BettingContext`: Updated to first check the database before calling external APIs
-2. `getMatchById`: Enhanced to fetch from the database when not in cache
-3. `MatchesPage`: Updated to display the data source (database, API, Yahoo, mock)
+1. `MatchesContext`: Dedicated context for match data management with configurable data sources
+2. `BettingContext`: Focuses purely on betting operations, uses `MatchesContext` for match data when needed
+3. `MatchesPage`: Uses `useMatches()` hook and displays data source (database, api, mock)
 
 ## Future Enhancements
 
