@@ -4,6 +4,7 @@ import { getUpcomingMatches } from '../services/supabaseService';
 import { fetchNBAMatches } from '../services/oddsApi';
 import { DATA_SOURCE_CONFIG } from '../config/dataSource';
 import { MOCK_MATCHES } from '../data/mockMatches';
+import { useAuth } from './AuthContext';
 
 interface MatchesContextType {
   matches: Match[];
@@ -25,6 +26,7 @@ export const MatchesProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [isLiveData, setIsLiveData] = useState<boolean>(true);
 
   const { USE_REMOTE_DATABASE } = DATA_SOURCE_CONFIG;
+  const { isLoading: authLoading, isAuthenticated } = useAuth();
 
   // Generate mock matches using configuration
   const generateMockMatches = useCallback((): Match[] => {
@@ -176,10 +178,17 @@ export const MatchesProvider: React.FC<{ children: ReactNode }> = ({ children })
     return matches.find(match => match.id === id);
   }, [matches]);
 
-  // Initial data loading
+  // Initial data loading - wait for authentication to complete
   useEffect(() => {
-    refreshMatches();
-  }, [refreshMatches]);
+    // Only load data after authentication is complete
+    if (!authLoading) {
+      console.log('=== MATCHES CONTEXT: Auth loading complete, fetching matches ===', { 
+        isAuthenticated, 
+        authLoading 
+      });
+      refreshMatches();
+    }
+  }, [refreshMatches, authLoading, isAuthenticated]);
 
   const contextValue: MatchesContextType = {
     matches,

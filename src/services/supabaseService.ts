@@ -601,36 +601,38 @@ export const storeMatches = async (matches: Match[]): Promise<number> => {
 
 export const getMatchById = async (id: string): Promise<Match | null> => {
   try {
-    // Try to get by ID
+    // Query the new multi-sport schema with joins
     const { data, error } = await supabaseClient
       .from('matches')
-      .select('*')
+      .select(`
+        *,
+        match_details_basketball_nba!inner(*)
+      `)
       .eq('id', id)
       .single();
 
     // If found by ID, return it
     if (!error && data) {
-      // Reconstruct sport_key from sport_name and league_name
-      const sport_key = `${data.sport_name}_${data.league_name}`;
+      const basketballDetails = data.match_details_basketball_nba;
       
       return {
         id: data.id,
-        sport_key: sport_key, // Reconstructed for backward compatibility
-        sport_title: data.sport_title,
-        commence_time: data.commence_time,
+        sport_key: 'basketball_nba', // Based on event_type
+        sport_title: 'Basketball', // Default for basketball
+        commence_time: data.scheduled_start_time, // Map scheduled_start_time to commence_time
         home_team: {
-          id: data.home_team_id,
-          name: data.home_team_name,
-          logo: data.home_team_logo
+          id: basketballDetails.home_team_id,
+          name: basketballDetails.home_team_name,
+          logo: basketballDetails.home_team_logo
         },
         away_team: {
-          id: data.away_team_id,
-          name: data.away_team_name,
-          logo: data.away_team_logo
+          id: basketballDetails.away_team_id,
+          name: basketballDetails.away_team_name,
+          logo: basketballDetails.away_team_logo
         },
-        bookmakers: data.bookmakers,
-        scores: data.scores,
-        completed: data.completed
+        bookmakers: data.bookmakers || [],
+        scores: basketballDetails.scores || null,
+        completed: data.status === 'finished'
       };
     }
 
@@ -648,44 +650,78 @@ export const getUpcomingMatches = async (limit: number = 50): Promise<Match[]> =
   try {
     const now = new Date().toISOString();
     
-    const { data, error } = await supabaseClient
+    // First get matches from the main table
+    // Temporarily allowing past matches for testing - remove this filter in production
+    const { data: matchesData, error: matchesError } = await supabaseClient
       .from('matches')
       .select('*')
-      .gt('commence_time', now)
-      .eq('completed', false)
-      .order('commence_time', { ascending: true })
+      // .gt('scheduled_start_time', now)  // Commented out to include past matches for testing
+      .eq('status', 'upcoming')
+      .eq('event_type', 'basketball_nba')
+      .order('scheduled_start_time', { ascending: true })
       .limit(limit);
 
-    if (error) {
-      console.error('Error getting upcoming matches:', error);
+
+
+    if (matchesError) {
+      console.error('Error getting matches:', matchesError);
       return [];
     }
 
-    // Convert from DB format to Match format
-    return (data || []).map(item => {
-      // Reconstruct sport_key from sport_name and league_name
-      const sport_key = `${item.sport_name}_${item.league_name}`;
+    if (!matchesData || matchesData.length === 0) {
+      console.log('No upcoming matches found');
+      return [];
+    }
+
+    // Get the details_ids from matches
+    const detailsIds = matchesData.map(match => match.details_id);
+    
+    // Get basketball details for these matches
+    const { data: basketballData, error: basketballError } = await supabaseClient
+      .from('match_details_basketball_nba')
+      .select('*')
+      .in('id', detailsIds);
+
+    if (basketballError) {
+      console.error('Error getting basketball details:', basketballError);
+      return [];
+    }
+
+    // Create a map of details for quick lookup
+    const detailsMap = new Map();
+    (basketballData || []).forEach(detail => {
+      detailsMap.set(detail.id, detail);
+    });
+
+    // Convert from new multi-sport schema to Match format expected by UI
+    return matchesData.map(item => {
+      const basketballDetails = detailsMap.get(item.details_id);
+      
+      if (!basketballDetails) {
+        console.warn(`No basketball details found for match ${item.id} with details_id ${item.details_id}`);
+        return null;
+      }
       
       return {
         id: item.id,
-        sport_key: sport_key, // Reconstructed for backward compatibility
-        sport_title: item.sport_title,
-        commence_time: item.commence_time,
+        sport_key: 'basketball_nba', // Based on event_type
+        sport_title: 'Basketball', // Default for basketball
+        commence_time: item.scheduled_start_time, // Map scheduled_start_time to commence_time
         home_team: {
-          id: item.home_team_id,
-          name: item.home_team_name,
-          logo: item.home_team_logo
+          id: basketballDetails.home_team_id,
+          name: basketballDetails.home_team_name,
+          logo: basketballDetails.home_team_logo || null
         },
         away_team: {
-          id: item.away_team_id,
-          name: item.away_team_name,
-          logo: item.away_team_logo
+          id: basketballDetails.away_team_id,
+          name: basketballDetails.away_team_name,
+          logo: basketballDetails.away_team_logo || null
         },
-        bookmakers: item.bookmakers,
-        scores: item.scores,
-        completed: item.completed
+        bookmakers: item.bookmakers || [],
+        scores: basketballDetails.scores || null,
+        completed: item.status === 'finished'
       };
-    });
+    }).filter(match => match !== null); // Remove any null entries
   } catch (error) {
     console.error('Exception getting upcoming matches:', error);
     return [];

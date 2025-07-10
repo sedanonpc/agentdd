@@ -78,6 +78,12 @@ ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow public read access to matches" 
   ON matches FOR SELECT 
+  TO anon
+  USING (true);
+
+CREATE POLICY "Allow authenticated users to read matches" 
+  ON matches FOR SELECT 
+  TO authenticated
   USING (true);
 
 CREATE POLICY "Allow authenticated users to insert matches" 
@@ -95,6 +101,12 @@ ALTER TABLE match_details_basketball_nba ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow public read access to basketball details" 
   ON match_details_basketball_nba FOR SELECT 
+  TO anon
+  USING (true);
+
+CREATE POLICY "Allow authenticated users to read basketball details" 
+  ON match_details_basketball_nba FOR SELECT 
+  TO authenticated
   USING (true);
 
 CREATE POLICY "Allow authenticated users to insert basketball details" 
