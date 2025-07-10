@@ -15,6 +15,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import { Web3Provider } from './context/Web3Context';
 import { AuthProvider } from './context/AuthContext';
 import { BettingProvider } from './context/BettingContext';
+import { MatchesProvider } from './context/MatchesContext';
 import { ChatProvider } from './context/ChatContext';
 import { PointsProvider } from './context/PointsContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -61,8 +62,9 @@ function App() {
     <Web3Provider>
       <AuthProvider>
         <PointsProvider>
-          <BettingProvider>
-            <ChatProvider>
+          <MatchesProvider>
+            <BettingProvider>
+              <ChatProvider>
               <ConsoleThemeProvider>
                 <div className="min-h-screen font-mono text-console-white bg-console-black bg-terminal-grid bg-grid relative">
                   {/* Scanline effect - positioned below content but above background */}
@@ -137,8 +139,9 @@ function App() {
                   </div>
                 </div>
               </ConsoleThemeProvider>
-            </ChatProvider>
-          </BettingProvider>
+              </ChatProvider>
+            </BettingProvider>
+          </MatchesProvider>
         </PointsProvider>
       </AuthProvider>
     </Web3Provider>
