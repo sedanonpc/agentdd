@@ -5,11 +5,11 @@ import { createMatch, updateMatchScoresAdmin, deleteMatch } from '../services/ad
 import { Match, Team } from '../types';
 import { toast } from 'react-toastify';
 import { getUpcomingMatches } from '../services/supabaseService';
-import { useBetting } from '../context/BettingContext';
+import { useMatches } from '../context/MatchesContext';
 
 const AdminDashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { refreshMatches } = useBetting();
+  const { refreshMatches } = useMatches();
   
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);

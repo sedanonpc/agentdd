@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MessageSquare, TrendingUp, Calendar, Clock, AlertCircle, Hash, RefreshCw, DollarSign, ArrowUp, ArrowDown, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Bet, BetStatus } from '../../types';
-import { useBetting } from '../../context/BettingContext';
+import { useMatches } from '../../context/MatchesContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { formatDecimalOdds, decimalToAmerican } from '../../utils/oddsUtils';
 import BetShareModal from './BetShareModal';
@@ -15,7 +15,7 @@ interface BetCardProps {
 }
 
 const BetCard: React.FC<BetCardProps> = ({ bet, onSettle, isSettling }) => {
-  const { getMatchById, refreshMatches } = useBetting();
+  const { getMatchById, refreshMatches } = useMatches();
   const { account } = useWeb3();
   const match = getMatchById(bet.matchId);
   const [showShareModal, setShowShareModal] = useState<boolean>(false);

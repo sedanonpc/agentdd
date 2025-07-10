@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, Search, Wifi, WifiOff, ExternalLink, Terminal, MessageSquare, Zap, Database } from 'lucide-react';
-import { useBetting } from '../context/BettingContext';
 import { useMatches } from '../context/MatchesContext';
 import { Match } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';

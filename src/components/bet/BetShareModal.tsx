@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { X, Share2, Copy, Check, Download, Calendar, Clock, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
 import { Bet } from '../../types';
-import { useBetting } from '../../context/BettingContext';
+import { useMatches } from '../../context/MatchesContext';
 import { formatDecimalOdds, decimalToAmerican } from '../../utils/oddsUtils';
 import { createPortal } from 'react-dom';
 
@@ -12,7 +12,7 @@ interface BetShareModalProps {
 }
 
 const BetShareModal: React.FC<BetShareModalProps> = ({ bet, onClose }) => {
-  const { getMatchById } = useBetting();
+  const { getMatchById } = useMatches();
   const match = getMatchById(bet.matchId);
   const [copied, setCopied] = useState<boolean>(false);
   const [shareUrl, setShareUrl] = useState<string>('');
