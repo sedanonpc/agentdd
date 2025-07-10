@@ -720,3 +720,5 @@ export const updateMatchScores = async (
     return false;
   }
 }; 
+
+// TODO: Add new multi-sport architecture functions here after resolving TypeScript issues with mock Supabase client 
