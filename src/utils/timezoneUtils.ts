@@ -1,4 +1,124 @@
 /**
+ * Get all Southeast Asian timezones using the standard library approach
+ * @returns Array of timezone objects with value and label for Southeast Asia
+ */
+export const getSoutheastAsianTimezones = () => {
+  // Comprehensive list of Southeast Asian timezone IDs from IANA database
+  const southeastAsianTimezones = [
+    // Thailand
+    'Asia/Bangkok',           // Indochina Time (UTC+7)
+    
+    // Singapore
+    'Asia/Singapore',         // Singapore Standard Time (UTC+8)
+    
+    // Malaysia
+    'Asia/Kuala_Lumpur',      // Malaysia Time (UTC+8)
+    
+    // Indonesia
+    'Asia/Jakarta',           // Western Indonesian Time (UTC+7)
+    'Asia/Makassar',          // Central Indonesian Time (UTC+8) 
+    'Asia/Jayapura',          // Eastern Indonesian Time (UTC+9)
+    
+    // Philippines
+    'Asia/Manila',            // Philippine Time (UTC+8)
+    
+    // Vietnam
+    'Asia/Ho_Chi_Minh',       // Indochina Time (UTC+7)
+    
+    // Cambodia
+    'Asia/Phnom_Penh',        // Indochina Time (UTC+7)
+    
+    // Laos
+    'Asia/Vientiane',         // Indochina Time (UTC+7)
+    
+    // Myanmar (Burma)
+    'Asia/Yangon',            // Myanmar Time (UTC+6:30)
+    
+    // Brunei
+    'Asia/Brunei',            // Brunei Darussalam Time (UTC+8)
+    
+    // East Timor
+    'Asia/Dili',              // East Timor Time (UTC+9)
+    
+    // Hong Kong
+    'Asia/Hong_Kong',         // Hong Kong Time (UTC+8)
+    
+    // Macau
+    'Asia/Macau',             // China Standard Time (UTC+8)
+    
+    // Taiwan
+    'Asia/Taipei',            // China Standard Time (UTC+8)
+  ];
+
+  // Filter to only those the browser actually supports and sort
+  const supportedTimezones = southeastAsianTimezones.filter(timezone => {
+    try {
+      Intl.DateTimeFormat('en', { timeZone: timezone }).format(new Date());
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  // Convert to objects with labels and sort by label
+  return supportedTimezones
+    .map(timezone => ({
+      value: timezone,
+      label: formatSoutheastAsianTimezoneLabel(timezone)
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+};
+
+/**
+ * Format a Southeast Asian timezone identifier into a human-readable label
+ * @param timezone - IANA timezone identifier
+ * @returns Formatted label with timezone name and offset
+ */
+const formatSoutheastAsianTimezoneLabel = (timezone: string): string => {
+  try {
+    const now = new Date();
+    
+    // Get offset
+    const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const localDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+    const offsetMinutes = (localDate.getTime() - utcDate.getTime()) / (1000 * 60);
+    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+    const offsetMins = Math.abs(offsetMinutes) % 60;
+    const offsetSign = offsetMinutes >= 0 ? '+' : '-';
+    
+    const offsetString = offsetMins > 0 
+      ? `${offsetSign}${offsetHours}:${String(offsetMins).padStart(2, '0')}`
+      : `${offsetSign}${offsetHours}`;
+    
+    // Create descriptive names for Southeast Asian timezones
+    const friendlyNames: Record<string, string> = {
+      'Asia/Bangkok': 'Thailand Time',
+      'Asia/Singapore': 'Singapore Time',
+      'Asia/Kuala_Lumpur': 'Malaysia Time',
+      'Asia/Jakarta': 'Western Indonesia Time',
+      'Asia/Makassar': 'Central Indonesia Time',
+      'Asia/Jayapura': 'Eastern Indonesia Time',
+      'Asia/Manila': 'Philippines Time',
+      'Asia/Ho_Chi_Minh': 'Vietnam Time',
+      'Asia/Phnom_Penh': 'Cambodia Time',
+      'Asia/Vientiane': 'Laos Time',
+      'Asia/Yangon': 'Myanmar Time',
+      'Asia/Brunei': 'Brunei Time',
+      'Asia/Dili': 'East Timor Time',
+      'Asia/Hong_Kong': 'Hong Kong Time',
+      'Asia/Macau': 'Macau Time',
+      'Asia/Taipei': 'Taiwan Time',
+    };
+    
+    const friendlyName = friendlyNames[timezone] || timezone.split('/')[1]?.replace(/_/g, ' ') || timezone;
+    return `${friendlyName} (UTC${offsetString})`;
+  } catch (error) {
+    console.error('Error formatting Southeast Asian timezone label:', error);
+    return timezone;
+  }
+};
+
+/**
  * Get all US and Canada timezones using the standard library approach
  * We can't directly get all timezone IDs from the standard library, but we can 
  * test against a comprehensive list of known North American zones

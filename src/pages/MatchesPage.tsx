@@ -8,6 +8,7 @@ import { decimalToAmerican, formatDecimalOdds } from '../utils/oddsUtils';
 import MatchChatRoom from '../components/match/MatchChatRoom';
 import MatchBettingForm from '../components/match/MatchBettingForm';
 import Modal from '../components/common/Modal';
+import { SandboxMatchCard } from '../components/match/SandboxMatchCard';
 
 const YAHOO_SPORTS_ODDS_URL = 'https://sports.yahoo.com/nba/odds/';
 
@@ -373,17 +374,21 @@ const MatchesPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMatches.map((match) => (
-            <MatchCard 
-              key={match.id} 
-              match={match} 
-              formatDate={formatDate} 
-              formatTime={formatTime} 
-              isLiveData={isLiveData}
-              onSelectForChat={handleSelectMatchForChat}
-              onSelectForBetting={handleSelectMatchForBetting}
-              isChatSelected={selectedMatch?.id === match.id}
-              isBettingSelected={selectedMatchForBetting?.id === match.id}
-            />
+            match.sport_key === 'sandbox_metaverse' ? (
+              <SandboxMatchCard key={match.id} match={match} />
+            ) : (
+              <MatchCard 
+                key={match.id} 
+                match={match} 
+                formatDate={formatDate} 
+                formatTime={formatTime} 
+                isLiveData={isLiveData}
+                onSelectForChat={handleSelectMatchForChat}
+                onSelectForBetting={handleSelectMatchForBetting}
+                isChatSelected={selectedMatch?.id === match.id}
+                isBettingSelected={selectedMatchForBetting?.id === match.id}
+              />
+            )
           ))}
         </div>
       )}

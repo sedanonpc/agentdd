@@ -233,6 +233,110 @@ export const createNBAMatch = async (
   }
 };
 
+// Create Sandbox Metaverse match with specific details (admin only)
+export const createSandboxMatch = async (
+  player1Name: string,
+  player1Subtitle: string,
+  player1ImageUrl: string,
+  player2Name: string,
+  player2Subtitle: string,
+  player2ImageUrl: string,
+  scheduledDateTime: string,
+  timezone?: string
+): Promise<Match | null> => {
+  try {
+    // Generate unique IDs
+    const matchId = generateMatchId(
+      'sandbox',
+      'metaverse',
+      player1Name,
+      player2Name,
+      scheduledDateTime
+    );
+    
+    const detailsId = `${matchId}_details`;
+    const player1Id = crypto.randomUUID();
+    const player2Id = crypto.randomUUID();
+    
+    // Create sandbox details entry
+    const sandboxDetails = {
+      id: detailsId,
+      player1_id: player1Id,
+      player1_name: player1Name,
+      player1_subtitle: player1Subtitle || null,
+      player1_image_url: player1ImageUrl || null,
+      player2_id: player2Id,
+      player2_name: player2Name,
+      player2_subtitle: player2Subtitle || null,
+      player2_image_url: player2ImageUrl || null
+    };
+    
+    const { error: detailsError } = await supabase
+      .from('match_details_sandbox_metaverse')
+      .insert(sandboxDetails);
+    
+    if (detailsError) {
+      console.error('Error creating sandbox match details:', detailsError);
+      return null;
+    }
+    
+    // Create main match entry
+    const mainMatchData = {
+      id: matchId,
+      event_type: 'sandbox_metaverse' as EventType,
+      details_id: detailsId,
+      status: 'upcoming' as const,
+      scheduled_start_time: scheduledDateTime,
+      external_id: null,
+      bookmakers: []
+    };
+    
+    const { data: matchData, error: matchError } = await supabase
+      .from('matches')
+      .insert(mainMatchData)
+      .select()
+      .single();
+    
+    if (matchError) {
+      console.error('Error creating match:', matchError);
+      // Clean up details if match creation failed
+      await supabase
+        .from('match_details_sandbox_metaverse')
+        .delete()
+        .eq('id', detailsId);
+      return null;
+    }
+    
+    // Convert back to Match type for backward compatibility
+    return {
+      id: matchData.id,
+      sport_key: 'sandbox_metaverse',
+      sport_name: 'esports',
+      league_name: 'sandbox',
+      sport_title: 'The Sandbox Metaverse',
+      commence_time: matchData.scheduled_start_time,
+      home_team: {
+        id: player1Id,
+        name: player1Name,
+        alias: player1Subtitle,
+        logo: player1ImageUrl
+      },
+      away_team: {
+        id: player2Id,
+        name: player2Name,
+        alias: player2Subtitle,
+        logo: player2ImageUrl
+      },
+      bookmakers: [],
+      scores: null,
+      completed: false
+    };
+  } catch (error) {
+    console.error('Exception creating Sandbox match:', error);
+    return null;
+  }
+};
+
 // Update match scores (admin only)
 export const updateMatchScoresAdmin = async (
   matchId: string,

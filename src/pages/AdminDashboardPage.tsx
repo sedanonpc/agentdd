@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { createMatch, createNBAMatch, updateMatchScoresAdmin, deleteMatch } from '../services/adminService';
+import { createMatch, createNBAMatch, createSandboxMatch, updateMatchScoresAdmin, deleteMatch } from '../services/adminService';
 import { Match, Team, EventType } from '../types';
 import { toast } from 'react-toastify';
 import { getUpcomingMatches } from '../services/supabaseService';
 import { useMatches } from '../context/MatchesContext';
 import { getNBATeams, NBATeam } from '../services/teamsService';
-import { getUSTimezones, convertLocalToUTC, getUserTimezone } from '../utils/timezoneUtils';
+import { getUSTimezones, getSoutheastAsianTimezones, convertLocalToUTC, getUserTimezone } from '../utils/timezoneUtils';
 
 const AdminDashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,6 +30,18 @@ const AdminDashboardPage: React.FC = () => {
     venue: '',
     scheduledDateTime: '',
     timezone: getUserTimezone() // Default to user's current timezone
+  });
+
+  // Form state for Sandbox Metaverse matches
+  const [sandboxMatchForm, setSandboxMatchForm] = useState({
+    player1Name: '',
+    player1Subtitle: '',
+    player1ImageUrl: '',
+    player2Name: '',
+    player2Subtitle: '',
+    player2ImageUrl: '',
+    scheduledDateTime: '',
+    timezone: 'Asia/Singapore' // Default to Singapore time for Southeast Asian matches
   });
   
   // Load existing matches from database
@@ -94,6 +106,17 @@ const AdminDashboardPage: React.FC = () => {
         scheduledDateTime: '',
         timezone: getUserTimezone()
       });
+    } else if (eventType === 'sandbox_metaverse') {
+      setSandboxMatchForm({
+        player1Name: '',
+        player1Subtitle: '',
+        player1ImageUrl: '',
+        player2Name: '',
+        player2Subtitle: '',
+        player2ImageUrl: '',
+        scheduledDateTime: '',
+        timezone: 'Asia/Singapore'
+      });
     }
   };
 
@@ -101,6 +124,15 @@ const AdminDashboardPage: React.FC = () => {
   const handleNBAFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNBAMatchForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle Sandbox form input changes
+  const handleSandboxFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setSandboxMatchForm(prev => ({
       ...prev,
       [name]: value
     }));
@@ -176,6 +208,76 @@ const AdminDashboardPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Handle Sandbox form submission
+  const handleSandboxSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedEventType || selectedEventType !== 'sandbox_metaverse') {
+      toast.error('Please select an event type first');
+      return;
+    }
+    
+    if (!sandboxMatchForm.player1Name || !sandboxMatchForm.player2Name || !sandboxMatchForm.scheduledDateTime || !sandboxMatchForm.timezone) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      // Convert local time to UTC for storage
+      const utcDateTime = convertLocalToUTC(sandboxMatchForm.scheduledDateTime, sandboxMatchForm.timezone);
+      
+      // Create Sandbox match using the specialized function
+      const result = await createSandboxMatch(
+        sandboxMatchForm.player1Name,
+        sandboxMatchForm.player1Subtitle,
+        sandboxMatchForm.player1ImageUrl,
+        sandboxMatchForm.player2Name,
+        sandboxMatchForm.player2Subtitle,
+        sandboxMatchForm.player2ImageUrl,
+        utcDateTime,
+        sandboxMatchForm.timezone
+      );
+      
+      if (result) {
+        toast.success('Sandbox match created successfully!');
+        
+        // Reset form
+        setSelectedEventType('');
+        setSandboxMatchForm({
+          player1Name: '',
+          player1Subtitle: '',
+          player1ImageUrl: '',
+          player2Name: '',
+          player2Subtitle: '',
+          player2ImageUrl: '',
+          scheduledDateTime: '',
+          timezone: 'Asia/Singapore'
+        });
+        
+        // Add to matches list
+        setMatches(prev => [result, ...prev]);
+        
+        // Refresh matches in the MatchesContext
+        try {
+          await refreshMatches();
+          toast.info('Match added to the betting system');
+        } catch (refreshError) {
+          console.error('Error refreshing matches:', refreshError);
+          // Don't show error to user since the match was created successfully
+        }
+      } else {
+        toast.error('Failed to create match');
+      }
+    } catch (error) {
+      console.error('Error creating Sandbox match:', error);
+      toast.error('Error creating match');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   return (
     <div className="container mx-auto px-4 py-8">
@@ -196,6 +298,7 @@ const AdminDashboardPage: React.FC = () => {
             >
               <option value="">-- Select an event type --</option>
               <option value="basketball_nba">NBA Basketball</option>
+              <option value="sandbox_metaverse">The Sandbox Metaverse</option>
             </select>
           </div>
           
@@ -305,7 +408,15 @@ const AdminDashboardPage: React.FC = () => {
                 {/* Timezone */}
                 <div className="space-y-2">
                   <label className="block text-console-white-dim text-sm font-mono">
-                    Timezone *
+                    <div className="flex items-center gap-2">
+                      Timezone *
+                      <div 
+                        className="w-4 h-4 rounded-full border border-console-blue-dark bg-console-black text-console-blue-bright text-xs flex items-center justify-center cursor-help font-mono"
+                        title="Dates are stored in UTC, but will always be presented in the timezone originally entered in the editor"
+                      >
+                        ?
+                      </div>
+                    </div>
                     <select
                       name="timezone"
                       value={nbaMatchForm.timezone}
@@ -320,9 +431,6 @@ const AdminDashboardPage: React.FC = () => {
                       ))}
                     </select>
                   </label>
-                  <p className="text-console-white-dim text-xs font-mono">
-                    The time will be converted to UTC for storage. Choose the timezone where the game is being played.
-                  </p>
                 </div>
               </div>
                           
@@ -333,6 +441,154 @@ const AdminDashboardPage: React.FC = () => {
                   className="bg-console-blue hover:bg-console-blue-bright text-console-white font-mono py-2 px-4 rounded-sm transition-colors disabled:opacity-50"
                 >
                   {loading ? 'CREATING NBA MATCH...' : 'CREATE NBA MATCH'}
+                </button>
+              </div>
+            </form>
+          )}
+          
+          {/* Show Sandbox form when sandbox_metaverse is selected */}
+          {selectedEventType === 'sandbox_metaverse' && (
+            <form onSubmit={handleSandboxSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Player 1 Fields */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Player 1 Name *
+                    <input
+                      type="text"
+                      name="player1Name"
+                      value={sandboxMatchForm.player1Name}
+                      onChange={handleSandboxFormChange}
+                      placeholder="@username, TSB_GamerTag, Discord#1234"
+                      required
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    />
+                  </label>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Player 1 Subtitle
+                    <input
+                      type="text"
+                      name="player1Subtitle"
+                      value={sandboxMatchForm.player1Subtitle}
+                      onChange={handleSandboxFormChange}
+                      placeholder="Secondary text displayed below player name"
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    />
+                  </label>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Player 1 Image URL
+                    <input
+                      type="url"
+                      name="player1ImageUrl"
+                      value={sandboxMatchForm.player1ImageUrl}
+                      onChange={handleSandboxFormChange}
+                      placeholder="https://example.com/avatar.jpg"
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    />
+                  </label>
+                </div>
+                
+                {/* Player 2 Fields */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Player 2 Name *
+                    <input
+                      type="text"
+                      name="player2Name"
+                      value={sandboxMatchForm.player2Name}
+                      onChange={handleSandboxFormChange}
+                      placeholder="@username, TSB_GamerTag, Discord#1234"
+                      required
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    />
+                  </label>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Player 2 Subtitle
+                    <input
+                      type="text"
+                      name="player2Subtitle"
+                      value={sandboxMatchForm.player2Subtitle}
+                      onChange={handleSandboxFormChange}
+                      placeholder="Secondary text displayed below player name"
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    />
+                  </label>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Player 2 Image URL
+                    <input
+                      type="url"
+                      name="player2ImageUrl"
+                      value={sandboxMatchForm.player2ImageUrl}
+                      onChange={handleSandboxFormChange}
+                      placeholder="https://example.com/avatar.jpg"
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    />
+                  </label>
+                </div>
+                
+                {/* Scheduled Date/Time */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Scheduled Start Date & Time *
+                    <input
+                      type="datetime-local"
+                      name="scheduledDateTime"
+                      value={sandboxMatchForm.scheduledDateTime}
+                      onChange={handleSandboxFormChange}
+                      required
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    />
+                  </label>
+                </div>
+                
+                {/* Timezone */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    <div className="flex items-center gap-2">
+                      Timezone *
+                      <div 
+                        className="w-4 h-4 rounded-full border border-console-blue-dark bg-console-black text-console-blue-bright text-xs flex items-center justify-center cursor-help font-mono"
+                        title="Dates are stored in UTC, but will always be presented in the timezone originally entered in the editor"
+                      >
+                        ?
+                      </div>
+                    </div>
+                    <select
+                      name="timezone"
+                      value={sandboxMatchForm.timezone}
+                      onChange={handleSandboxFormChange}
+                      required
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    >
+                      {getSoutheastAsianTimezones().map((tz) => (
+                        <option key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+                          
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-console-blue hover:bg-console-blue-bright text-console-white font-mono py-2 px-4 rounded-sm transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'CREATING SANDBOX MATCH...' : 'CREATE SANDBOX MATCH'}
                 </button>
               </div>
             </form>

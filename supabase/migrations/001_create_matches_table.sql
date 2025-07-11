@@ -1,5 +1,5 @@
 -- Create event type enum for different sports/esports
-CREATE TYPE event_type_enum AS ENUM ('basketball_nba');
+CREATE TYPE event_type_enum AS ENUM ('basketball_nba', 'sandbox_metaverse');
 
 -- Create match status enum 
 CREATE TYPE match_status_enum AS ENUM ('upcoming', 'live', 'finished', 'cancelled');
@@ -91,6 +91,21 @@ CREATE TABLE IF NOT EXISTS match_details_basketball_nba (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create Sandbox Metaverse esports details table
+CREATE TABLE IF NOT EXISTS match_details_sandbox_metaverse (
+  id TEXT PRIMARY KEY,
+  player1_id TEXT NOT NULL, -- Auto-generated UUID
+  player1_name TEXT NOT NULL,
+  player1_subtitle TEXT,
+  player1_image_url TEXT,
+  player2_id TEXT NOT NULL, -- Auto-generated UUID
+  player2_name TEXT NOT NULL,
+  player2_subtitle TEXT,
+  player2_image_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes for faster querying
 CREATE INDEX IF NOT EXISTS idx_matches_scheduled_start_time ON matches(scheduled_start_time);
 CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);
@@ -105,6 +120,10 @@ CREATE INDEX IF NOT EXISTS idx_basketball_details_home_team_id ON match_details_
 CREATE INDEX IF NOT EXISTS idx_basketball_details_away_team_id ON match_details_basketball_nba(away_team_id);
 CREATE INDEX IF NOT EXISTS idx_basketball_details_venue ON match_details_basketball_nba(venue);
 
+-- Sandbox details indexes
+CREATE INDEX IF NOT EXISTS idx_sandbox_details_player1_id ON match_details_sandbox_metaverse(player1_id);
+CREATE INDEX IF NOT EXISTS idx_sandbox_details_player2_id ON match_details_sandbox_metaverse(player2_id);
+
 -- Add foreign key constraint to ensure details_id points to correct table
 -- Note: Using a trigger instead of CHECK constraint since PostgreSQL doesn't allow subqueries in CHECK constraints
 CREATE OR REPLACE FUNCTION validate_match_details_id()
@@ -114,6 +133,10 @@ BEGIN
   IF NEW.event_type = 'basketball_nba' THEN
     IF NOT EXISTS (SELECT 1 FROM match_details_basketball_nba WHERE id = NEW.details_id) THEN
       RAISE EXCEPTION 'details_id % does not exist in match_details_basketball_nba table', NEW.details_id;
+    END IF;
+  ELSIF NEW.event_type = 'sandbox_metaverse' THEN
+    IF NOT EXISTS (SELECT 1 FROM match_details_sandbox_metaverse WHERE id = NEW.details_id) THEN
+      RAISE EXCEPTION 'details_id % does not exist in match_details_sandbox_metaverse table', NEW.details_id;
     END IF;
   END IF;
   
@@ -172,6 +195,29 @@ CREATE POLICY "Allow authenticated users to update basketball details"
   TO authenticated 
   USING (true);
 
+-- Add RLS policies for Sandbox details table
+ALTER TABLE match_details_sandbox_metaverse ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read access to sandbox details" 
+  ON match_details_sandbox_metaverse FOR SELECT 
+  TO anon
+  USING (true);
+
+CREATE POLICY "Allow authenticated users to read sandbox details" 
+  ON match_details_sandbox_metaverse FOR SELECT 
+  TO authenticated
+  USING (true);
+
+CREATE POLICY "Allow authenticated users to insert sandbox details" 
+  ON match_details_sandbox_metaverse FOR INSERT 
+  TO authenticated 
+  WITH CHECK (true);
+
+CREATE POLICY "Allow authenticated users to update sandbox details" 
+  ON match_details_sandbox_metaverse FOR UPDATE 
+  TO authenticated 
+  USING (true);
+
 -- Add RLS policies for NBA teams table
 ALTER TABLE teams_nba ENABLE ROW LEVEL SECURITY;
 
@@ -189,5 +235,7 @@ CREATE POLICY "Allow authenticated users to read NBA teams"
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.matches TO authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.match_details_basketball_nba TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.match_details_sandbox_metaverse TO authenticated;
 GRANT SELECT ON public.teams_nba TO authenticated;
-GRANT SELECT ON public.teams_nba TO anon; 
+GRANT SELECT ON public.teams_nba TO anon;
+GRANT SELECT ON public.match_details_sandbox_metaverse TO anon; 
