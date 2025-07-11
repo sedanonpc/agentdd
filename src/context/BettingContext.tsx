@@ -1,32 +1,22 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { useWeb3 } from './Web3Context';
 import { usePoints } from './PointsContext';
 import { useAuth } from './AuthContext';
-import { Match, Bet, BetStatus } from '../types';
-import { fetchNBAMatches } from '../services/oddsApi';
-import { createBet, getBetsByUser, getAllBets, acceptBet as acceptBetService, settleBet as settleBetService, cancelBet } from '../services/bettingService';
-import { INITIAL_MOCK_BETS } from '../data/mockBets';
-import { MOCK_MATCHES } from '../data/mockMatches';
-import * as betStorageService from '../services/betStorageService';
+import { useMatches } from './MatchesContext';
+import { Bet, BetStatus } from '../types';
+import { createBet, getBetsByUser, acceptBet as acceptBetService, settleBet as settleBetService } from '../services/bettingService';
 import { storeBet, updateBet } from '../services/betStorageService';
-import { updatePoints, storeMatches, getUpcomingMatches, getMatchById as getMatchByIdFromDB, updateMatchScores as updateMatchScoresInDB } from '../services/supabaseService';
+import { updatePoints } from '../services/supabaseService';
 import { awardBetAcceptanceBonus } from '../services/pointsConfigService';
 
 interface BettingContextType {
-  matches: Match[];
-  loadingMatches: boolean;
   userBets: Bet[];
   loadingBets: boolean;
-  isLiveData: boolean;
-  dataSource: string;
   createNewBet: (matchId: string, teamId: string, amount: number, description: string) => Promise<Bet | null>;
   settleBet: (betId: string) => Promise<boolean>;
-  refreshMatches: () => Promise<void>;
   refreshBets: () => Promise<void>;
-  getMatchById: (id: string) => Match | undefined;
   getBetById: (id: string) => Bet | undefined;
-  debugCache: () => void;
   acceptBet: (bet: Bet) => Promise<boolean>;
 }
 
@@ -45,18 +35,12 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { account, isConnected } = useWeb3();
   const { deductPoints, addPoints, createBetEscrow, acceptBetEscrow, settleBetEscrow, refundBetEscrow, getEscrowByBet } = usePoints();
   const { user, isAuthenticated } = useAuth();
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [loadingMatches, setLoadingMatches] = useState<boolean>(false);
+  const { getMatchById: getMatchFromContext } = useMatches(); // Get match data from MatchesContext
+  
   const [userBets, setUserBets] = useState<Bet[]>([]);
   const [loadingBets, setLoadingBets] = useState<boolean>(false);
-  const [isLiveData, setIsLiveData] = useState<boolean>(false);
-  const [dataSource, setDataSource] = useState<string>('Loading...');
   const [lastBetsLoadTime, setLastBetsLoadTime] = useState<number>(0);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const [forceUpdate, setForceUpdate] = useState<boolean>(false);
-  
-  // Ref to keep a cache of all matches we've seen
-  const matchCacheRef = useRef<Map<string, Match>>(new Map());
 
   // Helper function to get current user ID (either from wallet or email)
   const getCurrentUserId = (): string | null => {
@@ -67,169 +51,6 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Fallback to wallet account if available but no user.id
     return account;
   };
-
-  // Use useCallback to memoize these functions and prevent unnecessary rerenders
-  const refreshMatches = useCallback(async () => {
-    try {
-      setLoadingMatches(true);
-      
-      console.log('=== BETTING CONTEXT: Starting to refresh matches... ===');
-      
-      // First try to get matches from our database
-      let fetchedMatches: Match[] = [];
-      let dataSourceValue = 'database';
-      let isLiveDataValue = true;
-      
-      try {
-        console.log('=== BETTING CONTEXT: Attempting to fetch matches from database... ===');
-        const dbMatches = await getUpcomingMatches(50);
-        
-        if (dbMatches && dbMatches.length > 0) {
-          console.log(`=== BETTING CONTEXT: Fetched ${dbMatches.length} matches from database ===`);
-          fetchedMatches = dbMatches;
-        } else {
-          console.log('=== BETTING CONTEXT: No matches found in database, fetching from external APIs... ===');
-          
-          // Try to get matches from The Odds API
-          try {
-            console.log('=== BETTING CONTEXT: Attempting to fetch from The Odds API... ===');
-            const oddsApiResponse = await fetchNBAMatches();
-            fetchedMatches = oddsApiResponse.matches;
-            
-            if (fetchedMatches && fetchedMatches.length > 0) {
-              console.log(`=== BETTING CONTEXT: Fetched ${fetchedMatches.length} matches from The Odds API ===`);
-              console.log('First match:', fetchedMatches[0] ? 
-                `${fetchedMatches[0].away_team.name} vs ${fetchedMatches[0].home_team.name}` : 'No matches');
-              
-              dataSourceValue = oddsApiResponse.dataSource || 'the_odds_api';
-              isLiveDataValue = oddsApiResponse.isLive;
-              
-              console.log(`=== BETTING CONTEXT: Data source: ${dataSourceValue}, Is live: ${isLiveDataValue} ===`);
-              
-              // Store the fetched matches in the database
-              console.log('=== BETTING CONTEXT: Storing fetched matches in database... ===');
-              const storedCount = await storeMatches(fetchedMatches);
-              console.log(`=== BETTING CONTEXT: Stored ${storedCount} matches in database ===`);
-            } else {
-              console.log('=== BETTING CONTEXT: No matches returned from The Odds API, trying Yahoo Sports... ===');
-            }
-          } catch (apiError) {
-            console.error('=== BETTING CONTEXT: Error fetching from The Odds API ===', apiError);
-            console.log('=== BETTING CONTEXT: Falling back to Yahoo Sports... ===');
-          }
-        }
-      } catch (dbError) {
-        console.error('=== BETTING CONTEXT: Error fetching matches from database ===', dbError);
-        console.log('=== BETTING CONTEXT: Falling back to external APIs... ===');
-        
-        // Continue with the existing API fetch logic
-        try {
-          console.log('=== BETTING CONTEXT: Attempting to fetch from The Odds API... ===');
-          const oddsApiResponse = await fetchNBAMatches();
-          fetchedMatches = oddsApiResponse.matches;
-          
-          if (fetchedMatches && fetchedMatches.length > 0) {
-            console.log(`=== BETTING CONTEXT: Fetched ${fetchedMatches.length} matches from The Odds API ===`);
-            
-            dataSourceValue = oddsApiResponse.dataSource || 'the_odds_api';
-            isLiveDataValue = oddsApiResponse.isLive;
-            
-            // Try to store the fetched matches in the database
-            try {
-              await storeMatches(fetchedMatches);
-            } catch (storeError) {
-              console.error('=== BETTING CONTEXT: Error storing matches in database ===', storeError);
-            }
-          }
-        } catch (apiError) {
-          console.error('=== BETTING CONTEXT: Error fetching from The Odds API ===', apiError);
-        }
-      }
-      
-      // If no matches found, try mock data as fallback
-      if (!fetchedMatches || fetchedMatches.length === 0) {
-        try {
-          console.log('=== BETTING CONTEXT: Using mock match data as final fallback ===');
-          fetchedMatches = [...MOCK_MATCHES];
-          dataSourceValue = 'mock';
-          isLiveDataValue = false;
-          
-          if (fetchedMatches.length === 0) {
-            console.error('=== BETTING CONTEXT: Even mock data fetch failed! ===');
-          } else {
-            console.log(`=== BETTING CONTEXT: Loaded ${fetchedMatches.length} mock matches ===`);
-            console.log('First mock match:', fetchedMatches[0] ? 
-              `${fetchedMatches[0].away_team.name} vs ${fetchedMatches[0].home_team.name}` : 'No matches');
-            
-            // Try to store mock matches in the database for future use
-            try {
-              await storeMatches(fetchedMatches);
-            } catch (storeError) {
-              console.error('=== BETTING CONTEXT: Error storing mock matches in database ===', storeError);
-            }
-          }
-        } catch (mockError) {
-          console.error('=== BETTING CONTEXT: Error using mock matches ===', mockError);
-        }
-      }
-      
-      // Debug the fetched matches
-      if (fetchedMatches && fetchedMatches.length > 0) {
-        fetchedMatches.forEach((match, index) => {
-          console.log(`=== BETTING CONTEXT: Match ${index + 1} ===`);
-          console.log(`ID: ${match.id}`);
-          console.log(`Teams: ${match.away_team.name} vs ${match.home_team.name}`);
-          console.log(`Time: ${match.commence_time}`);
-          console.log(`Has bookmakers: ${match.bookmakers && match.bookmakers.length > 0 ? 'Yes' : 'No'}`);
-        });
-      }
-      
-      // Set the data source values
-      setDataSource(dataSourceValue);
-      setIsLiveData(isLiveDataValue);
-      
-      // Update the cache with all matches - crucially important for bet display
-      fetchedMatches.forEach((match: Match) => {
-        matchCacheRef.current.set(match.id, match);
-      });
-      
-      console.log(`=== BETTING CONTEXT: Match cache now contains ${matchCacheRef.current.size} matches ===`);
-      
-      // Update the matches state
-      setMatches(fetchedMatches);
-      
-      // Log some details about the fetched matches for debugging
-      if (fetchedMatches.length > 0) {
-        console.log('=== BETTING CONTEXT: Sample match ===', {
-          id: fetchedMatches[0].id,
-          teams: `${fetchedMatches[0].home_team.name} vs ${fetchedMatches[0].away_team.name}`,
-          hasBookmakers: !!fetchedMatches[0].bookmakers?.length,
-          source: dataSourceValue
-        });
-      }
-    } catch (error) {
-      console.error('=== BETTING CONTEXT: Error refreshing matches ===', error);
-      setIsLiveData(false);
-      setDataSource('mock');
-      
-      // Try to load mock data as a last resort
-      try {
-        const mockData = [...MOCK_MATCHES];
-        setMatches(mockData);
-        console.log('=== BETTING CONTEXT: Loaded emergency mock data ===');
-        
-        // Update the cache
-        mockData.forEach((match: Match) => {
-          matchCacheRef.current.set(match.id, match);
-        });
-      } catch (mockError) {
-        console.error('=== BETTING CONTEXT: Even mock data failed to load ===', mockError);
-      }
-    } finally {
-      setLoadingMatches(false);
-      console.log('=== BETTING CONTEXT: Finished refreshing matches ===');
-    }
-  }, []);
 
   // Add this function to identify mock bets
   const isMockBet = (bet: Bet): boolean => {
@@ -257,115 +78,87 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     try {
       setLoadingBets(true);
+      console.log('=== BETTING CONTEXT: Refreshing bets for user:', userId, '===');
+
+      const bets = await getBetsByUser(userId);
       
-      // Fetch the user's bets using userId instead of account
-      const fetchedBets = await getBetsByUser(userId);
+      if (bets && bets.length > 0) {
+        console.log(`=== BETTING CONTEXT: Found ${bets.length} bets for user ===`);
+        setUserBets(bets);
+      } else {
+        console.log('=== BETTING CONTEXT: No bets found for user ===');
+        setUserBets([]);
+      }
       
-      // Process all bets to ensure they have is_mock property
-      const processedBets = fetchedBets.map(bet => ({
-        ...bet,
-        is_mock: isMockBet(bet)
-      }));
-      
-      setUserBets(processedBets);
-      
-      // Log the debug info
-      console.log(`Refreshed bets, total: ${processedBets.length}, mock: ${processedBets.filter(b => b.is_mock).length}`);
-      
-      // Update the load time
       setLastBetsLoadTime(Date.now());
+      setIsInitialized(true);
     } catch (error) {
-      console.error('Error refreshing bets:', error);
+      console.error('=== BETTING CONTEXT: Error refreshing bets ===', error);
+      setUserBets([]);
     } finally {
       setLoadingBets(false);
     }
-  }, [user, account]);
+  }, [account, user]);
 
-  // Initial data loading
+  // Initialize data on component mount and when authentication changes
   useEffect(() => {
-    if (!isInitialized) {
+    if (isAuthenticated || isConnected) {
       const initializeData = async () => {
-        await refreshMatches();
-        if (isAuthenticated) {
-          await refreshBets();
-        }
-        setIsInitialized(true);
+        console.log('=== BETTING CONTEXT: Initializing data ===');
+        
+        // Load bets for the current user
+        await refreshBets();
+        
+        console.log('=== BETTING CONTEXT: Data initialization complete ===');
       };
       
       initializeData();
+    } else {
+      // Clear data when not authenticated
+      setUserBets([]);
+      setIsInitialized(false);
     }
-  }, [isAuthenticated, refreshMatches, refreshBets, isInitialized]);
-
-  // Refresh data when user changes
-  useEffect(() => {
-    if (isInitialized && isAuthenticated) {
-      refreshBets();
-    }
-  }, [isAuthenticated, user, account, isInitialized, refreshBets]);
+  }, [isAuthenticated, isConnected, refreshBets]);
 
   const createNewBet = async (matchId: string, teamId: string, amount: number, description: string): Promise<Bet | null> => {
     const userId = getCurrentUserId();
+    
     if (!userId) {
-      toast.error('Please sign in to place a bet');
+      toast.error('Please sign in to create a bet');
       return null;
     }
-    
+
     try {
-      // Ensure amount is a number
-      const numericAmount = Number(amount);
-      
-      if (isNaN(numericAmount) || numericAmount <= 0) {
-        toast.error('Invalid bet amount');
+      // Get match from MatchesContext
+      const match = getMatchFromContext(matchId);
+      if (!match) {
+        toast.error('Match not found');
         return null;
       }
-      
-      // Create a new bet object with userId instead of account
-      const newBet: Bet = {
-        id: `bet_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-        creator: userId,
-        matchId,
-        teamId,
-        amount: numericAmount,
-        status: BetStatus.OPEN,
-        timestamp: Date.now(),
-        description: description || undefined
-      };
-      
-      // Deduct DARE points from the user's balance - silently to avoid duplicate notifications
-      const deductResult = await deductPoints(numericAmount, newBet.id, `Created bet on match ${matchId}`, true);
+
+      // Deduct points from the user
+      const deductResult = await deductPoints(amount, `bet_${Date.now()}`, `Created bet on ${match.home_team.name} vs ${match.away_team.name}`, true);
       
       if (!deductResult) {
         toast.error('Failed to deduct DARE points');
         return null;
       }
-      
-      // Save the bet using the service
-      const createdBet = await createBet(
-        newBet.creator,
-        newBet.matchId,
-        newBet.teamId,
-        newBet.amount,
-        newBet.description || ''
-      );
+
+      // Create the bet
+      const createdBet = await createBet(userId, matchId, teamId, amount, description);
       
       if (!createdBet) {
         toast.error('Failed to create bet');
         return null;
       }
-      
-      // Log the bet before storing
-      console.log('Storing bet in Supabase:', createdBet);
-      
-      // Store the bet in Supabase
+
+      // Store the bet
       const storeResult = await storeBet(createdBet);
       
       if (!storeResult) {
         console.error('Failed to store bet in Supabase, but bet was created locally');
       } else {
-        console.log('Successfully stored bet in Supabase!');
-        
-        // Try to update the user's points in Supabase to match their wallet's record
-        // This helps keep the leaderboard up-to-date
+        // Try to update the user's points in Supabase for the leaderboard
         try {
           if (user?.id) {
             await updatePoints(user.id, 0); // Update with 0 to sync the current balance
@@ -375,8 +168,6 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           console.error('Failed to update user points for leaderboard:', pointsError);
         }
       }
-      
-
       
       toast.success('Bet created successfully');
       
@@ -430,8 +221,8 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
-      // Get the match associated with this bet
-      const match = getMatchById(bet.matchId);
+      // Get the match associated with this bet from MatchesContext
+      const match = getMatchFromContext(bet.matchId);
       
       if (!match) {
         toast.error('Match not found for this bet');
@@ -476,64 +267,6 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       toast.error('Failed to settle bet');
       return false;
     }
-  };
-
-  const getMatchById = useCallback((id: string): Match | undefined => {
-    // First check the cache
-    if (matchCacheRef.current.has(id)) {
-      return matchCacheRef.current.get(id);
-    }
-    
-    // If not in cache, try to fetch from database
-    const fetchMatchFromDB = async (matchId: string) => {
-      try {
-        console.log(`=== BETTING CONTEXT: Fetching match ${matchId} from database ===`);
-        
-        // Fetch the match from database
-        const match = await getMatchByIdFromDB(matchId);
-        
-        if (match) {
-          // Add to cache
-          matchCacheRef.current.set(matchId, match);
-          
-          // Force a re-render to update any components that need this match
-          setForceUpdate(prev => !prev);
-          
-          return match;
-        } else {
-          console.log(`=== BETTING CONTEXT: Match ${matchId} not found in database ===`);
-        }
-      } catch (error) {
-        console.error(`=== BETTING CONTEXT: Error fetching match ${matchId} from database ===`, error);
-      }
-      
-      return undefined;
-    };
-    
-    // Start the fetch but don't wait for it
-    fetchMatchFromDB(id);
-    
-    // Return undefined for now, the component will re-render when the match is fetched
-    return undefined;
-  }, [matches]);
-
-  // Add a debug method to inspect the match cache
-  const debugCache = () => {
-    console.log('Current matches in state:', matches.length);
-    console.log('Current matches in cache:', matchCacheRef.current.size);
-    
-    // Log some stats about the cached matches
-    const cachedMatchIds = Array.from(matchCacheRef.current.keys());
-    console.log('Cached match IDs:', cachedMatchIds);
-    
-    // Compare with bet match IDs
-    const betMatchIds = userBets.map(bet => bet.matchId);
-    const uniqueBetMatchIds = [...new Set(betMatchIds)];
-    console.log('Unique bet match IDs:', uniqueBetMatchIds);
-    
-    // Check if all bet match IDs are in the cache
-    const missingMatchIds = uniqueBetMatchIds.filter(id => !matchCacheRef.current.has(id));
-    console.log('Missing match IDs in cache:', missingMatchIds);
   };
 
   const getBetById = (id: string): Bet | undefined => {
@@ -648,65 +381,14 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const updateMatchScores = useCallback(async (matchId: string, homeScore: number, awayScore: number, completed: boolean = false): Promise<boolean> => {
-    try {
-      console.log(`=== BETTING CONTEXT: Updating match ${matchId} scores: home=${homeScore}, away=${awayScore}, completed=${completed} ===`);
-      
-      // Update the match scores
-      const success = await updateMatchScoresInDB(
-        matchId, 
-        homeScore, 
-        awayScore, 
-        completed
-      );
-      
-      if (success) {
-        // Update the match in our local state
-        setMatches(prevMatches => 
-          prevMatches.map(m => 
-            m.id === matchId 
-              ? { 
-                  ...m, 
-                  scores: { home: homeScore, away: awayScore },
-                  completed 
-                } 
-              : m
-          )
-        );
-        
-        // Also update the match in the cache
-        if (matchCacheRef.current.has(matchId)) {
-          const cachedMatch = matchCacheRef.current.get(matchId)!;
-          cachedMatch.scores = { home: homeScore, away: awayScore };
-          cachedMatch.completed = completed;
-          matchCacheRef.current.set(matchId, cachedMatch);
-        }
-        
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error(`=== BETTING CONTEXT: Error updating match ${matchId} scores ===`, error);
-      return false;
-    }
-  }, [matches]);
-
   // Using React.memo or useMemo here could also help prevent unnecessary renders
   const contextValue = {
-        matches,
-        loadingMatches,
         userBets,
         loadingBets,
-        isLiveData,
-        dataSource,
         createNewBet,
         settleBet,
-        refreshMatches,
         refreshBets,
-        getMatchById,
         getBetById,
-        debugCache,
         acceptBet
   };
 

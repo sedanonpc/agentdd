@@ -80,6 +80,15 @@ Comprehensive documentation is available in the `docs/` folder:
 - **RPC Functions** for complex operations
 - **Row Level Security** for data protection
 
+### Application Architecture
+- **Separation of Concerns**: Dedicated React contexts for different data domains
+  - `MatchesContext`: Manages match data with configurable data sources
+  - `BettingContext`: Handles betting operations and user bet management
+  - `PointsContext`: Manages points economy and transactions
+  - `AuthContext`: Handles user authentication and sessions
+- **Configuration-Driven**: Uses `USE_REMOTE_DATABASE` flag to control data fetching strategy
+- **Flexible Data Sources**: Supports database, external APIs, and mock data with intelligent fallbacks
+
 ## Technologies
 
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS

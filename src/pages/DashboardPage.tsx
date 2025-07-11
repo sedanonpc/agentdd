@@ -11,7 +11,7 @@ import { toast } from 'react-toastify';
 import DareDevilChatModal from '../components/chat/DareDevilChatModal';
 
 const DashboardPage: React.FC = () => {
-  const { userBets, loadingBets, loadingMatches, settleBet, refreshMatches, refreshBets, debugCache } = useBetting();
+  const { userBets, loadingBets, settleBet, refreshBets } = useBetting();
   const { account } = useWeb3();
   const { userBalance, transactions } = usePoints();
   const [isSettling, setIsSettling] = useState<string | null>(null);
@@ -74,12 +74,8 @@ const DashboardPage: React.FC = () => {
       const loadDashboardData = async () => {
         setIsRefreshing(true);
     try {
-          // First refresh matches, then bets to ensure we have match data available
-          await refreshMatches();
+          // Refresh bets for the dashboard
           await refreshBets();
-          
-          // Debug the match cache after loading
-          debugCache();
           
           // Mark as fetched
           hasFetchedRef.current = true;
@@ -134,20 +130,16 @@ const DashboardPage: React.FC = () => {
   
   // Show loading state only on initial load to prevent flickering on data refresh
   // Add forceRender check to ensure we don't get stuck in loading state
-  const isLoading = !forceRender && (loadingBets || loadingMatches || isRefreshing);
+  const isLoading = !forceRender && (loadingBets || isRefreshing);
   
   // Add a manual refresh function
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
-      // First refresh matches, then bets to ensure we have match data available
-      await refreshMatches();
+      // Refresh bets for the dashboard
       await refreshBets();
       
-      // Debug the match cache after refresh
-      debugCache();
-      
-      toast.success('Data refreshed successfully');
+      toast.success('Bets refreshed successfully');
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
