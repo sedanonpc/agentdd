@@ -661,8 +661,6 @@ export const getUpcomingMatches = async (limit: number = 50): Promise<Match[]> =
       .order('scheduled_start_time', { ascending: true })
       .limit(limit);
 
-
-
     if (matchesError) {
       console.error('Error getting matches:', matchesError);
       return [];
@@ -676,10 +674,14 @@ export const getUpcomingMatches = async (limit: number = 50): Promise<Match[]> =
     // Get the details_ids from matches
     const detailsIds = matchesData.map(match => match.details_id);
     
-    // Get basketball details for these matches
+    // Get basketball details for these matches with team info
     const { data: basketballData, error: basketballError } = await supabaseClient
       .from('match_details_basketball_nba')
-      .select('*')
+      .select(`
+        *,
+        home_team:teams_nba!match_details_basketball_nba_home_team_id_fkey(*),
+        away_team:teams_nba!match_details_basketball_nba_away_team_id_fkey(*)
+      `)
       .in('id', detailsIds);
 
     if (basketballError) {
@@ -702,20 +704,25 @@ export const getUpcomingMatches = async (limit: number = 50): Promise<Match[]> =
         return null;
       }
       
+      const homeTeam = basketballDetails.home_team;
+      const awayTeam = basketballDetails.away_team;
+      
       return {
         id: item.id,
         sport_key: 'basketball_nba', // Based on event_type
-        sport_title: 'Basketball', // Default for basketball
+        sport_title: 'NBA', // Updated to match sport_title
+        sport_name: 'basketball',
+        league_name: 'nba',
         commence_time: item.scheduled_start_time, // Map scheduled_start_time to commence_time
         home_team: {
           id: basketballDetails.home_team_id,
-          name: basketballDetails.home_team_name,
-          logo: basketballDetails.home_team_logo || null
+          name: homeTeam ? `${homeTeam.city} ${homeTeam.name}` : basketballDetails.home_team_id,
+          logo: homeTeam?.logo_url || null
         },
         away_team: {
           id: basketballDetails.away_team_id,
-          name: basketballDetails.away_team_name,
-          logo: basketballDetails.away_team_logo || null
+          name: awayTeam ? `${awayTeam.city} ${awayTeam.name}` : basketballDetails.away_team_id,
+          logo: awayTeam?.logo_url || null
         },
         bookmakers: item.bookmakers || [],
         scores: basketballDetails.scores || null,
