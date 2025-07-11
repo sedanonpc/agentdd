@@ -21,6 +21,7 @@ const AdminDashboardPage: React.FC = () => {
   // Multi-step form state
   const [selectedEventType, setSelectedEventType] = useState<EventType | ''>('');
   const [nbaTeams, setNBATeams] = useState<NBATeam[]>([]);
+  const [showTimezoneTooltip, setShowTimezoneTooltip] = useState<'nba' | 'sandbox' | null>(null);
   
   // Form state for NBA basketball matches
   const [nbaMatchForm, setNBAMatchForm] = useState({
@@ -410,11 +411,20 @@ const AdminDashboardPage: React.FC = () => {
                   <label className="block text-console-white-dim text-sm font-mono">
                     <div className="flex items-center gap-2">
                       Timezone *
-                      <div 
-                        className="w-4 h-4 rounded-full border border-console-blue-dark bg-console-black text-console-blue-bright text-xs flex items-center justify-center cursor-help font-mono"
-                        title="Dates are stored in UTC, but will always be presented in the timezone originally entered in the editor"
-                      >
-                        ?
+                      <div className="relative">
+                        <div 
+                          className="w-4 h-4 rounded-full border border-console-blue-dark bg-console-black text-console-blue-bright text-xs flex items-center justify-center cursor-help font-mono transition-colors hover:bg-console-blue-dark"
+                          onMouseEnter={() => setShowTimezoneTooltip('nba')}
+                          onMouseLeave={() => setShowTimezoneTooltip(null)}
+                        >
+                          ?
+                        </div>
+                        {showTimezoneTooltip === 'nba' && (
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-console-black border border-console-blue-dark rounded text-xs text-console-white-bright font-mono whitespace-nowrap z-10 shadow-lg">
+                            Dates are stored in UTC, but will always be presented in the timezone originally entered in the editor
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-console-blue-dark"></div>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <select
@@ -449,95 +459,107 @@ const AdminDashboardPage: React.FC = () => {
           {/* Show Sandbox form when sandbox_metaverse is selected */}
           {selectedEventType === 'sandbox_metaverse' && (
             <form onSubmit={handleSandboxSubmit} className="space-y-4">
+              {/* Player Fields - Left/Right Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Player 1 Column */}
+                <div className="space-y-4">
+                  <h3 className="text-console-white-bright font-mono text-base border-b border-console-blue-dark pb-2">Player 1</h3>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-console-white-dim text-sm font-mono">
+                      Name *
+                      <input
+                        type="text"
+                        name="player1Name"
+                        value={sandboxMatchForm.player1Name}
+                        onChange={handleSandboxFormChange}
+                        placeholder="@username, TSB_GamerTag, Discord#1234"
+                        required
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-console-white-dim text-sm font-mono">
+                      Subtitle
+                      <input
+                        type="text"
+                        name="player1Subtitle"
+                        value={sandboxMatchForm.player1Subtitle}
+                        onChange={handleSandboxFormChange}
+                        placeholder="Secondary text displayed below player name"
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-console-white-dim text-sm font-mono">
+                      Image URL
+                      <input
+                        type="url"
+                        name="player1ImageUrl"
+                        value={sandboxMatchForm.player1ImageUrl}
+                        onChange={handleSandboxFormChange}
+                        placeholder="https://example.com/avatar.jpg"
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                </div>
+                
+                {/* Player 2 Column */}
+                <div className="space-y-4">
+                  <h3 className="text-console-white-bright font-mono text-base border-b border-console-blue-dark pb-2">Player 2</h3>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-console-white-dim text-sm font-mono">
+                      Name *
+                      <input
+                        type="text"
+                        name="player2Name"
+                        value={sandboxMatchForm.player2Name}
+                        onChange={handleSandboxFormChange}
+                        placeholder="@username, TSB_GamerTag, Discord#1234"
+                        required
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-console-white-dim text-sm font-mono">
+                      Subtitle
+                      <input
+                        type="text"
+                        name="player2Subtitle"
+                        value={sandboxMatchForm.player2Subtitle}
+                        onChange={handleSandboxFormChange}
+                        placeholder="Secondary text displayed below player name"
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-console-white-dim text-sm font-mono">
+                      Image URL
+                      <input
+                        type="url"
+                        name="player2ImageUrl"
+                        value={sandboxMatchForm.player2ImageUrl}
+                        onChange={handleSandboxFormChange}
+                        placeholder="https://example.com/avatar.jpg"
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Match Details Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Player 1 Fields */}
-                <div className="space-y-2">
-                  <label className="block text-console-white-dim text-sm font-mono">
-                    Player 1 Name *
-                    <input
-                      type="text"
-                      name="player1Name"
-                      value={sandboxMatchForm.player1Name}
-                      onChange={handleSandboxFormChange}
-                      placeholder="@username, TSB_GamerTag, Discord#1234"
-                      required
-                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                    />
-                  </label>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-console-white-dim text-sm font-mono">
-                    Player 1 Subtitle
-                    <input
-                      type="text"
-                      name="player1Subtitle"
-                      value={sandboxMatchForm.player1Subtitle}
-                      onChange={handleSandboxFormChange}
-                      placeholder="Secondary text displayed below player name"
-                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                    />
-                  </label>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-console-white-dim text-sm font-mono">
-                    Player 1 Image URL
-                    <input
-                      type="url"
-                      name="player1ImageUrl"
-                      value={sandboxMatchForm.player1ImageUrl}
-                      onChange={handleSandboxFormChange}
-                      placeholder="https://example.com/avatar.jpg"
-                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                    />
-                  </label>
-                </div>
-                
-                {/* Player 2 Fields */}
-                <div className="space-y-2">
-                  <label className="block text-console-white-dim text-sm font-mono">
-                    Player 2 Name *
-                    <input
-                      type="text"
-                      name="player2Name"
-                      value={sandboxMatchForm.player2Name}
-                      onChange={handleSandboxFormChange}
-                      placeholder="@username, TSB_GamerTag, Discord#1234"
-                      required
-                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                    />
-                  </label>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-console-white-dim text-sm font-mono">
-                    Player 2 Subtitle
-                    <input
-                      type="text"
-                      name="player2Subtitle"
-                      value={sandboxMatchForm.player2Subtitle}
-                      onChange={handleSandboxFormChange}
-                      placeholder="Secondary text displayed below player name"
-                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                    />
-                  </label>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-console-white-dim text-sm font-mono">
-                    Player 2 Image URL
-                    <input
-                      type="url"
-                      name="player2ImageUrl"
-                      value={sandboxMatchForm.player2ImageUrl}
-                      onChange={handleSandboxFormChange}
-                      placeholder="https://example.com/avatar.jpg"
-                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                    />
-                  </label>
-                </div>
-                
                 {/* Scheduled Date/Time */}
                 <div className="space-y-2">
                   <label className="block text-console-white-dim text-sm font-mono">
@@ -558,11 +580,20 @@ const AdminDashboardPage: React.FC = () => {
                   <label className="block text-console-white-dim text-sm font-mono">
                     <div className="flex items-center gap-2">
                       Timezone *
-                      <div 
-                        className="w-4 h-4 rounded-full border border-console-blue-dark bg-console-black text-console-blue-bright text-xs flex items-center justify-center cursor-help font-mono"
-                        title="Dates are stored in UTC, but will always be presented in the timezone originally entered in the editor"
-                      >
-                        ?
+                      <div className="relative">
+                        <div 
+                          className="w-4 h-4 rounded-full border border-console-blue-dark bg-console-black text-console-blue-bright text-xs flex items-center justify-center cursor-help font-mono transition-colors hover:bg-console-blue-dark"
+                          onMouseEnter={() => setShowTimezoneTooltip('sandbox')}
+                          onMouseLeave={() => setShowTimezoneTooltip(null)}
+                        >
+                          ?
+                        </div>
+                        {showTimezoneTooltip === 'sandbox' && (
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-console-black border border-console-blue-dark rounded text-xs text-console-white-bright font-mono whitespace-nowrap z-10 shadow-lg">
+                            Dates are stored in UTC, but will always be presented in the timezone originally entered in the editor
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-console-blue-dark"></div>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <select
