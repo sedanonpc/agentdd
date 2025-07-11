@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import { getUpcomingMatches } from '../services/supabaseService';
 import { useMatches } from '../context/MatchesContext';
 import { getNBATeams, NBATeam } from '../services/teamsService';
+import { getUSTimezones, convertLocalToUTC, getUserTimezone } from '../utils/timezoneUtils';
 
 const AdminDashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -27,7 +28,8 @@ const AdminDashboardPage: React.FC = () => {
     awayTeamId: '',
     gameSubtitle: '',
     venue: '',
-    scheduledDateTime: ''
+    scheduledDateTime: '',
+    timezone: getUserTimezone() // Default to user's current timezone
   });
   
   // Load existing matches from database
@@ -89,7 +91,8 @@ const AdminDashboardPage: React.FC = () => {
         awayTeamId: '',
         gameSubtitle: '',
         venue: '',
-        scheduledDateTime: ''
+        scheduledDateTime: '',
+        timezone: getUserTimezone()
       });
     }
   };
@@ -112,7 +115,7 @@ const AdminDashboardPage: React.FC = () => {
       return;
     }
     
-    if (!nbaMatchForm.homeTeamId || !nbaMatchForm.awayTeamId || !nbaMatchForm.scheduledDateTime) {
+    if (!nbaMatchForm.homeTeamId || !nbaMatchForm.awayTeamId || !nbaMatchForm.scheduledDateTime || !nbaMatchForm.timezone) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -125,13 +128,17 @@ const AdminDashboardPage: React.FC = () => {
     setLoading(true);
     
     try {
+      // Convert local time to UTC for storage
+      const utcDateTime = convertLocalToUTC(nbaMatchForm.scheduledDateTime, nbaMatchForm.timezone);
+      
       // Create NBA match using the specialized function
       const result = await createNBAMatch(
         nbaMatchForm.homeTeamId,
         nbaMatchForm.awayTeamId,
-        nbaMatchForm.scheduledDateTime,
+        utcDateTime,
         nbaMatchForm.gameSubtitle || undefined,
-        nbaMatchForm.venue || undefined
+        nbaMatchForm.venue || undefined,
+        nbaMatchForm.timezone
       );
       
       if (result) {
@@ -144,7 +151,8 @@ const AdminDashboardPage: React.FC = () => {
           awayTeamId: '',
           gameSubtitle: '',
           venue: '',
-          scheduledDateTime: ''
+          scheduledDateTime: '',
+          timezone: getUserTimezone()
         });
         
         // Add to matches list
@@ -280,7 +288,7 @@ const AdminDashboardPage: React.FC = () => {
                 </div>
                 
                 {/* Scheduled Date/Time */}
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2">
                   <label className="block text-console-white-dim text-sm font-mono">
                     Scheduled Start Date & Time *
                     <input
@@ -292,6 +300,29 @@ const AdminDashboardPage: React.FC = () => {
                       className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
                     />
                   </label>
+                </div>
+                
+                {/* Timezone */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Timezone *
+                    <select
+                      name="timezone"
+                      value={nbaMatchForm.timezone}
+                      onChange={handleNBAFormChange}
+                      required
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    >
+                      {getUSTimezones().map((tz) => (
+                        <option key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <p className="text-console-white-dim text-xs font-mono">
+                    The time will be converted to UTC for storage. Choose the timezone where the game is being played.
+                  </p>
                 </div>
               </div>
                           

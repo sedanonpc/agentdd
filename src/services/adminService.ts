@@ -136,7 +136,8 @@ export const createNBAMatch = async (
   awayTeamId: string,
   scheduledDateTime: string,
   gameSubtitle?: string,
-  venue?: string
+  venue?: string,
+  timezone?: string
 ): Promise<Match | null> => {
   try {
     // Generate unique IDs
@@ -157,6 +158,7 @@ export const createNBAMatch = async (
       away_team_id: awayTeamId,
       game_subtitle: gameSubtitle || null,
       venue: venue || null,
+      timezone: timezone || null,
       scores: null
     };
     

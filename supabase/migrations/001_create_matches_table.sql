@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS match_details_basketball_nba (
   away_team_id TEXT NOT NULL REFERENCES teams_nba(id) ON DELETE CASCADE,
   game_subtitle TEXT,
   venue TEXT,
+  timezone TEXT, -- Store the timezone used for match entry (for display/editing purposes)
   scores JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
