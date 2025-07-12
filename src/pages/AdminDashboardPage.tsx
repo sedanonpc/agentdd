@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { createMatch, updateMatchScoresAdmin, deleteMatch } from '../services/adminService';
-import { Match, Team } from '../types';
+import { createMatch, createNBAMatch, createSandboxMatch, updateMatchScoresAdmin, deleteMatch } from '../services/adminService';
+import { Match, Team, EventType } from '../types';
 import { toast } from 'react-toastify';
 import { getUpcomingMatches } from '../services/supabaseService';
 import { useMatches } from '../context/MatchesContext';
+import { getNBATeams, NBATeam } from '../services/teamsService';
+import { getUSTimezones, getSoutheastAsianTimezones, convertLocalToUTC, getUserTimezone } from '../utils/timezoneUtils';
 
 const AdminDashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -14,65 +16,34 @@ const AdminDashboardPage: React.FC = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMatches, setLoadingMatches] = useState(false);
-  const [isCustomMatch, setIsCustomMatch] = useState(false);
+  const [loadingTeams, setLoadingTeams] = useState(false);
   
-  // Form state for creating a new match
-  const [newMatch, setNewMatch] = useState({
-    sport_key: '',
-    sport_name: '',
-    league_name: '',
-    sport_title: '',
-    commence_time: '',
-    home_team: {
-      id: '',
-      name: ''
-    },
-    away_team: {
-      id: '',
-      name: ''
-    },
-    homeOdds: 2.0,
-    awayOdds: 2.0
+  // Multi-step form state
+  const [selectedEventType, setSelectedEventType] = useState<EventType | ''>('');
+  const [nbaTeams, setNBATeams] = useState<NBATeam[]>([]);
+  const [showTimezoneTooltip, setShowTimezoneTooltip] = useState<'nba' | 'sandbox' | null>(null);
+  
+  // Form state for NBA basketball matches
+  const [nbaMatchForm, setNBAMatchForm] = useState({
+    homeTeamId: '',
+    awayTeamId: '',
+    gameSubtitle: '',
+    venue: '',
+    scheduledDateTime: '',
+    timezone: getUserTimezone() // Default to user's current timezone
   });
 
-  // Custom match templates
-  const matchTemplates = [
-    { 
-      name: "NBA Basketball", 
-      sport_name: "basketball", 
-      league_name: "nba", 
-      sport_title: "NBA",
-      sport_key: "basketball_nba"
-    },
-    { 
-      name: "NFL Football", 
-      sport_name: "football", 
-      league_name: "nfl", 
-      sport_title: "NFL",
-      sport_key: "football_nfl"
-    },
-    { 
-      name: "MLB Baseball", 
-      sport_name: "baseball", 
-      league_name: "mlb", 
-      sport_title: "MLB",
-      sport_key: "baseball_mlb"
-    },
-    { 
-      name: "NHL Hockey", 
-      sport_name: "hockey", 
-      league_name: "nhl", 
-      sport_title: "NHL",
-      sport_key: "hockey_nhl"
-    },
-    { 
-      name: "Custom Match", 
-      sport_name: "", 
-      league_name: "", 
-      sport_title: "",
-      sport_key: ""
-    }
-  ];
+  // Form state for Sandbox Metaverse matches
+  const [sandboxMatchForm, setSandboxMatchForm] = useState({
+    player1Name: '',
+    player1Subtitle: '',
+    player1ImageUrl: '',
+    player2Name: '',
+    player2Subtitle: '',
+    player2ImageUrl: '',
+    scheduledDateTime: '',
+    timezone: 'Asia/Singapore' // Default to Singapore time for Southeast Asian matches
+  });
   
   // Load existing matches from database
   const loadExistingMatches = async () => {
@@ -95,140 +66,132 @@ const AdminDashboardPage: React.FC = () => {
     }
   };
 
-  // Redirect non-admin users and load existing matches
-  useEffect(() => {
-    // Load existing matches
-    loadExistingMatches();
-  }, []);
-  
-  // Handle form input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    
-    // Handle nested properties
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      
-      if (parent === 'home_team') {
-        setNewMatch(prev => ({
-          ...prev,
-          home_team: {
-            ...prev.home_team,
-            [child]: value
-          }
-        }));
-      } else if (parent === 'away_team') {
-        setNewMatch(prev => ({
-          ...prev,
-          away_team: {
-            ...prev.away_team,
-            [child]: value
-          }
-        }));
-      }
-    } else {
-      setNewMatch(prev => ({
-        ...prev,
-        [name]: value
-      }));
+  // Load NBA teams when event type is selected
+  const loadNBATeams = async () => {
+    try {
+      setLoadingTeams(true);
+      const teams = await getNBATeams();
+      setNBATeams(teams);
+    } catch (error) {
+      console.error('Error loading NBA teams:', error);
+      toast.error('Failed to load NBA teams');
+    } finally {
+      setLoadingTeams(false);
     }
   };
 
-  // Handle template selection
-  const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedTemplate = matchTemplates.find(template => template.name === e.target.value);
+  // Load existing matches and NBA teams on component mount
+  useEffect(() => {
+    loadExistingMatches();
+  }, []);
+
+  // Load teams when NBA basketball is selected
+  useEffect(() => {
+    if (selectedEventType === 'basketball_nba') {
+      loadNBATeams();
+    }
+  }, [selectedEventType]);
+  
+  // Handle event type selection
+  const handleEventTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const eventType = e.target.value as EventType | '';
+    setSelectedEventType(eventType);
     
-    if (selectedTemplate) {
-      // Set custom match flag
-      setIsCustomMatch(selectedTemplate.name === "Custom Match");
-      
-      // Update form with template values
-      setNewMatch(prev => ({
-        ...prev,
-        sport_name: selectedTemplate.sport_name,
-        league_name: selectedTemplate.league_name,
-        sport_title: selectedTemplate.sport_title,
-        sport_key: selectedTemplate.sport_key
-      }));
+    // Reset form when changing event type
+    if (eventType === 'basketball_nba') {
+      setNBAMatchForm({
+        homeTeamId: '',
+        awayTeamId: '',
+        gameSubtitle: '',
+        venue: '',
+        scheduledDateTime: '',
+        timezone: getUserTimezone()
+      });
+    } else if (eventType === 'sandbox_metaverse') {
+      setSandboxMatchForm({
+        player1Name: '',
+        player1Subtitle: '',
+        player1ImageUrl: '',
+        player2Name: '',
+        player2Subtitle: '',
+        player2ImageUrl: '',
+        scheduledDateTime: '',
+        timezone: 'Asia/Singapore'
+      });
     }
   };
+
+  // Handle NBA form input changes
+  const handleNBAFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNBAMatchForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle Sandbox form input changes
+  const handleSandboxFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setSandboxMatchForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
   
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Handle NBA form submission
+  const handleNBASubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!selectedEventType || selectedEventType !== 'basketball_nba') {
+      toast.error('Please select an event type first');
+      return;
+    }
+    
+    if (!nbaMatchForm.homeTeamId || !nbaMatchForm.awayTeamId || !nbaMatchForm.scheduledDateTime || !nbaMatchForm.timezone) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
+    if (nbaMatchForm.homeTeamId === nbaMatchForm.awayTeamId) {
+      toast.error('Home and away teams must be different');
+      return;
+    }
+    
     setLoading(true);
     
     try {
-      // Generate team IDs if not provided
-      if (!newMatch.home_team.id) {
-        newMatch.home_team.id = newMatch.home_team.name.toLowerCase().replace(/\s+/g, '');
-      }
+      // Convert local time to UTC for storage
+      const utcDateTime = convertLocalToUTC(nbaMatchForm.scheduledDateTime, nbaMatchForm.timezone);
       
-      if (!newMatch.away_team.id) {
-        newMatch.away_team.id = newMatch.away_team.name.toLowerCase().replace(/\s+/g, '');
-      }
-      
-      // Create bookmakers array with odds
-      const bookmakers = [{
-        key: 'admin_created',
-        title: 'Admin Created',
-        markets: [{
-          key: 'h2h',
-          outcomes: [
-            {
-              name: newMatch.home_team.name,
-              price: parseFloat(newMatch.homeOdds.toString())
-            },
-            {
-              name: newMatch.away_team.name,
-              price: parseFloat(newMatch.awayOdds.toString())
-            }
-          ]
-        }]
-      }];
-      
-      // Prepare match data
-      const matchData: Omit<Match, 'id'> = {
-        sport_key: newMatch.sport_key || `${newMatch.sport_name.toLowerCase()}_${newMatch.league_name.toLowerCase()}`,
-        sport_name: newMatch.sport_name,
-        league_name: newMatch.league_name,
-        sport_title: newMatch.sport_title,
-        commence_time: newMatch.commence_time,
-        home_team: newMatch.home_team,
-        away_team: newMatch.away_team,
-        bookmakers
-      };
-      
-      // Create the match
-      const result = await createMatch(matchData);
+      // Create NBA match using the specialized function
+      const result = await createNBAMatch(
+        nbaMatchForm.homeTeamId,
+        nbaMatchForm.awayTeamId,
+        utcDateTime,
+        nbaMatchForm.gameSubtitle || undefined,
+        nbaMatchForm.venue || undefined,
+        nbaMatchForm.timezone
+      );
       
       if (result) {
-        toast.success('Match created successfully!');
+        toast.success('NBA match created successfully!');
         
         // Reset form
-        setNewMatch({
-          sport_key: '',
-          sport_name: '',
-          league_name: '',
-          sport_title: '',
-          commence_time: '',
-          home_team: {
-            id: '',
-            name: ''
-          },
-          away_team: {
-            id: '',
-            name: ''
-          },
-          homeOdds: 2.0,
-          awayOdds: 2.0
+        setSelectedEventType('');
+        setNBAMatchForm({
+          homeTeamId: '',
+          awayTeamId: '',
+          gameSubtitle: '',
+          venue: '',
+          scheduledDateTime: '',
+          timezone: getUserTimezone()
         });
-        setIsCustomMatch(false);
         
         // Add to matches list
         setMatches(prev => [result, ...prev]);
         
-        // Refresh matches in the BettingContext to make it visible in MatchesPage
+        // Refresh matches in the MatchesContext
         try {
           await refreshMatches();
           toast.info('Match added to the betting system');
@@ -240,7 +203,77 @@ const AdminDashboardPage: React.FC = () => {
         toast.error('Failed to create match');
       }
     } catch (error) {
-      console.error('Error creating match:', error);
+      console.error('Error creating NBA match:', error);
+      toast.error('Error creating match');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Sandbox form submission
+  const handleSandboxSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedEventType || selectedEventType !== 'sandbox_metaverse') {
+      toast.error('Please select an event type first');
+      return;
+    }
+    
+    if (!sandboxMatchForm.player1Name || !sandboxMatchForm.player2Name || !sandboxMatchForm.scheduledDateTime || !sandboxMatchForm.timezone) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      // Convert local time to UTC for storage
+      const utcDateTime = convertLocalToUTC(sandboxMatchForm.scheduledDateTime, sandboxMatchForm.timezone);
+      
+      // Create Sandbox match using the specialized function
+      const result = await createSandboxMatch(
+        sandboxMatchForm.player1Name,
+        sandboxMatchForm.player1Subtitle,
+        sandboxMatchForm.player1ImageUrl,
+        sandboxMatchForm.player2Name,
+        sandboxMatchForm.player2Subtitle,
+        sandboxMatchForm.player2ImageUrl,
+        utcDateTime,
+        sandboxMatchForm.timezone
+      );
+      
+      if (result) {
+        toast.success('Sandbox match created successfully!');
+        
+        // Reset form
+        setSelectedEventType('');
+        setSandboxMatchForm({
+          player1Name: '',
+          player1Subtitle: '',
+          player1ImageUrl: '',
+          player2Name: '',
+          player2Subtitle: '',
+          player2ImageUrl: '',
+          scheduledDateTime: '',
+          timezone: 'Asia/Singapore'
+        });
+        
+        // Add to matches list
+        setMatches(prev => [result, ...prev]);
+        
+        // Refresh matches in the MatchesContext
+        try {
+          await refreshMatches();
+          toast.info('Match added to the betting system');
+        } catch (refreshError) {
+          console.error('Error refreshing matches:', refreshError);
+          // Don't show error to user since the match was created successfully
+        }
+      } else {
+        toast.error('Failed to create match');
+      }
+    } catch (error) {
+      console.error('Error creating Sandbox match:', error);
       toast.error('Error creating match');
     } finally {
       setLoading(false);
@@ -254,190 +287,343 @@ const AdminDashboardPage: React.FC = () => {
         <div className="bg-console-gray-terminal/30 border border-console-blue p-4 rounded-md shadow-terminal">
           <h2 className="text-xl font-mono text-console-white-bright mb-4">CREATE NEW MATCH</h2>
           
-          {/* Match template selector */}
+          {/* Event type selector */}
           <div className="mb-6">
             <label className="block text-console-white-dim text-sm font-mono mb-2">
-              Select Match Template
+              Select Event Type
             </label>
             <select 
-              onChange={handleTemplateChange}
+              value={selectedEventType}
+              onChange={handleEventTypeChange}
               className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono focus:border-console-blue-bright focus:outline-none"
             >
-              <option value="">-- Select a template --</option>
-              {matchTemplates.map((template, index) => (
-                <option key={index} value={template.name}>
-                  {template.name}
-                </option>
-              ))}
+              <option value="">-- Select an event type --</option>
+              <option value="basketball_nba">NBA Basketball</option>
+              <option value="sandbox_metaverse">The Sandbox Metaverse</option>
             </select>
           </div>
           
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Sport Information */}
-              <div className="space-y-2">
-                <label className="block text-console-white-dim text-sm font-mono">
-                  Sport Name
-                  <input
-                    type="text"
-                    name="sport_name"
-                    value={newMatch.sport_name}
-                    onChange={handleInputChange}
-                    placeholder="basketball"
-                    required
-                    className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                  />
-                </label>
+          {/* Show NBA form when basketball_nba is selected */}
+          {selectedEventType === 'basketball_nba' && (
+            <form onSubmit={handleNBASubmit} className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Home Team */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Home Team *
+                    {loadingTeams ? (
+                      <div className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1">
+                        Loading teams...
+                      </div>
+                    ) : (
+                      <select
+                        name="homeTeamId"
+                        value={nbaMatchForm.homeTeamId}
+                        onChange={handleNBAFormChange}
+                        required
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      >
+                        <option value="">-- Select home team --</option>
+                        {nbaTeams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.city} {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </label>
+                </div>
+                
+                {/* Away Team */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Away Team *
+                    {loadingTeams ? (
+                      <div className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1">
+                        Loading teams...
+                      </div>
+                    ) : (
+                      <select
+                        name="awayTeamId"
+                        value={nbaMatchForm.awayTeamId}
+                        onChange={handleNBAFormChange}
+                        required
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      >
+                        <option value="">-- Select away team --</option>
+                        {nbaTeams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.city} {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </label>
+                </div>
+                
+                {/* Game Subtitle */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Game Subtitle
+                    <input
+                      type="text"
+                      name="gameSubtitle"
+                      value={nbaMatchForm.gameSubtitle}
+                      onChange={handleNBAFormChange}
+                      placeholder="e.g., Finals Game 1, Regular Season, Playoffs Round 1"
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    />
+                  </label>
+                </div>
+                
+                {/* Venue */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Venue
+                    <input
+                      type="text"
+                      name="venue"
+                      value={nbaMatchForm.venue}
+                      onChange={handleNBAFormChange}
+                      placeholder="e.g., Madison Square Garden, Staples Center"
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    />
+                  </label>
+                </div>
+                
+                {/* Scheduled Date/Time */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Scheduled Start Date & Time *
+                    <input
+                      type="datetime-local"
+                      name="scheduledDateTime"
+                      value={nbaMatchForm.scheduledDateTime}
+                      onChange={handleNBAFormChange}
+                      required
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    />
+                  </label>
+                </div>
+                
+                {/* Timezone */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    <div className="flex items-center gap-2">
+                      Timezone *
+                      <div className="relative">
+                        <div 
+                          className="w-4 h-4 rounded-full border border-console-blue-dark bg-console-black text-console-blue-bright text-xs flex items-center justify-center cursor-help font-mono transition-colors hover:bg-console-blue-dark"
+                          onMouseEnter={() => setShowTimezoneTooltip('nba')}
+                          onMouseLeave={() => setShowTimezoneTooltip(null)}
+                        >
+                          ?
+                        </div>
+                        {showTimezoneTooltip === 'nba' && (
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-console-black border border-console-blue-dark rounded text-xs text-console-white-bright font-mono whitespace-nowrap z-10 shadow-lg">
+                            Dates are stored in UTC, but will always be presented in the timezone originally entered in the editor
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-console-blue-dark"></div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <select
+                      name="timezone"
+                      value={nbaMatchForm.timezone}
+                      onChange={handleNBAFormChange}
+                      required
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    >
+                      {getUSTimezones().map((tz) => (
+                        <option key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+                          
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={loading || loadingTeams}
+                  className="bg-console-blue hover:bg-console-blue-bright text-console-white font-mono py-2 px-4 rounded-sm transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'CREATING NBA MATCH...' : 'CREATE NBA MATCH'}
+                </button>
+              </div>
+            </form>
+          )}
+          
+          {/* Show Sandbox form when sandbox_metaverse is selected */}
+          {selectedEventType === 'sandbox_metaverse' && (
+            <form onSubmit={handleSandboxSubmit} className="space-y-4">
+              {/* Player Fields - Left/Right Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Player 1 Column */}
+                <div className="space-y-4">
+                  <h3 className="text-console-white-bright font-mono text-base border-b border-console-blue-dark pb-2">Player 1</h3>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-console-white-dim text-sm font-mono">
+                      Name *
+                      <input
+                        type="text"
+                        name="player1Name"
+                        value={sandboxMatchForm.player1Name}
+                        onChange={handleSandboxFormChange}
+                        placeholder="@username, TSB_GamerTag, Discord#1234"
+                        required
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-console-white-dim text-sm font-mono">
+                      Subtitle
+                      <input
+                        type="text"
+                        name="player1Subtitle"
+                        value={sandboxMatchForm.player1Subtitle}
+                        onChange={handleSandboxFormChange}
+                        placeholder="Secondary text displayed below player name"
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-console-white-dim text-sm font-mono">
+                      Image URL
+                      <input
+                        type="url"
+                        name="player1ImageUrl"
+                        value={sandboxMatchForm.player1ImageUrl}
+                        onChange={handleSandboxFormChange}
+                        placeholder="https://example.com/avatar.jpg"
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                </div>
+                
+                {/* Player 2 Column */}
+                <div className="space-y-4">
+                  <h3 className="text-console-white-bright font-mono text-base border-b border-console-blue-dark pb-2">Player 2</h3>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-console-white-dim text-sm font-mono">
+                      Name *
+                      <input
+                        type="text"
+                        name="player2Name"
+                        value={sandboxMatchForm.player2Name}
+                        onChange={handleSandboxFormChange}
+                        placeholder="@username, TSB_GamerTag, Discord#1234"
+                        required
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-console-white-dim text-sm font-mono">
+                      Subtitle
+                      <input
+                        type="text"
+                        name="player2Subtitle"
+                        value={sandboxMatchForm.player2Subtitle}
+                        onChange={handleSandboxFormChange}
+                        placeholder="Secondary text displayed below player name"
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-console-white-dim text-sm font-mono">
+                      Image URL
+                      <input
+                        type="url"
+                        name="player2ImageUrl"
+                        value={sandboxMatchForm.player2ImageUrl}
+                        onChange={handleSandboxFormChange}
+                        placeholder="https://example.com/avatar.jpg"
+                        className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                </div>
               </div>
               
-              <div className="space-y-2">
-                <label className="block text-console-white-dim text-sm font-mono">
-                  League Name
-                  <input
-                    type="text"
-                    name="league_name"
-                    value={newMatch.league_name}
-                    onChange={handleInputChange}
-                    placeholder="nba"
-                    required
-                    className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                  />
-                </label>
+              {/* Match Details Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Scheduled Date/Time */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    Scheduled Start Date & Time *
+                    <input
+                      type="datetime-local"
+                      name="scheduledDateTime"
+                      value={sandboxMatchForm.scheduledDateTime}
+                      onChange={handleSandboxFormChange}
+                      required
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    />
+                  </label>
+                </div>
+                
+                {/* Timezone */}
+                <div className="space-y-2">
+                  <label className="block text-console-white-dim text-sm font-mono">
+                    <div className="flex items-center gap-2">
+                      Timezone *
+                      <div className="relative">
+                        <div 
+                          className="w-4 h-4 rounded-full border border-console-blue-dark bg-console-black text-console-blue-bright text-xs flex items-center justify-center cursor-help font-mono transition-colors hover:bg-console-blue-dark"
+                          onMouseEnter={() => setShowTimezoneTooltip('sandbox')}
+                          onMouseLeave={() => setShowTimezoneTooltip(null)}
+                        >
+                          ?
+                        </div>
+                        {showTimezoneTooltip === 'sandbox' && (
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-console-black border border-console-blue-dark rounded text-xs text-console-white-bright font-mono whitespace-nowrap z-10 shadow-lg">
+                            Dates are stored in UTC, but will always be presented in the timezone originally entered in the editor
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-console-blue-dark"></div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <select
+                      name="timezone"
+                      value={sandboxMatchForm.timezone}
+                      onChange={handleSandboxFormChange}
+                      required
+                      className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
+                    >
+                      {getSoutheastAsianTimezones().map((tz) => (
+                        <option key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               </div>
-              
-              <div className="space-y-2">
-                <label className="block text-console-white-dim text-sm font-mono">
-                  Sport Title
-                  <input
-                    type="text"
-                    name="sport_title"
-                    value={newMatch.sport_title}
-                    onChange={handleInputChange}
-                    placeholder="NBA"
-                    required
-                    className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                  />
-                </label>
+                          
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-console-blue hover:bg-console-blue-bright text-console-white font-mono py-2 px-4 rounded-sm transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'CREATING SANDBOX MATCH...' : 'CREATE SANDBOX MATCH'}
+                </button>
               </div>
-              
-              <div className="space-y-2">
-                <label className="block text-console-white-dim text-sm font-mono">
-                  Match Date/Time
-                  <input
-                    type="datetime-local"
-                    name="commence_time"
-                    value={newMatch.commence_time}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                  />
-                </label>
-              </div>
-              
-              {/* Home Team */}
-              <div className="space-y-2">
-                <label className="block text-console-white-dim text-sm font-mono">
-                  {isCustomMatch ? "Competitor 1 Name" : "Home Team Name"}
-                  <input
-                    type="text"
-                    name="home_team.name"
-                    value={newMatch.home_team.name}
-                    onChange={handleInputChange}
-                    placeholder={isCustomMatch ? "Player/Team 1" : "Lakers"}
-                    required
-                    className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                  />
-                </label>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="block text-console-white-dim text-sm font-mono">
-                  {isCustomMatch ? "Competitor 1 ID (optional)" : "Home Team ID (optional)"}
-                  <input
-                    type="text"
-                    name="home_team.id"
-                    value={newMatch.home_team.id}
-                    onChange={handleInputChange}
-                    placeholder="Auto-generated if empty"
-                    className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                  />
-                </label>
-              </div>
-              
-              {/* Away Team */}
-              <div className="space-y-2">
-                <label className="block text-console-white-dim text-sm font-mono">
-                  {isCustomMatch ? "Competitor 2 Name" : "Away Team Name"}
-                  <input
-                    type="text"
-                    name="away_team.name"
-                    value={newMatch.away_team.name}
-                    onChange={handleInputChange}
-                    placeholder={isCustomMatch ? "Player/Team 2" : "Celtics"}
-                    required
-                    className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                  />
-                </label>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="block text-console-white-dim text-sm font-mono">
-                  {isCustomMatch ? "Competitor 2 ID (optional)" : "Away Team ID (optional)"}
-                  <input
-                    type="text"
-                    name="away_team.id"
-                    value={newMatch.away_team.id}
-                    onChange={handleInputChange}
-                    placeholder="Auto-generated if empty"
-                    className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                  />
-                </label>
-              </div>
-              
-              {/* Odds */}
-              <div className="space-y-2">
-                <label className="block text-console-white-dim text-sm font-mono">
-                  {isCustomMatch ? "Competitor 1 Odds" : "Home Team Odds"}
-                  <input
-                    type="number"
-                    name="homeOdds"
-                    value={newMatch.homeOdds}
-                    onChange={handleInputChange}
-                    step="0.01"
-                    min="1.01"
-                    required
-                    className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                  />
-                </label>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="block text-console-white-dim text-sm font-mono">
-                  {isCustomMatch ? "Competitor 2 Odds" : "Away Team Odds"}
-                  <input
-                    type="number"
-                    name="awayOdds"
-                    value={newMatch.awayOdds}
-                    onChange={handleInputChange}
-                    step="0.01"
-                    min="1.01"
-                    required
-                    className="w-full bg-console-black border border-console-blue-dark p-2 rounded-sm text-console-white font-mono mt-1 focus:border-console-blue-bright focus:outline-none"
-                  />
-                </label>
-              </div>
-            </div>
-            
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-console-blue hover:bg-console-blue-bright text-console-white font-mono py-2 px-4 rounded-sm transition-colors disabled:opacity-50"
-              >
-                {loading ? 'CREATING...' : 'CREATE MATCH'}
-              </button>
-            </div>
-          </form>
+            </form>
+          )}
         </div>
       </div>
       

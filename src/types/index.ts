@@ -10,7 +10,7 @@ export enum BetStatus {
 }
 
 // New enums for multi-sport architecture
-export type EventType = 'basketball_nba';
+export type EventType = 'basketball_nba' | 'sandbox_metaverse';
 export type MatchStatus = 'upcoming' | 'live' | 'finished' | 'cancelled';
 
 // New basketball-specific details interface
@@ -32,6 +32,21 @@ export interface BasketballMatchDetails {
   updated_at: string;
 }
 
+// Sandbox Metaverse esports details interface
+export interface SandboxMatchDetails {
+  id: string;
+  player1_id: string;
+  player1_name: string;
+  player1_subtitle?: string;
+  player1_image_url?: string;
+  player2_id: string;
+  player2_name: string;
+  player2_subtitle?: string;
+  player2_image_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // New universal match interface
 export interface UniversalMatch {
   id: string;
@@ -44,12 +59,13 @@ export interface UniversalMatch {
   updated_at: string;
 }
 
-// Team interface (unchanged)
+// Team interface (updated to support player aliases for esports)
 export interface Team {
   id: string;
   name: string;
   logo?: string;
   record?: string;
+  alias?: string; // For esports player aliases like @username, TSB_GamerTag, etc.
 }
 
 export interface Odds {
