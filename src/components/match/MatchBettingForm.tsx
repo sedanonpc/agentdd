@@ -19,7 +19,7 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
   const { createStraightBet, isCreatingBet } = useStraightBets();
   const { isConnected } = useWeb3();
   const { isAuthenticated, authMethod } = useAuth();
-  const { userBalance } = usePoints();
+  const { freePointsBalance } = usePoints();
   
   const [selectedTeam, setSelectedTeam] = useState<string>(match.home_team.id);
   const [betAmount, setBetAmount] = useState<string>('100');
@@ -64,15 +64,15 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
       return;
     }
 
-    // Check if user has enough $DARE points
+    // Check if user has enough free $DARE points
     const betAmountNumber = parseInt(betAmount);
     if (isNaN(betAmountNumber) || betAmountNumber <= 0) {
       toast.error('Please enter a valid bet amount');
       return;
     }
     
-    if (betAmountNumber > userBalance) {
-      toast.error('Insufficient $DARE points balance');
+    if (betAmountNumber > freePointsBalance) {
+      toast.error(`Insufficient free $DARE points. You have ${freePointsBalance} free points available.`);
       return;
     }
     
@@ -138,9 +138,9 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
             <div className="flex items-center justify-between bg-console-gray-terminal/40 p-3 border-1 border-[#E5FF03]">
               <div className="flex items-center">
                 <Trophy className="h-5 w-5 text-[#E5FF03] mr-2" />
-                <span className="text-console-white font-mono text-sm">YOUR BALANCE:</span>
+                <span className="text-console-white font-mono text-sm">FREE POINTS:</span>
               </div>
-              <div className="text-[#E5FF03] font-mono text-lg">{userBalance} $DARE</div>
+              <div className="text-[#E5FF03] font-mono text-lg">{freePointsBalance} $DARE</div>
             </div>
             
             {/* Team/Player Selection */}
@@ -218,8 +218,8 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
               </div>
               <div className="mt-1 flex justify-between text-xs font-mono">
                 <span className="text-console-white-dim">MIN: 10 $DARE</span>
-                <span className={parseInt(betAmount) > userBalance ? 'text-red-500' : 'text-[#E5FF03]'}>
-                  {parseInt(betAmount) > userBalance ? 'INSUFFICIENT BALANCE' : 'AVAILABLE: ' + userBalance + ' $DARE'}
+                <span className={parseInt(betAmount) > freePointsBalance ? 'text-red-500' : 'text-[#E5FF03]'}>
+                  {parseInt(betAmount) > freePointsBalance ? 'INSUFFICIENT BALANCE' : 'AVAILABLE: ' + freePointsBalance + ' $DARE'}
                 </span>
               </div>
             </div>
@@ -273,7 +273,7 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
         
         <button
           onClick={handleCreateBet}
-          disabled={!isAuthenticated || isCreatingBet || parseInt(betAmount) > userBalance}
+          disabled={!isAuthenticated || isCreatingBet || parseInt(betAmount) > freePointsBalance}
           className="bg-[#E5FF03]/90 backdrop-blur-xs border-1 border-[#E5FF03] px-4 py-2 text-black font-mono hover:shadow-button transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {isCreatingBet ? (

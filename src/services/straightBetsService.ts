@@ -477,3 +477,5 @@ export const getStraightBetById = async (betId: string): Promise<StraightBet | n
     throw error;
   }
 }; 
+
+ 

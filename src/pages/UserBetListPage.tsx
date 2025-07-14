@@ -5,6 +5,7 @@ import { StraightBetStatus } from '../services/straightBetsService';
 import UserBetCard from '../components/bet/UserBetCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Modal from '../components/common/Modal';
+import BetDetailsModal from '../components/bet/BetDetailsModal';
 import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import SportsIcon from '@mui/icons-material/Sports';
@@ -21,6 +22,8 @@ const UserBetListPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<StraightBetStatus | 'all'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showCreateBetModal, setShowCreateBetModal] = useState(false);
+  const [selectedBetForDetails, setSelectedBetForDetails] = useState<any>(null);
+  const [showBetDetailsModal, setShowBetDetailsModal] = useState(false);
   const navigate = useNavigate();
 
   // Status filter options
@@ -222,8 +225,8 @@ const UserBetListPage: React.FC = () => {
                 key={bet.id}
                 bet={bet}
                 onViewDetails={(bet) => {
-                  // TODO: Implement bet details modal or navigation
-                  console.log('View details for bet:', bet.id);
+                  setSelectedBetForDetails(bet);
+                  setShowBetDetailsModal(true);
                 }}
               />
             ))}
@@ -277,6 +280,13 @@ const UserBetListPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Bet Details Modal */}
+      <BetDetailsModal
+        isOpen={showBetDetailsModal}
+        onClose={() => setShowBetDetailsModal(false)}
+        bet={selectedBetForDetails}
+      />
     </div>
   );
 };

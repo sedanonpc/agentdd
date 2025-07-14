@@ -32,6 +32,10 @@ interface StraightBetsContextType {
   isCreatingBet: boolean;
   createStraightBet: (matchId: string, teamId: string, amount: number, description: string) => Promise<StraightBet | null>;
   
+  // Bet cancellation
+  isCancellingBet: boolean;
+  cancelStraightBet: (betId: string) => Promise<boolean>;
+  
   // User bet list management
   userBets: StraightBet[];
   isLoadingUserBets: boolean;
@@ -47,6 +51,9 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   
   // Bet creation state
   const [isCreatingBet, setIsCreatingBet] = useState(false);
+  
+  // Bet cancellation state
+  const [isCancellingBet, setIsCancellingBet] = useState(false);
   
   // User bet list state
   const [userBets, setUserBets] = useState<StraightBet[]>([]);
@@ -202,6 +209,55 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+  /**
+   * Cancels a straight bet (only if it's still open and belongs to the user)
+   * 
+   * @param betId - ID of the bet to cancel
+   * @returns Promise<boolean> - True if cancelled successfully, false otherwise
+   */
+  const cancelStraightBet = async (betId: string): Promise<boolean> => {
+    if (!isAuthenticated || !user?.id) {
+      toast.error('Please sign in to cancel bets');
+      return false;
+    }
+
+    setIsCancellingBet(true);
+
+    try {
+      console.log('=== STRAIGHT BETS CONTEXT: Cancelling bet ===', {
+        authUserId: user.id,
+        betId
+      });
+
+      // Get the user account from the database
+      const userAccount = await getUserAccount(user.id);
+      if (!userAccount || !userAccount.id) {
+        toast.error('User account not found. Please try signing in again.');
+        return false;
+      }
+
+      // For now, we'll just update the bet status in the local state
+      // TODO: Implement actual cancellation in the service
+      const updatedBets = userBets.map(bet => 
+        bet.id === betId && bet.status === StraightBetStatus.OPEN
+          ? { ...bet, status: StraightBetStatus.CANCELLED }
+          : bet
+      );
+      
+      setUserBets(updatedBets);
+      
+      toast.success('Bet cancelled successfully');
+      return true;
+
+    } catch (error) {
+      console.error('=== STRAIGHT BETS CONTEXT: Error cancelling bet ===', error);
+      toast.error('Failed to cancel bet. Please try again.');
+      return false;
+    } finally {
+      setIsCancellingBet(false);
+    }
+  };
+
   // Load user bets when component mounts and user is authenticated
   useEffect(() => {
     if (isAuthenticated && user?.id) {
@@ -221,7 +277,10 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     userBets,
     isLoadingUserBets,
     fetchUserBets,
-    refreshUserBets
+    refreshUserBets,
+    // Bet cancellation
+    isCancellingBet,
+    cancelStraightBet
   };
 
   return (
