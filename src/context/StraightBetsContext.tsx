@@ -23,7 +23,8 @@ import {
   createStraightBetWithValidation, 
   StraightBet, 
   StraightBetStatus,
-  getUserStraightBets
+  getUserStraightBets,
+  cancelStraightBet as cancelStraightBetService
 } from '../services/straightBetsService';
 import { getUserAccount } from '../services/supabaseService';
 
@@ -236,22 +237,27 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return false;
       }
 
-      // For now, we'll just update the bet status in the local state
-      // TODO: Implement actual cancellation in the service
-      const updatedBets = userBets.map(bet => 
-        bet.id === betId && bet.status === StraightBetStatus.OPEN
-          ? { ...bet, status: StraightBetStatus.CANCELLED }
-          : bet
-      );
+      // Call the service function to cancel the bet in the database
+      const success = await cancelStraightBetService(betId, userAccount.id);
       
-      setUserBets(updatedBets);
-      
-      toast.success('Bet cancelled successfully');
-      return true;
+      if (success) {
+        // Refresh user bets to get the updated status from the database
+        await refreshUserBets();
+        toast.success('Bet cancelled successfully');
+        return true;
+      } else {
+        toast.error('Failed to cancel bet. Please try again.');
+        return false;
+      }
 
     } catch (error) {
       console.error('=== STRAIGHT BETS CONTEXT: Error cancelling bet ===', error);
-      toast.error('Failed to cancel bet. Please try again.');
+      
+      if (error instanceof Error) {
+        toast.error(`Failed to cancel bet: ${error.message}`);
+      } else {
+        toast.error('Failed to cancel bet. Please try again.');
+      }
       return false;
     } finally {
       setIsCancellingBet(false);

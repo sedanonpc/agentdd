@@ -478,4 +478,113 @@ export const getStraightBetById = async (betId: string): Promise<StraightBet | n
   }
 }; 
 
+/**
+ * Cancels a straight bet and releases reserved points
+ * 
+ * This function:
+ * 1. Validates that the bet exists and belongs to the user
+ * 2. Validates that the bet is in 'open' status (can only cancel open bets)
+ * 3. Updates the bet status to 'cancelled' in the database
+ * 4. Records a points transaction to release the reserved points back to free points
+ * 
+ * @param betId - ID of the bet to cancel
+ * @param userId - User ID requesting the cancellation (must be the bet creator)
+ * @returns Promise<boolean> - True if cancelled successfully, false otherwise
+ * @throws Error if validation fails or database operation fails
+ */
+export const cancelStraightBet = async (betId: string, userId: string): Promise<boolean> => {
+  try {
+    console.log('Cancelling straight bet:', { betId, userId });
+
+    // First, get the bet to validate it exists and belongs to the user
+    const bet = await getStraightBetById(betId);
+    if (!bet) {
+      throw new Error('Bet not found');
+    }
+
+    // Validate that the user is the creator of the bet
+    if (bet.creatorId !== userId) {
+      throw new Error('You can only cancel bets that you created');
+    }
+
+    // Validate that the bet is in 'open' status (can only cancel open bets)
+    if (bet.status !== StraightBetStatus.OPEN) {
+      throw new Error('Only open bets can be cancelled');
+    }
+
+    console.log('Bet validation passed, proceeding with cancellation:', {
+      betId,
+      userId,
+      betAmount: bet.amount,
+      betStatus: bet.status
+    });
+
+    // Update the bet status to 'cancelled' in the database
+    const { error: updateError } = await supabaseClient
+      .from('straight_bets')
+      .update({ status: 'cancelled' })
+      .eq('id', betId)
+      .eq('creator_id', userId) // Additional safety check
+      .eq('status', 'open'); // Additional safety check
+
+    if (updateError) {
+      console.error('Error updating bet status to cancelled:', updateError);
+      throw new Error(`Failed to cancel bet: ${updateError.message}`);
+    }
+
+    console.log('Bet status updated to cancelled in database');
+
+    // Record points transaction to release reserved points back to free points
+    try {
+      await recordTransaction(
+        userId,
+        'BET_CANCELLED',
+        'FREE',
+        bet.amount, // Positive amount indicates points being released back to free
+        betId,
+        {
+          bet_id: betId,
+          match_id: bet.matchId,
+          bettor_user_id: userId,
+          team_id: bet.creatorsPickId,
+          bet_amount: bet.amount,
+          action: 'cancellation'
+        }
+      );
+      
+      console.log('Points transaction recorded for bet cancellation');
+    } catch (transactionError) {
+      console.error('Error recording points transaction for cancellation:', transactionError);
+      
+      // If points transaction fails, we should revert the bet status
+      // This is a critical error - we don't want cancelled bets without proper point releases
+      console.error('Points transaction failed - reverting bet status:', betId);
+      
+      const { error: revertError } = await supabaseClient
+        .from('straight_bets')
+        .update({ status: 'open' })
+        .eq('id', betId);
+
+      if (revertError) {
+        console.error('Failed to revert bet status after points transaction failure:', revertError);
+      }
+      
+      throw new Error('Failed to release points for cancelled bet. Cancellation cancelled.');
+    }
+
+    console.log('Straight bet cancellation completed successfully:', betId);
+    return true;
+
+  } catch (error) {
+    console.error('Error in cancelStraightBet:', error);
+    
+    // Re-throw with more context if it's not already our custom error
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error('An unexpected error occurred while cancelling the bet');
+    }
+  }
+}; 
+
  
