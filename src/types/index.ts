@@ -1,7 +1,12 @@
 // Basic Types (defined first to avoid circular references)
 export type DataSource = 'mock' | 'api' | 'yahoo' | 'database';
 
-// Betting status enum
+/**
+ * @deprecated Use StraightBetStatus from straightBetsService.ts instead
+ * This enum is deprecated and will be removed in a future version.
+ * It was used by the old bettingService.ts and betStorageService.ts files.
+ * Note: The 'active' status is incorrect - should be 'waiting_result'
+ */
 export enum BetStatus {
   OPEN = 'open',
   ACTIVE = 'active', 
@@ -102,6 +107,11 @@ export interface Match {
 // Betting Types
 export type BetResult = 'pending' | 'won' | 'lost' | 'draw' | 'void';
 
+/**
+ * @deprecated Use StraightBet from straightBetsService.ts instead
+ * This interface is deprecated and will be removed in a future version.
+ * It was used by the old bettingService.ts and betStorageService.ts files.
+ */
 export interface Bet {
   id: string;
   creator: string;

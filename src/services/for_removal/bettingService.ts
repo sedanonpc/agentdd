@@ -1,3 +1,23 @@
+/*
+ * ⚠️ DEPRECATED - MARKED FOR REMOVAL ⚠️
+ * 
+ * This file is deprecated and scheduled for removal.
+ * 
+ * DO NOT USE THIS SERVICE IN NEW CODE.
+ * DO NOT MODIFY OR EXTEND THIS SERVICE.
+ * 
+ * This service uses mock data and in-memory storage which is being replaced
+ * by the new straightBetsService.ts that uses the straight_bets database table.
+ * 
+ * Current issues with this service:
+ * - Uses mock data (MOCK_BETS array) instead of database
+ * - Maintains state in memory which is lost on refresh
+ * - Inconsistent with database-backed betStorageService
+ * - Will be moved to src/services/for_removal/ folder
+ * 
+ * Use src/services/straightBetsService.ts instead.
+ */
+
 import { Bet, BetStatus } from '../types';
 import { INITIAL_MOCK_BETS } from '../data/mockBets';
 import { v4 as uuidv4 } from 'uuid';
