@@ -143,10 +143,10 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
               <div className="text-[#E5FF03] font-mono text-lg">{userBalance} $DARE</div>
             </div>
             
-            {/* Team Selection */}
+            {/* Team/Player Selection */}
             <div>
               <label className="block text-console-white-dim font-mono text-sm mb-2">
-                SELECT_TEAM:
+                {match.sport_key === 'sandbox_metaverse' ? 'SELECT_PLAYER:' : 'SELECT_TEAM:'}
               </label>
               <div className="grid grid-cols-2 gap-4">
                 <button
@@ -159,6 +159,9 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
                   onClick={() => setSelectedTeam(match.home_team.id)}
                 >
                   <span className="font-mono">{match.home_team.name}</span>
+                  {match.home_team.alias && (
+                    <span className="text-xs text-console-white-muted font-mono mt-1">{match.home_team.alias}</span>
+                  )}
                   {odds.home && (
                     <div className="mt-2 flex flex-col gap-1">
                       <div className="bg-console-black/70 backdrop-blur-xs border-1 border-console-blue px-2 py-1 font-mono text-sm">
@@ -179,6 +182,9 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
                   onClick={() => setSelectedTeam(match.away_team.id)}
                 >
                   <span className="font-mono">{match.away_team.name}</span>
+                  {match.away_team.alias && (
+                    <span className="text-xs text-console-white-muted font-mono mt-1">{match.away_team.alias}</span>
+                  )}
                   {odds.away && (
                     <div className="mt-2 flex flex-col gap-1">
                       <div className="bg-console-black/70 backdrop-blur-xs border-1 border-console-blue px-2 py-1 font-mono text-sm">

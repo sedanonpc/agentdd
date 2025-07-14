@@ -375,7 +375,14 @@ const MatchesPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMatches.map((match) => (
             match.sport_key === 'sandbox_metaverse' ? (
-              <SandboxMatchCard key={match.id} match={match} />
+              <SandboxMatchCard 
+                key={match.id} 
+                match={match}
+                onSelectForChat={handleSelectMatchForChat}
+                onSelectForBetting={handleSelectMatchForBetting}
+                isChatSelected={selectedMatch?.id === match.id}
+                isBettingSelected={selectedMatchForBetting?.id === match.id}
+              />
             ) : (
               <MatchCard 
                 key={match.id} 
