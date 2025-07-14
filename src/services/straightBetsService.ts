@@ -311,4 +311,169 @@ export const createStraightBetWithValidation = async (
 
   // Create the bet
   return await createStraightBet(creatorId, matchId, creatorsPickId, amount, creatorsNote);
+};
+
+/**
+ * Get all straight bets for a specific user (both created and accepted)
+ * 
+ * @param userAccountId - User account ID (from user_accounts table, not auth.users)
+ * @param status - Optional status filter
+ * @param limit - Maximum number of bets to return (default: 50)
+ * @returns Promise<StraightBet[]> - Array of user's straight bets
+ */
+export const getUserStraightBets = async (
+  userAccountId: string, 
+  status?: StraightBetStatus,
+  limit: number = 50
+): Promise<StraightBet[]> => {
+  try {
+    console.log('Fetching straight bets for user:', userAccountId, 'with status:', status);
+
+    // Build the query
+    let query = supabaseClient
+      .from('straight_bets')
+      .select('*')
+      .or(`creator_id.eq.${userAccountId},acceptor_id.eq.${userAccountId}`)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    // Add status filter if provided
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching user straight bets:', error);
+      throw new Error(`Failed to fetch user bets: ${error.message}`);
+    }
+
+    console.log(`Found ${data?.length || 0} straight bets for user ${userAccountId}`);
+
+    // Convert database records to StraightBet interface
+    return (data || []).map((betData: any) => ({
+      id: betData.id,
+      matchId: betData.match_id,
+      creatorId: betData.creator_id,
+      amount: betData.amount,
+      amountCurrency: betData.amount_currency,
+      creatorsPickId: betData.creators_pick_id,
+      creatorsNote: betData.creators_note,
+      status: betData.status as StraightBetStatus,
+      createdAt: betData.created_at,
+      updatedAt: betData.updated_at,
+      acceptorId: betData.acceptor_id || undefined,
+      acceptorsPickId: betData.acceptors_pick_id || undefined,
+      winnerUserId: betData.winner_user_id || undefined,
+      acceptedAt: betData.accepted_at || undefined,
+      completedAt: betData.completed_at || undefined
+    }));
+
+  } catch (error) {
+    console.error('Exception getting user straight bets:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all open straight bets (available for acceptance)
+ * 
+ * @param limit - Maximum number of bets to return (default: 50)
+ * @returns Promise<StraightBet[]> - Array of open straight bets
+ */
+export const getOpenStraightBets = async (limit: number = 50): Promise<StraightBet[]> => {
+  try {
+    console.log('Fetching open straight bets');
+
+    const { data, error } = await supabaseClient
+      .from('straight_bets')
+      .select('*')
+      .eq('status', StraightBetStatus.OPEN)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error fetching open straight bets:', error);
+      throw new Error(`Failed to fetch open bets: ${error.message}`);
+    }
+
+    console.log(`Found ${data?.length || 0} open straight bets`);
+
+    // Convert database records to StraightBet interface
+    return (data || []).map((betData: any) => ({
+      id: betData.id,
+      matchId: betData.match_id,
+      creatorId: betData.creator_id,
+      amount: betData.amount,
+      amountCurrency: betData.amount_currency,
+      creatorsPickId: betData.creators_pick_id,
+      creatorsNote: betData.creators_note,
+      status: betData.status as StraightBetStatus,
+      createdAt: betData.created_at,
+      updatedAt: betData.updated_at,
+      acceptorId: betData.acceptor_id || undefined,
+      acceptorsPickId: betData.acceptors_pick_id || undefined,
+      winnerUserId: betData.winner_user_id || undefined,
+      acceptedAt: betData.accepted_at || undefined,
+      completedAt: betData.completed_at || undefined
+    }));
+
+  } catch (error) {
+    console.error('Exception getting open straight bets:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get a specific straight bet by ID
+ * 
+ * @param betId - ID of the bet to retrieve
+ * @returns Promise<StraightBet | null> - The straight bet or null if not found
+ */
+export const getStraightBetById = async (betId: string): Promise<StraightBet | null> => {
+  try {
+    console.log('Fetching straight bet by ID:', betId);
+
+    const { data, error } = await supabaseClient
+      .from('straight_bets')
+      .select('*')
+      .eq('id', betId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows returned - bet not found
+        console.log('Straight bet not found:', betId);
+        return null;
+      }
+      console.error('Error fetching straight bet by ID:', error);
+      throw new Error(`Failed to fetch bet: ${error.message || 'Unknown error'}`);
+    }
+
+    console.log('Found straight bet:', betId);
+
+    // Convert database record to StraightBet interface
+    return {
+      id: data.id,
+      matchId: data.match_id,
+      creatorId: data.creator_id,
+      amount: data.amount,
+      amountCurrency: data.amount_currency,
+      creatorsPickId: data.creators_pick_id,
+      creatorsNote: data.creators_note,
+      status: data.status as StraightBetStatus,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      acceptorId: data.acceptor_id || undefined,
+      acceptorsPickId: data.acceptors_pick_id || undefined,
+      winnerUserId: data.winner_user_id || undefined,
+      acceptedAt: data.accepted_at || undefined,
+      completedAt: data.completed_at || undefined
+    };
+
+  } catch (error) {
+    console.error('Exception getting straight bet by ID:', error);
+    throw error;
+  }
 }; 

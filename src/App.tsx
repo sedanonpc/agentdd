@@ -12,6 +12,7 @@ import AcceptBetPage from './pages/AcceptBetPage';
 import LoginPage from './pages/LoginPage';
 import LeaderboardPage from './pages/Leaderboard';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import UserBetListPage from './pages/UserBetListPage';
 import { Web3Provider } from './context/Web3Context';
 import { AuthProvider } from './context/AuthContext';
 import { BettingProvider } from './context/BettingContext';
@@ -92,6 +93,14 @@ function App() {
                         element={
                           <ProtectedRoute>
                             <DashboardPage />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      <Route 
+                        path="/my-bets" 
+                        element={
+                          <ProtectedRoute>
+                            <UserBetListPage />
                           </ProtectedRoute>
                         } 
                       />
