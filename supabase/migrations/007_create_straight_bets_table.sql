@@ -1,4 +1,4 @@
--- Migration: 006_create_straight_bets_table.sql
+-- Migration: 007_create_straight_bets_table.sql
 -- Creates the straight_bets table to store all betting data
 
 -- Create enum type for bet statuses
@@ -32,35 +32,15 @@ END$$;
 -- Create the straight_bets table
 CREATE TABLE IF NOT EXISTS straight_bets (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  
-  -- User who created the bet
   creator_id UUID NOT NULL REFERENCES user_accounts(id) ON DELETE CASCADE,
-  
-  -- User who accepted the bet (NULL if still open)
-  acceptor_id UUID REFERENCES user_accounts(id) ON DELETE CASCADE,
-  
-  -- The match this bet is placed on
   match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-  
-  -- Team/player ID that the bet creator picked to win
   creators_pick_id TEXT NOT NULL,
-  
-  -- Team/player ID that the bet acceptor picked to win (NULL if bet not accepted yet)
-  acceptors_pick_id TEXT,
-  
-  -- Bet amount
   amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
-  
-  -- Currency for the bet amount (currently only points supported)
   amount_currency currency_type NOT NULL DEFAULT 'points',
-  
-  -- Optional note from the bet creator
   creators_note TEXT,
-  
-  -- Current status of the bet
+  acceptor_id UUID REFERENCES user_accounts(id) ON DELETE CASCADE,
+  acceptors_pick_id TEXT,
   status bet_status NOT NULL DEFAULT 'open',
-  
-  -- User ID of the winning bettor (NULL until bet is completed)
   winner_user_id UUID REFERENCES user_accounts(id) ON DELETE SET NULL,
   
   -- Timestamps
