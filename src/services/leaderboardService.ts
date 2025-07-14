@@ -1,4 +1,4 @@
-import { getUsersByPoints } from './betStorageService';
+import { getUsersByPoints } from './for_removal/betStorageService';
 
 // Function to get top users for the leaderboard
 export const getTopUsers = async (isFullRefresh: boolean = false): Promise<any[]> => {

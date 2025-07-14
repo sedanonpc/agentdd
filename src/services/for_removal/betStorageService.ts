@@ -1,5 +1,28 @@
-import { supabase, supabaseClient } from './supabaseService';
-import { Bet, BetStatus } from '../types';
+/*
+ * ⚠️ DEPRECATED - MARKED FOR REMOVAL ⚠️
+ * 
+ * This file is deprecated and scheduled for removal.
+ * 
+ * DO NOT USE THIS SERVICE IN NEW CODE.
+ * DO NOT MODIFY OR EXTEND THIS SERVICE.
+ * 
+ * This service has overlapping functionality with bettingService.ts and
+ * is being replaced by the new straightBetsService.ts that uses the straight_bets
+ * database table consistently.
+ * 
+ * Current issues with this service:
+ * - Duplicates functionality with bettingService.ts
+ * - Uses old 'bets' table instead of 'straight_bets' table
+ * - Mixes bet CRUD operations with analytics/leaderboard functions
+ * - Falls back to mock data which creates inconsistency
+ * - Will be moved to src/services/for_removal/ folder
+ * 
+ * Analytics/leaderboard functions may be moved to a separate service.
+ * Use src/services/straightBetsService.ts for bet operations instead.
+ */
+
+import { supabase, supabaseClient } from '../supabaseService';
+import { Bet, BetStatus } from '../../types';
 
 // Define types for the bet records
 interface BetRecord {

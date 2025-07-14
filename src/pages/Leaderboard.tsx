@@ -25,7 +25,7 @@ import { keyframes } from '@mui/system';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
-import { getUsersByPoints, getOpenBets, getClosedBets, LeaderboardEntry } from '../services/betStorageService';
+import { getUsersByPoints, getOpenBets, getClosedBets, LeaderboardEntry } from '../services/for_removal/betStorageService';
 import { useAuth } from '../context/AuthContext';
 import { truncateAddress } from '../utils/addressUtils';
 import { useWeb3 } from '../context/Web3Context';
