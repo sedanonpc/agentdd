@@ -1,3 +1,20 @@
+/*
+ * ⚠️ DEPRECATED - SCHEDULED FOR REMOVAL ⚠️
+ * 
+ * This context is deprecated and scheduled for removal.
+ * 
+ * DO NOT USE THIS CONTEXT FOR NEW FEATURES.
+ * DO NOT EXTEND OR MODIFY THIS CONTEXT.
+ * 
+ * This context manages legacy betting functionality that is being replaced 
+ * by specialized contexts:
+ * - StraightBetsContext for straight bet creation in Matches tab
+ * - Future contexts for bet acceptance, settlement, and marketplace
+ * 
+ * Current usage will be gradually migrated to the new contexts.
+ * This file will be moved to src/context/for_removal/ folder.
+ */
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { useWeb3 } from './Web3Context';
@@ -5,8 +22,8 @@ import { usePoints } from './PointsContext';
 import { useAuth } from './AuthContext';
 import { useMatches } from './MatchesContext';
 import { Bet, BetStatus } from '../types';
-import { createBet, getBetsByUser, acceptBet as acceptBetService, settleBet as settleBetService } from '../services/bettingService';
-import { storeBet, updateBet } from '../services/betStorageService';
+import { createBet, getBetsByUser, acceptBet as acceptBetService, settleBet as settleBetService } from '../services/for_removal/bettingService';
+import { storeBet, updateBet } from '../services/for_removal/betStorageService';
 import { updatePoints } from '../services/supabaseService';
 import { awardBetAcceptanceBonus } from '../services/pointsConfigService';
 

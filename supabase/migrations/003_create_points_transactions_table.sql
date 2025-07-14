@@ -222,4 +222,4 @@ CREATE TRIGGER validate_points_transaction
 
 -- Grant necessary permissions to authenticated users
 GRANT USAGE ON SCHEMA public TO authenticated;
-GRANT SELECT ON public.points_transactions TO authenticated; 
+GRANT SELECT, INSERT ON public.points_transactions TO authenticated; 

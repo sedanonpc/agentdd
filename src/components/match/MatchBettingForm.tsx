@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DollarSign, ChevronRight, X, Zap, Trophy, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Match } from '../../types';
-import { useBetting } from '../../context/BettingContext';
+import { useStraightBets } from '../../context/StraightBetsContext';
 import { useWeb3 } from '../../context/Web3Context';
 import { usePoints } from '../../context/PointsContext';
 import { useAuth } from '../../context/AuthContext';
@@ -16,7 +16,7 @@ interface MatchBettingFormProps {
 
 const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) => {
   const navigate = useNavigate();
-  const { createNewBet } = useBetting();
+  const { createStraightBet, isCreatingBet } = useStraightBets();
   const { isConnected } = useWeb3();
   const { isAuthenticated, authMethod } = useAuth();
   const { userBalance } = usePoints();
@@ -24,7 +24,6 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
   const [selectedTeam, setSelectedTeam] = useState<string>(match.home_team.id);
   const [betAmount, setBetAmount] = useState<string>('100');
   const [description, setDescription] = useState<string>('');
-  const [isCreatingBet, setIsCreatingBet] = useState(false);
   
   const getMainOdds = (match: Match) => {
     try {
@@ -77,24 +76,19 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
       return;
     }
     
-    setIsCreatingBet(true);
     try {
-      // Create the bet in the betting system
-      // The createNewBet function will handle deducting points and showing success toast
-      const newBet = await createNewBet(match.id, selectedTeam, betAmountNumber, description);
+      // Create the straight bet using the new StraightBetsContext
+      // The context handles deducting points and showing success/error toasts
+      const newBet = await createStraightBet(match.id, selectedTeam, betAmountNumber, description);
       
       if (newBet) {
-        // Toast notification is handled in the createNewBet function
-        // Just navigate to dashboard
+        // Success! Navigate to dashboard
         navigate('/dashboard');
-      } else {
-        throw new Error('Failed to create bet');
+        onClose(); // Close the modal
       }
     } catch (error) {
       console.error('Failed to create bet:', error);
-      toast.error('Failed to create bet. Please try again.');
-    } finally {
-      setIsCreatingBet(false);
+      // Error handling is done in the context, but we can log it here
     }
   };
   

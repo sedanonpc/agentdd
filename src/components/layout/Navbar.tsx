@@ -4,7 +4,7 @@ import { Activity, User, Database, MessageSquare, Terminal, LogOut, Trophy, Refr
 import { useAuth } from '../../context/AuthContext';
 import { usePoints } from '../../context/PointsContext';
 import PointsDisplay from '../../components/PointsDisplay';
-import { getUsersByPoints, LeaderboardEntry } from '../../services/betStorageService';
+import { getUsersByPoints, LeaderboardEntry } from '../../services/for_removal/betStorageService';
 import { getMockLeaderboardEntries } from '../../mockSupabase';
 
 const Navbar: React.FC = () => {

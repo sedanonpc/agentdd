@@ -21,8 +21,8 @@
  * Use src/services/straightBetsService.ts for bet operations instead.
  */
 
-import { supabase, supabaseClient } from './supabaseService';
-import { Bet, BetStatus } from '../types';
+import { supabase, supabaseClient } from '../supabaseService';
+import { Bet, BetStatus } from '../../types';
 
 // Define types for the bet records
 interface BetRecord {

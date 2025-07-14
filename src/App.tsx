@@ -18,6 +18,7 @@ import { BettingProvider } from './context/BettingContext';
 import { MatchesProvider } from './context/MatchesContext';
 import { ChatProvider } from './context/ChatContext';
 import { PointsProvider } from './context/PointsContext';
+import { StraightBetsProvider } from './context/StraightBetsContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { isSupabaseConfigured } from './services/supabaseService';
 import { ConsoleThemeProvider } from './theme/muiTheme';
@@ -63,7 +64,8 @@ function App() {
       <AuthProvider>
         <PointsProvider>
           <MatchesProvider>
-            <BettingProvider>
+            <StraightBetsProvider>
+              <BettingProvider>
               <ChatProvider>
               <ConsoleThemeProvider>
                 <div className="min-h-screen font-mono text-console-white bg-console-black bg-terminal-grid bg-grid relative">
@@ -141,6 +143,7 @@ function App() {
               </ConsoleThemeProvider>
               </ChatProvider>
             </BettingProvider>
+            </StraightBetsProvider>
           </MatchesProvider>
         </PointsProvider>
       </AuthProvider>

@@ -33,7 +33,7 @@ END$$;
 CREATE TABLE IF NOT EXISTS straight_bets (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   creator_id UUID NOT NULL REFERENCES user_accounts(id) ON DELETE CASCADE,
-  match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
   creators_pick_id TEXT NOT NULL,
   amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
   amount_currency currency_type NOT NULL DEFAULT 'points',
@@ -90,22 +90,7 @@ CREATE TRIGGER update_straight_bets_updated_at_trigger
     FOR EACH ROW
     EXECUTE FUNCTION update_straight_bets_updated_at();
 
--- Create view for open bets that can be accepted by other users
-CREATE VIEW open_straight_bets AS
-SELECT 
-    sb.id,
-    sb.creator_id,
-    sb.match_id,
-    sb.creators_pick_id,
-    sb.amount,
-    sb.amount_currency,
-    sb.creators_note,
-    sb.created_at,
-    creator.username as creator_username
-FROM straight_bets sb
-JOIN user_accounts creator ON sb.creator_id = creator.id
-WHERE sb.status = 'open'
-ORDER BY sb.created_at DESC;
+
 
 -- Enable Row Level Security
 ALTER TABLE straight_bets ENABLE ROW LEVEL SECURITY;
@@ -114,8 +99,16 @@ ALTER TABLE straight_bets ENABLE ROW LEVEL SECURITY;
 -- Users can view bets they created or accepted
 CREATE POLICY "Users can view their own bets" ON straight_bets
     FOR SELECT USING (
-        auth.uid() = creator_id OR 
-        auth.uid() = acceptor_id
+        EXISTS (
+            SELECT 1 FROM user_accounts 
+            WHERE user_accounts.id = creator_id 
+            AND user_accounts.user_id = auth.uid()
+        ) OR 
+        EXISTS (
+            SELECT 1 FROM user_accounts 
+            WHERE user_accounts.id = acceptor_id 
+            AND user_accounts.user_id = auth.uid()
+        )
     );
 
 -- Users can view open bets from others (for accepting)
@@ -124,11 +117,25 @@ CREATE POLICY "Users can view open bets" ON straight_bets
 
 -- Users can create bets
 CREATE POLICY "Users can create bets" ON straight_bets
-    FOR INSERT WITH CHECK (auth.uid() = creator_id);
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM user_accounts 
+            WHERE user_accounts.id = creator_id 
+            AND user_accounts.user_id = auth.uid()
+        )
+    );
 
 -- Users can update their own open bets (e.g., to accept them)
 CREATE POLICY "Users can update bets" ON straight_bets
     FOR UPDATE USING (
-        auth.uid() = creator_id OR 
+        EXISTS (
+            SELECT 1 FROM user_accounts 
+            WHERE user_accounts.id = creator_id 
+            AND user_accounts.user_id = auth.uid()
+        ) OR 
         (status = 'open' AND auth.uid() IS NOT NULL)
-    ); 
+    );
+
+-- Grant necessary permissions to authenticated users
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.straight_bets TO authenticated; 

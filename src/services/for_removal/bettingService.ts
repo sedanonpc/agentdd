@@ -18,8 +18,8 @@
  * Use src/services/straightBetsService.ts instead.
  */
 
-import { Bet, BetStatus } from '../types';
-import { INITIAL_MOCK_BETS } from '../data/mockBets';
+import { Bet, BetStatus } from '../../types';
+import { INITIAL_MOCK_BETS } from '../../data/mockBets';
 import { v4 as uuidv4 } from 'uuid';
 
 // Function to generate a unique transaction ID
