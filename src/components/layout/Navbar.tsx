@@ -8,7 +8,7 @@ import { getUsersByPoints, LeaderboardEntry } from '../../services/betStorageSer
 import { getMockLeaderboardEntries } from '../../mockSupabase';
 
 const Navbar: React.FC = () => {
-  const { user, authMethod, isAuthenticated, logout } = useAuth();
+  const { user, authMethod, isAuthenticated, isAdmin, logout } = useAuth();
   const { userBalance } = usePoints();
   const location = useLocation();
   const navigate = useNavigate();
@@ -114,11 +114,14 @@ const Navbar: React.FC = () => {
     return window.sessionStorage.getItem('session_id');
   };
 
+  // isAdmin is already destructured from useAuth() above
+
   const navLinks = [
     { path: '/', label: 'TERMINAL', icon: Terminal },
     { path: '/matches', label: 'MATCHES', icon: Activity },
     { path: '/leaderboard', label: 'RANKS', icon: Trophy },
     { path: '/chat', label: 'COMMS', icon: MessageSquare, requiresAuth: true },
+    { path: '/admin', label: 'ADMIN', icon: Database, requiresAuth: true },
   ];
 
   const handleLogout = () => {
@@ -137,7 +140,8 @@ const Navbar: React.FC = () => {
   // Get filtered links - we want to show ALL links on mobile, with smaller icons
   const getFilteredLinks = () => {
     return navLinks.filter(link => 
-      !link.requiresAuth || (link.requiresAuth && isAuthenticated)
+      (!link.requiresAuth || (link.requiresAuth && isAuthenticated)) && 
+      (!link.requiresAdmin || (link.requiresAdmin && isAdmin))
     );
   };
 

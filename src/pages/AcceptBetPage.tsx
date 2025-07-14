@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Check, X, AlertTriangle, Loader2, ShieldCheck, Calendar, Clock, TrendingUp, ArrowUp, ArrowDown, User } from 'lucide-react';
 import { useBetting } from '../context/BettingContext';
+import { useMatches } from '../context/MatchesContext';
 import { useWeb3 } from '../context/Web3Context';
 import { useAuth } from '../context/AuthContext';
 import { usePoints } from '../context/PointsContext';
@@ -13,7 +14,8 @@ import { QRCodeSVG } from 'qrcode.react';
 const AcceptBetPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { getMatchById, acceptBet } = useBetting();
+  const { acceptBet } = useBetting();
+  const { getMatchById } = useMatches();
   const { account, connectWallet } = useWeb3();
   const { isAuthenticated, loginWithEmail, authMethod } = useAuth();
   const { userBalance, deductPoints, createBetEscrow } = usePoints();

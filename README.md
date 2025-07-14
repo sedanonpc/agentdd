@@ -80,6 +80,15 @@ Comprehensive documentation is available in the `docs/` folder:
 - **RPC Functions** for complex operations
 - **Row Level Security** for data protection
 
+### Application Architecture
+- **Separation of Concerns**: Dedicated React contexts for different data domains
+  - `MatchesContext`: Manages match data with configurable data sources
+  - `BettingContext`: Handles betting operations and user bet management
+  - `PointsContext`: Manages points economy and transactions
+  - `AuthContext`: Handles user authentication and sessions
+- **Configuration-Driven**: Uses `USE_REMOTE_DATABASE` flag to control data fetching strategy
+- **Flexible Data Sources**: Supports database, external APIs, and mock data with intelligent fallbacks
+
 ## Technologies
 
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS
@@ -133,4 +142,14 @@ MIT License - see LICENSE file for details.
 
 ## Maintainer
 
-Built and maintained by sedanoNPC 
+agentdd.vercel.app 
+
+## Deployment Status
+
+- Latest updates include UI improvements with fixed navbar layout
+- Added fallback.html for error handling in Vercel deployments
+- Fixed Git configuration to ensure correct user attribution
+- Deployed and maintained by sedanoNPC 
+
+## Branch v05a
+This is a change made on the v05a branch. 

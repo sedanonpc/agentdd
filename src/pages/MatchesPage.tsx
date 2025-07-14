@@ -1,21 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, Search, Wifi, WifiOff, ExternalLink, Terminal, MessageSquare, Zap, Database } from 'lucide-react';
-import { useBetting } from '../context/BettingContext';
+import { useMatches } from '../context/MatchesContext';
 import { Match } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { decimalToAmerican, formatDecimalOdds } from '../utils/oddsUtils';
 import MatchChatRoom from '../components/match/MatchChatRoom';
 import MatchBettingForm from '../components/match/MatchBettingForm';
 import Modal from '../components/common/Modal';
+import { SandboxMatchCard } from '../components/match/SandboxMatchCard';
 
 const YAHOO_SPORTS_ODDS_URL = 'https://sports.yahoo.com/nba/odds/';
 
 const MatchesPage: React.FC = () => {
-  const { matches, loadingMatches, refreshMatches, isLiveData, dataSource } = useBetting();
+  // Use the new MatchesContext instead of BettingContext for match data
+  const { matches, loading: loadingMatches, error: matchesError, dataSource, isLiveData, refreshMatches: refreshMatchesData } = useMatches();
+  
   const [searchTerm, setSearchTerm] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [forceRender, setForceRender] = useState<boolean>(false);
   
   // State for the selected match for chat
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -23,32 +24,7 @@ const MatchesPage: React.FC = () => {
   const [selectedMatchForBetting, setSelectedMatchForBetting] = useState<Match | null>(null);
   // State for showing betting modal
   const [showBettingModal, setShowBettingModal] = useState<boolean>(false);
-  
-  useEffect(() => {
-    // Load data when component mounts
-    const loadData = async () => {
-      try {
-        await refreshMatches();
-      } catch (err) {
-        setError('Failed to load matches. Please try again.');
-        console.error('Error loading matches:', err);
-      }
-    };
-    
-    loadData();
-    
-    // Set a timeout to force render content even if loading doesn't complete properly
-    const timer = setTimeout(() => {
-      setForceRender(true);
-    }, 3000); // Force render after 3 seconds no matter what
-    
-    // Cleanup function
-    return () => {
-      clearTimeout(timer);
-      setForceRender(false);
-    };
-  }, []); // Empty dependency array to ensure it only runs once when mounted
-  
+
   // Use the filtered matches even if they're empty
   const filteredMatches = matches ? matches.filter(match => 
     match.home_team.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -83,11 +59,8 @@ const MatchesPage: React.FC = () => {
   };
   
   const handleRefresh = () => {
-    setError(null);
-    refreshMatches().catch(err => {
-      setError('Failed to load matches. Please try again.');
-      console.error('Error refreshing matches:', err);
-    });
+    // Use the MatchesContext refresh function
+    refreshMatchesData();
   };
 
   const getTerminalTime = () => {
@@ -133,35 +106,28 @@ const MatchesPage: React.FC = () => {
     }, 300);
   };
   
-  // Determine if we should show the loading screen - add forceRender check
-  const shouldShowLoading = !forceRender && loadingMatches;
+  // Determine if we should show the loading screen
+  const shouldShowLoading = loadingMatches;
   
   // First, find the LiveDataIndicator component and enhance it to be more prominent for both states
   // Find the component that renders the data source indicator
   const LiveDataIndicator = () => {
     // Determine styling based on data source
-    let iconColor = 'text-yellow-400';
-    let label = 'OFFLINE';
+    let iconColor = 'text-orange-400';
+    let label = 'MOCK';
     let icon = <WifiOff className="w-3 h-3" />;
     let tooltip = 'Using mock data - no live connection';
 
-    if (isLiveData) {
-      if (dataSource === 'database') {
-        iconColor = 'text-green-400';
-        label = 'DB DATA';
-        icon = <Database className="w-3 h-3" />;
-        tooltip = 'Using persisted data from database';
-      } else if (dataSource === 'the_odds_api') {
-        iconColor = 'text-green-400';
-        label = 'API DATA';
-        icon = <Wifi className="w-3 h-3" />;
-        tooltip = 'Connected to The Odds API - live data';
-      } else if (dataSource === 'yahoo') {
-        iconColor = 'text-blue-400';
-        label = 'YAHOO DATA';
-        icon = <Database className="w-3 h-3" />;
-        tooltip = 'Connected to Yahoo Sports - live data';
-      }
+    if (dataSource === 'database') {
+      iconColor = 'text-green-400';
+      label = 'DB DATA';
+      icon = <Database className="w-3 h-3" />;
+      tooltip = 'Using persisted data from database';
+    } else if (dataSource === 'api') {
+      iconColor = 'text-blue-400';
+      label = 'API DATA';
+      icon = <Wifi className="w-3 h-3" />;
+      tooltip = 'Connected to The Odds API - live data';
     }
 
     return (
@@ -180,21 +146,15 @@ const MatchesPage: React.FC = () => {
           DB
         </span>
       );
-    } else if (dataSource === 'yahoo') {
+    } else if (dataSource === 'api') {
       return (
         <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-mono ml-2">
-          YAHOO
-        </span>
-      );
-    } else if (dataSource === 'the_odds_api') {
-      return (
-        <span className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-mono ml-2">
           API
         </span>
       );
     } else if (dataSource === 'mock') {
       return (
-        <span className="bg-yellow-600 text-black px-2 py-1 rounded text-xs font-mono ml-2">
+        <span className="bg-orange-600 text-white px-2 py-1 rounded text-xs font-mono ml-2">
           MOCK
         </span>
       );
@@ -207,7 +167,7 @@ const MatchesPage: React.FC = () => {
       {/* Header with title and banner */}
       <div className="bg-console-gray-terminal/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal overflow-hidden">
         <div className="bg-console-blue/90 p-2 text-black flex items-center justify-between">
-          <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ NBA_TERMINAL ]</div>
+          <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ SPORTS_TERMINAL ]</div>
           <div className="flex items-center gap-4">
             <LiveDataIndicator />
             <div className="text-xs text-console-white font-mono tracking-wide opacity-80">[ SESSION: {getSessionID()} ]</div>
@@ -218,7 +178,7 @@ const MatchesPage: React.FC = () => {
           <div className="flex items-center justify-center mb-3">
             <Terminal className="text-console-blue-bright h-8 w-8 mr-2" />
             <h1 className="text-2xl md:text-3xl font-display uppercase text-console-white tracking-widest">
-              NBA BETTING SYSTEM
+              SPORTS BETTING SYSTEM
             </h1>
           </div>
           <div className="font-mono text-console-white-muted text-sm flex flex-wrap justify-center items-center gap-2">
@@ -234,29 +194,23 @@ const MatchesPage: React.FC = () => {
             <div className="mt-4 p-2 bg-console-gray-terminal/80 border-1 border-console-blue inline-block">
               <div className={`font-mono text-sm uppercase flex items-center ${
                 dataSource === 'database' ? 'text-green-500' :
-                dataSource === 'the_odds_api' ? 'text-green-500' : 
-                dataSource === 'yahoo' ? 'text-blue-500' : 
-                'text-yellow-500'
+                dataSource === 'api' ? 'text-blue-500' : 
+                'text-orange-500'
               }`}>
                 {dataSource === 'database' ? (
                   <>
                     <Database className="h-4 w-4 mr-2" />
                     <span>DATABASE_DATA: Using persisted matches from database</span>
                   </>
-                ) : dataSource === 'the_odds_api' ? (
+                ) : dataSource === 'api' ? (
                   <>
                     <Wifi className="h-4 w-4 mr-2" />
                     <span>LIVE_API_DATA: Using real-time The Odds API</span>
                   </>
-                ) : dataSource === 'yahoo' ? (
-                  <>
-                    <Database className="h-4 w-4 mr-2" />
-                    <span>YAHOO_SPORTS_DATA: Using Yahoo Sports odds</span>
-                  </>
                 ) : (
                   <>
                     <WifiOff className="h-4 w-4 mr-2" />
-                    <span>MOCK_DATA_MODE: Displaying simulated NBA matches</span>
+                    <span>MOCK_DATA: Using generated mock matches</span>
                   </>
                 )}
               </div>
@@ -354,24 +308,18 @@ const MatchesPage: React.FC = () => {
         <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mt-3 md:mt-0">
           <div className={`inline-flex items-center gap-2 px-3 py-1 font-mono text-sm ${
             dataSource === 'database' ? 'text-green-500' : 
-            dataSource === 'the_odds_api' ? 'text-green-500' : 
-            dataSource === 'yahoo' ? 'text-blue-500' : 
-            'text-yellow-500'
+            dataSource === 'api' ? 'text-blue-500' : 
+            'text-orange-500'
           }`}>
             {dataSource === 'database' ? (
               <>
                 <Database className="h-4 w-4" />
                 <span>DB_DATA</span>
               </>
-            ) : dataSource === 'the_odds_api' ? (
+            ) : dataSource === 'api' ? (
               <>
                 <Wifi className="h-4 w-4" />
                 <span>API_DATA</span>
-              </>
-            ) : dataSource === 'yahoo' ? (
-              <>
-                <Database className="h-4 w-4" />
-                <span>YAHOO_DATA</span>
               </>
             ) : (
               <>
@@ -406,9 +354,9 @@ const MatchesPage: React.FC = () => {
         </div>
       </div>
       
-      {error && (
+      {matchesError && (
         <div className="bg-red-900/30 backdrop-blur-xs border-1 border-red-800 text-red-300 px-4 py-3 font-mono">
-          <span className="text-red-500 mr-2">ERROR:</span> {error}
+          <span className="text-red-500 mr-2">ERROR:</span> {matchesError}
         </div>
       )}
       
@@ -426,17 +374,21 @@ const MatchesPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMatches.map((match) => (
-            <MatchCard 
-              key={match.id} 
-              match={match} 
-              formatDate={formatDate} 
-              formatTime={formatTime} 
-              isLiveData={isLiveData}
-              onSelectForChat={handleSelectMatchForChat}
-              onSelectForBetting={handleSelectMatchForBetting}
-              isChatSelected={selectedMatch?.id === match.id}
-              isBettingSelected={selectedMatchForBetting?.id === match.id}
-            />
+            match.sport_key === 'sandbox_metaverse' ? (
+              <SandboxMatchCard key={match.id} match={match} />
+            ) : (
+              <MatchCard 
+                key={match.id} 
+                match={match} 
+                formatDate={formatDate} 
+                formatTime={formatTime} 
+                isLiveData={isLiveData}
+                onSelectForChat={handleSelectMatchForChat}
+                onSelectForBetting={handleSelectMatchForBetting}
+                isChatSelected={selectedMatch?.id === match.id}
+                isBettingSelected={selectedMatchForBetting?.id === match.id}
+              />
+            )
           ))}
         </div>
       )}
@@ -568,12 +520,22 @@ const MatchCard: React.FC<MatchCardProps> = ({
             {match.bookmakers && match.bookmakers.length > 0 && (
               <span className={`text-xs font-mono px-1 py-0.5 ${
                 match.bookmakers[0].key === 'yahoo_sports' ? 'bg-blue-600 text-white' :
+                match.bookmakers[0].key === 'admin_created' ? 'bg-purple-600 text-white' :
                 !isLiveData ? 'bg-yellow-600 text-black' : 'bg-green-600 text-white'
               } rounded`}>
-                {match.bookmakers[0].key === 'yahoo_sports' ? 'YAHOO' : !isLiveData ? 'MOCK' : 'API'}
+                {match.bookmakers[0].key === 'yahoo_sports' ? 'YAHOO' : 
+                 match.bookmakers[0].key === 'admin_created' ? 'ADMIN' :
+                 !isLiveData ? 'MOCK' : 'API'}
               </span>
             )}
             </div>
+          </div>
+          
+          {/* Sport title badge */}
+          <div className="mt-1 flex justify-end">
+            <span className="bg-console-black/40 px-2 py-0.5 text-xs font-mono text-console-blue-bright">
+              {match.sport_title || (match.sport_name ? `${match.sport_name.toUpperCase()} ${match.league_name?.toUpperCase() || ''}` : 'SPORTS')}
+            </span>
           </div>
         </div>
         

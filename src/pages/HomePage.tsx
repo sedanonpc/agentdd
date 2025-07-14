@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Shield, Terminal, Cpu, Code, MessageSquare } from 'lucide-react';
-import { Conference, Division, StandingsTeam, Match } from '../types';
+import { Conference, Division, StandingsTeam } from '../types';
 import { fetchNBAStandings } from '../services/standingsService';
-import { fetchFeaturedMatch } from '../services/featuredMatchService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import DareDevilChatModal from '../components/chat/DareDevilChatModal';
 
@@ -14,18 +13,6 @@ const HomePage: React.FC = () => {
   const [isLiveData, setIsLiveData] = useState<boolean>(false);
   const [dataSource, setDataSource] = useState<string>('mock');
   const [isDareDevilModalOpen, setIsDareDevilModalOpen] = useState<boolean>(false);
-  
-  // Featured match state
-  const [featuredMatch, setFeaturedMatch] = useState<Match | null>(null);
-  const [loadingFeaturedMatch, setLoadingFeaturedMatch] = useState<boolean>(true);
-  const [matchIsLive, setMatchIsLive] = useState<boolean>(false);
-  const [matchDataSource, setMatchDataSource] = useState<string>('mock');
-  const [liveScore, setLiveScore] = useState<{
-    home: number;
-    away: number;
-    quarter: string;
-    timeRemaining: string;
-  } | null>(null);
 
   useEffect(() => {
     // Fetch standings data when component mounts
@@ -46,26 +33,8 @@ const HomePage: React.FC = () => {
         setLoadingStandings(false);
       }
     };
-    
-    // Fetch featured match data
-    const loadFeaturedMatch = async () => {
-      try {
-        setLoadingFeaturedMatch(true);
-        const response = await fetchFeaturedMatch();
-        setFeaturedMatch(response.match);
-        setMatchIsLive(response.isLive);
-        setMatchDataSource(response.dataSource);
-        setLiveScore(response.liveScore || null);
-        console.log('=== HOME PAGE: Loaded featured match ===', response.dataSource);
-      } catch (error) {
-        console.error('Error loading featured match:', error);
-      } finally {
-        setLoadingFeaturedMatch(false);
-      }
-    };
 
     loadStandings();
-    loadFeaturedMatch();
   }, []);
 
   const getTerminalTime = () => {
@@ -81,35 +50,10 @@ const HomePage: React.FC = () => {
     }
     return window.sessionStorage.getItem('session_id');
   };
-  
-  // Format date for game time
-  const formatGameTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  };
 
   // Format win percentage to display as .XXX
   const formatPct = (pct: number): string => {
     return pct.toFixed(3).slice(1); // Remove the leading 0
-  };
-  
-  // Get team record string (e.g. "49-33")
-  const getTeamRecord = (teamName: string) => {
-    if (!standings) return '';
-    
-    // Search through both conferences for the team
-    for (const conference of [standings.eastern, standings.western]) {
-      for (const division of conference.divisions) {
-        for (const team of division.teams) {
-          if (team.name.toLowerCase().includes(teamName.toLowerCase()) || 
-              teamName.toLowerCase().includes(team.name.toLowerCase())) {
-            return `${team.wins}-${team.losses}`;
-          }
-        }
-      }
-    }
-    
-    return '';
   };
 
   // Function to render team row with clinched indicators
@@ -144,51 +88,6 @@ const HomePage: React.FC = () => {
       </React.Fragment>
     );
   };
-  
-  // Extract spread for a team from bookmakers
-  const getSpread = (teamName: string) => {
-    if (!featuredMatch || !featuredMatch.bookmakers || featuredMatch.bookmakers.length === 0) {
-      return '+2.5'; // Default fallback
-    }
-    
-    // Try to find the spread market
-    const bookmaker = featuredMatch.bookmakers[0];
-    const spreadMarket = bookmaker.markets.find(m => m.key === 'spreads');
-    
-    if (!spreadMarket) return '';
-    
-    // Find the outcome for this team
-    const outcome = spreadMarket.outcomes.find(o => o.name.includes(teamName));
-    if (!outcome) return '';
-    
-    // Extract just the spread value (e.g. "+2.5" from "Team Name +2.5")
-    const spreadRegex = /([+-]\d+\.?\d*)/;
-    const match = outcome.name.match(spreadRegex);
-    
-    return match ? match[0] : '';
-  };
-  
-  // Extract the total points (over/under) from bookmakers
-  const getTotalPoints = () => {
-    if (!featuredMatch || !featuredMatch.bookmakers || featuredMatch.bookmakers.length === 0) {
-      return '221.5'; // Default fallback
-    }
-    
-    // Try to find the totals market
-    const bookmaker = featuredMatch.bookmakers[0];
-    const totalsMarket = bookmaker.markets.find(m => m.key === 'totals');
-    
-    if (!totalsMarket || totalsMarket.outcomes.length === 0) return '221.5';
-    
-    // Get the first outcome (usually "Over X")
-    const outcome = totalsMarket.outcomes[0];
-    
-    // Extract just the total value (e.g. "221.5" from "Over 221.5")
-    const totalRegex = /(\d+\.?\d*)/;
-    const match = outcome.name.match(totalRegex);
-    
-    return match ? match[0] : '221.5';
-  };
 
   return (
     <div className="space-y-6">
@@ -215,122 +114,6 @@ const HomePage: React.FC = () => {
           />
         </div>
       </section>
-      
-      {/* Game Banner Section - Updated with dynamic data */}
-      <div className="w-full bg-console-black/60 backdrop-blur-xs border-1 border-console-blue shadow-terminal max-w-6xl mx-auto px-2 sm:px-0">
-        <div className="bg-console-blue/90 p-1 text-black flex items-center justify-between flex-wrap gap-1">
-          <div className="text-xs text-console-white font-mono tracking-wide">[ FEATURED_MATCH ]</div>
-          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-            <div className="text-xs text-console-white font-mono tracking-wide">
-              {matchDataSource === 'yahoo' && matchIsLive && (
-                <span className="px-1 py-0.5 bg-blue-600 text-white text-[10px] font-mono rounded mr-1">YAHOO DATA</span>
-              )}
-              {!matchIsLive && (
-                <span className="px-1 py-0.5 bg-yellow-600 text-black text-[10px] font-mono rounded mr-1">MOCK DATA</span>
-              )}
-              [ {featuredMatch?.sport_title || 'NBA'} ]
-            </div>
-            <div className="text-xs text-console-white font-mono tracking-wide opacity-80">SYS_TIME: {getTerminalTime()}</div>
-          </div>
-        </div>
-        
-        {loadingFeaturedMatch ? (
-          <div className="flex justify-center items-center h-24">
-            <LoadingSpinner size={5} color="text-console-blue-bright" />
-          </div>
-        ) : featuredMatch ? (
-          <div className="relative w-full overflow-hidden">
-            {/* Teams logo display - more compact */}
-            <div className="flex justify-center items-center py-2 bg-gradient-to-r from-console-blue/20 to-console-black/20">
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm py-2 px-6 border-1 border-console-blue/50 rounded-sm">
-                <div className="text-xl font-bold text-console-blue-bright">{featuredMatch.home_team.name.substring(0, 3).toUpperCase()}</div>
-                <span className="text-lg text-console-white-dim">VS</span>
-                <div className="text-xl font-bold text-console-blue-bright">{featuredMatch.away_team.name.substring(0, 3).toUpperCase()}</div>
-              </div>
-            </div>
-            
-            {/* Overlay gradient */}
-            <div className="absolute inset-0 bg-gradient-to-r from-console-blue/40 to-console-black/40 z-10"></div>
-            
-            {/* Game info overlay - more compact */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-console-black/90 to-transparent p-2 sm:p-3 z-20">
-              <div className="flex flex-row justify-between items-center gap-2 max-w-4xl mx-auto">
-                <div className="font-mono text-console-white">
-                  <div className="flex items-center gap-1 mb-0.5 flex-wrap">
-                    <span className="text-xs text-console-blue-bright">PLAYOFF SERIES</span>
-                    <span className="bg-yellow-500/80 text-black text-[10px] px-1 py-0.5">FEATURED GAME</span>
-                  </div>
-                  <div className="text-sm sm:text-base mb-1">
-                    {featuredMatch.home_team.name} vs {featuredMatch.away_team.name}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-console-white-dim flex-wrap">
-                    <span>Game 1</span>
-                    <span className="hidden sm:inline">•</span>
-                    <span>Series tied 0-0</span>
-                  </div>
-                  <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
-                    <div className="bg-console-black/50 px-1 py-0.5 border-1 border-console-blue">
-                      <span className="text-console-white-dim text-[10px]">{featuredMatch.home_team.name.substring(0, 3).toUpperCase()}</span>
-                      <span className="text-console-white ml-1 text-xs">{getSpread(featuredMatch.home_team.name)}</span>
-                    </div>
-                    <div className="bg-console-black/50 px-1 py-0.5 border-1 border-console-blue">
-                      <span className="text-console-white-dim text-[10px]">{featuredMatch.away_team.name.substring(0, 3).toUpperCase()}</span>
-                      <span className="text-console-white ml-1 text-xs">{getSpread(featuredMatch.away_team.name)}</span>
-                    </div>
-                    <div className="bg-console-black/50 px-1 py-0.5 border-1 border-console-blue">
-                      <span className="text-console-white-dim text-[10px]">O/U</span>
-                      <span className="text-console-white ml-1 text-xs">{getTotalPoints()}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-console-blue/20 backdrop-blur-xs border-1 border-console-blue p-2 text-console-white font-mono">
-                  <div className="text-[10px] text-console-white-dim mb-0.5">TIPOFF</div>
-                  <div className="text-base text-yellow-300">{formatGameTime(featuredMatch.commence_time)}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="h-24 flex items-center justify-center text-console-white-dim font-mono">
-            No featured match available
-          </div>
-        )}
-        
-        {/* Bottom bar with quick stats - more compact */}
-        <div className="bg-console-black/80 backdrop-blur-xs p-2 border-t border-console-blue/50">
-          <div className="flex flex-row justify-between items-center gap-2 font-mono text-xs text-console-white-dim max-w-4xl mx-auto">
-            <div className="flex items-center gap-2">
-              {featuredMatch && (
-                <>
-                  <span className="text-console-blue-bright">
-                    {featuredMatch.home_team.name.substring(0, 3).toUpperCase()} {getTeamRecord(featuredMatch.home_team.name)}
-                  </span>
-                  <span>|</span>
-                  <span className="text-console-blue-bright">
-                    {featuredMatch.away_team.name.substring(0, 3).toUpperCase()} {getTeamRecord(featuredMatch.away_team.name)}
-                  </span>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-              <span className="px-1 py-0.5 bg-red-900/30 text-red-400 text-[10px]">LIVE</span>
-              <Link 
-                to="/matches" 
-                className="bg-red-600/90 text-white px-2 py-0.5 text-[10px] font-mono hover:bg-red-500 transition-colors flex items-center gap-1"
-              >
-                <span className="inline-block w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-                <span>WATCH LIVE</span>
-              </Link>
-              <Link 
-                to="/matches"
-                className="bg-yellow-500/90 text-black px-2 py-0.5 text-[10px] font-mono hover:bg-yellow-400 transition-colors"
-              >
-                BET NOW
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
       
       {/* DareDevil Chat Button */}
       <div className="flex justify-center my-6 max-w-6xl mx-auto px-2 sm:px-0">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, DollarSign, AlertCircle } from 'lucide-react';
 import { useBetting } from '../context/BettingContext';
+import { useMatches } from '../context/MatchesContext';
 import { useWeb3 } from '../context/Web3Context';
 import { Match } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -12,7 +13,8 @@ import { MatchAnalysis } from '../types';
 const MatchDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { matches, loadingMatches, createNewBet } = useBetting();
+  const { createNewBet } = useBetting();
+  const { matches, loading: loadingMatches } = useMatches();
   const { isConnected } = useWeb3();
   
   const [match, setMatch] = useState<Match | null>(null);
@@ -101,7 +103,7 @@ const MatchDetailPage: React.FC = () => {
     
     setIsCreatingBet(true);
     try {
-      const newBet = await createNewBet(match.id, selectedTeam, betAmount, description);
+      const newBet = await createNewBet(match.id, selectedTeam, parseFloat(betAmount), description);
       if (newBet) {
         navigate(`/dashboard`);
       }

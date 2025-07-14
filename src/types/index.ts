@@ -1,9 +1,71 @@
-// Match Types
+// Basic Types (defined first to avoid circular references)
+export type DataSource = 'mock' | 'api' | 'yahoo' | 'database';
+
+// Betting status enum
+export enum BetStatus {
+  OPEN = 'open',
+  ACTIVE = 'active', 
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled'
+}
+
+// New enums for multi-sport architecture
+export type EventType = 'basketball_nba' | 'sandbox_metaverse';
+export type MatchStatus = 'upcoming' | 'live' | 'finished' | 'cancelled';
+
+// New basketball-specific details interface
+export interface BasketballMatchDetails {
+  id: string;
+  home_team_id: string;
+  home_team_name: string;
+  home_team_logo?: string;
+  away_team_id: string;
+  away_team_name: string;
+  away_team_logo?: string;
+  season?: string;
+  week?: number;
+  scores?: any;
+  venue_name?: string;
+  venue_city?: string;
+  external_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Sandbox Metaverse esports details interface
+export interface SandboxMatchDetails {
+  id: string;
+  player1_id: string;
+  player1_name: string;
+  player1_subtitle?: string;
+  player1_image_url?: string;
+  player2_id: string;
+  player2_name: string;
+  player2_subtitle?: string;
+  player2_image_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// New universal match interface
+export interface UniversalMatch {
+  id: string;
+  event_type: EventType;
+  details_id: string;
+  status: MatchStatus;
+  scheduled_start_time: string;
+  bookmakers?: BookmakerOdds[]; // Temporary: keeping for Phase 1 compatibility
+  created_at: string;
+  updated_at: string;
+}
+
+// Team interface (updated to support player aliases for esports)
 export interface Team {
   id: string;
   name: string;
   logo?: string;
   record?: string;
+  alias?: string; // For esports player aliases like @username, TSB_GamerTag, etc.
 }
 
 export interface Odds {
@@ -22,38 +84,23 @@ export interface BookmakerOdds {
   }[];
 }
 
+// Existing Match interface - keeping for backward compatibility during Phase 1
 export interface Match {
   id: string;
   sport_key: string;
-  sport_name?: string;
-  league_name?: string;
   sport_title: string;
-  commence_time: string;
+  commence_time: string; // Will map from scheduled_start_time
   home_team: Team;
   away_team: Team;
-  bookmakers: BookmakerOdds[];
-  scores?: {
-    home: number;
-    away: number;
-  };
-  completed?: boolean;
+  bookmakers?: BookmakerOdds[];
+  scores?: any;
+  completed?: boolean; // Will map from status
+  sport_name?: string; // Optional for backward compatibility
+  league_name?: string; // Optional for backward compatibility
 }
 
 // Betting Types
-export enum BetStatus {
-  OPEN = 'open',
-  ACTIVE = 'active',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled'
-}
-
-export enum BetResult {
-  PENDING = 'pending',
-  WON = 'won',
-  LOST = 'lost',
-  DRAW = 'draw',
-  VOID = 'void'
-}
+export type BetResult = 'pending' | 'won' | 'lost' | 'draw' | 'void';
 
 export interface Bet {
   id: string;

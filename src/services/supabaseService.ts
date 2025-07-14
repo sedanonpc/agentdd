@@ -253,6 +253,7 @@ interface UserAccount {
   wallet_address?: string;
   reserved_points?: number;
   free_points?: number;
+  is_admin?: boolean;
   created_at?: string;
   updated_at?: string;
   [key: string]: any; // Allow for additional fields
@@ -415,221 +416,44 @@ export const freePoints = async (userId: string, amount: number): Promise<boolea
   return true;
 };
 
-/**
- * Generates a consistent ID for a match based on identifying columns
- * @param sportName The sport name (e.g., "basketball")
- * @param leagueName The league name (e.g., "nba")
- * @param homeTeamName The home team name
- * @param awayTeamName The away team name 
- * @param commenceTime The match commence time
- * @returns A consistent ID string
- */
-export const generateMatchId = (
-  sportName: string,
-  leagueName: string,
-  homeTeamName: string,
-  awayTeamName: string,
-  commenceTime: string
-): string => {
-  // Normalize all inputs (lowercase, trim spaces)
-  const normalizedSport = sportName.toLowerCase().trim();
-  const normalizedLeague = leagueName.toLowerCase().trim();
-  const normalizedHomeTeam = homeTeamName.toLowerCase().trim().replace(/\s+/g, '_');
-  const normalizedAwayTeam = awayTeamName.toLowerCase().trim().replace(/\s+/g, '_');
-  
-  // Ensure date is in UTC and ISO 8601 format (YYYY-MM-DD)
-  const date = new Date(commenceTime);
-  const utcDateString = date.toISOString().split('T')[0];
-  
-  // Combine the values in a consistent order with sport and league prepended
-  const idString = `${normalizedSport}_${normalizedLeague}_${normalizedHomeTeam}_vs_${normalizedAwayTeam}_${utcDateString}`;
-  
-  return idString;
-};
 
-// Match storage functions
-export const storeMatch = async (match: Match): Promise<boolean> => {
-  try {
-    // Extract sport and league from sport_key (typically in format "basketball_nba")
-    const [sportName, leagueName] = match.sport_key.split('_');
-    
-    // Generate a consistent ID based on identifying columns
-    const generatedId = generateMatchId(
-      sportName,
-      leagueName,
-      match.home_team.name,
-      match.away_team.name,
-      match.commence_time
-    );
-    
-    console.log('Using generated match ID:', generatedId);
-    
-    // Check if a match with this ID already exists
-    const { data: existingMatch, error: queryError } = await supabaseClient
-      .from('matches')
-      .select('id')
-      .eq('id', generatedId)
-      .single();
-    
-    if (queryError && queryError.code !== 'PGRST116') { // PGRST116 is "not found" error
-      console.error('Error checking for existing match:', queryError);
-      return false;
-    }
-    
-    // If match already exists, consider it a success but don't insert
-    if (existingMatch) {
-      console.log(`Match with ID ${generatedId} already exists - skipping`);
-      return true;
-    }
-    
-    // No duplicate found, insert this match with the generated ID
-    const matchRecord = {
-      id: generatedId,
-      sport_name: sportName,
-      league_name: leagueName,
-      sport_title: match.sport_title,
-      commence_time: match.commence_time,
-      home_team_id: match.home_team.id,
-      home_team_name: match.home_team.name,
-      home_team_logo: match.home_team.logo,
-      away_team_id: match.away_team.id,
-      away_team_name: match.away_team.name,
-      away_team_logo: match.away_team.logo,
-      bookmakers: match.bookmakers,
-      scores: match.scores,
-      completed: match.completed || false,
-      updated_at: new Date().toISOString()
-    };
 
-    const { error } = await supabaseClient
-      .from('matches')
-      .insert(matchRecord);
 
-    if (error) {
-      console.error('Error storing match in Supabase:', error);
-      return false;
-    }
-
-    console.log(`Successfully stored new match with ID ${generatedId}: ${match.home_team.name} vs ${match.away_team.name}`);
-    return true;
-  } catch (error) {
-    console.error('Exception storing match:', error);
-    return false;
-  }
-};
-
-export const storeMatches = async (matches: Match[]): Promise<number> => {
-  try {
-    let successCount = 0;
-    
-    // Process each match individually to check for duplicates
-    for (const match of matches) {
-      try {
-        // Extract sport and league from sport_key (typically in format "basketball_nba")
-        const [sportName, leagueName] = match.sport_key.split('_');
-        
-        // Generate a consistent ID based on identifying columns
-        const generatedId = generateMatchId(
-          sportName,
-          leagueName,
-          match.home_team.name,
-          match.away_team.name,
-          match.commence_time
-        );
-        
-        // Check if a match with this ID already exists
-        const { data: existingMatch, error: queryError } = await supabaseClient
-          .from('matches')
-          .select('id')
-          .eq('id', generatedId)
-          .single();
-        
-        if (queryError && queryError.code !== 'PGRST116') { // PGRST116 is "not found" error
-          console.error('Error checking for existing match:', queryError);
-          continue;
-        }
-        
-        // If match already exists, skip this one
-        if (existingMatch) {
-          console.log(`Match with ID ${generatedId} already exists - skipping`);
-          successCount++;
-          continue;
-        }
-        
-        // No duplicate found, insert this match with the generated ID
-        const matchRecord = {
-          id: generatedId,
-          sport_name: sportName,
-          league_name: leagueName,
-          sport_title: match.sport_title,
-          commence_time: match.commence_time,
-          home_team_id: match.home_team.id,
-          home_team_name: match.home_team.name,
-          home_team_logo: match.home_team.logo,
-          away_team_id: match.away_team.id,
-          away_team_name: match.away_team.name,
-          away_team_logo: match.away_team.logo,
-          bookmakers: match.bookmakers,
-          scores: match.scores,
-          completed: match.completed || false,
-          updated_at: new Date().toISOString()
-        };
-        
-        const { error: insertError } = await supabaseClient
-          .from('matches')
-          .insert(matchRecord);
-        
-        if (insertError) {
-          console.error(`Error storing match in Supabase:`, insertError);
-        } else {
-          console.log(`Stored new match with ID ${generatedId}: ${match.home_team.name} vs ${match.away_team.name}`);
-          successCount++;
-        }
-      } catch (matchError) {
-        console.error(`Error processing match:`, matchError);
-      }
-    }
-    
-    console.log(`Successfully processed ${successCount} of ${matches.length} matches`);
-    return successCount;
-  } catch (error) {
-    console.error('Exception storing matches:', error);
-    return 0;
-  }
-};
 
 export const getMatchById = async (id: string): Promise<Match | null> => {
   try {
-    // Try to get by ID
+    // Query the new multi-sport schema with joins
     const { data, error } = await supabaseClient
       .from('matches')
-      .select('*')
+      .select(`
+        *,
+        match_details_basketball_nba!inner(*)
+      `)
       .eq('id', id)
       .single();
 
     // If found by ID, return it
     if (!error && data) {
-      // Reconstruct sport_key from sport_name and league_name
-      const sport_key = `${data.sport_name}_${data.league_name}`;
+      const basketballDetails = data.match_details_basketball_nba;
       
       return {
         id: data.id,
-        sport_key: sport_key, // Reconstructed for backward compatibility
-        sport_title: data.sport_title,
-        commence_time: data.commence_time,
+        sport_key: 'basketball_nba', // Based on event_type
+        sport_title: 'Basketball', // Default for basketball
+        commence_time: data.scheduled_start_time, // Map scheduled_start_time to commence_time
         home_team: {
-          id: data.home_team_id,
-          name: data.home_team_name,
-          logo: data.home_team_logo
+          id: basketballDetails.home_team_id,
+          name: basketballDetails.home_team_name,
+          logo: basketballDetails.home_team_logo
         },
         away_team: {
-          id: data.away_team_id,
-          name: data.away_team_name,
-          logo: data.away_team_logo
+          id: basketballDetails.away_team_id,
+          name: basketballDetails.away_team_name,
+          logo: basketballDetails.away_team_logo
         },
-        bookmakers: data.bookmakers,
-        scores: data.scores,
-        completed: data.completed
+        bookmakers: data.bookmakers || [],
+        scores: basketballDetails.scores || null,
+        completed: data.status === 'finished'
       };
     }
 
@@ -647,44 +471,112 @@ export const getUpcomingMatches = async (limit: number = 50): Promise<Match[]> =
   try {
     const now = new Date().toISOString();
     
-    const { data, error } = await supabaseClient
+    // First get matches from the main table (all event types)
+    // Temporarily allowing past matches for testing - remove this filter in production
+    const { data: matchesData, error: matchesError } = await supabaseClient
       .from('matches')
       .select('*')
-      .gt('commence_time', now)
-      .eq('completed', false)
-      .order('commence_time', { ascending: true })
+      // .gt('scheduled_start_time', now)  // Commented out to include past matches for testing
+      .eq('status', 'upcoming')
+      .order('scheduled_start_time', { ascending: true })
       .limit(limit);
 
-    if (error) {
-      console.error('Error getting upcoming matches:', error);
+    if (matchesError) {
+      console.error('Error getting matches:', matchesError);
       return [];
     }
 
-    // Convert from DB format to Match format
-    return (data || []).map(item => {
-      // Reconstruct sport_key from sport_name and league_name
-      const sport_key = `${item.sport_name}_${item.league_name}`;
-      
-      return {
-        id: item.id,
-        sport_key: sport_key, // Reconstructed for backward compatibility
-        sport_title: item.sport_title,
-        commence_time: item.commence_time,
-        home_team: {
-          id: item.home_team_id,
-          name: item.home_team_name,
-          logo: item.home_team_logo
-        },
-        away_team: {
-          id: item.away_team_id,
-          name: item.away_team_name,
-          logo: item.away_team_logo
-        },
-        bookmakers: item.bookmakers,
-        scores: item.scores,
-        completed: item.completed
-      };
-    });
+    if (!matchesData || matchesData.length === 0) {
+      console.log('No upcoming matches found');
+      return [];
+    }
+
+    // Process matches by event type
+    const processedMatches = await Promise.all(
+      matchesData.map(async (item) => {
+        if (item.event_type === 'basketball_nba') {
+          // Get basketball details with team info
+          const { data: basketballData, error: basketballError } = await supabaseClient
+            .from('match_details_basketball_nba')
+            .select(`
+              *,
+              home_team:teams_nba!match_details_basketball_nba_home_team_id_fkey(*),
+              away_team:teams_nba!match_details_basketball_nba_away_team_id_fkey(*)
+            `)
+            .eq('id', item.details_id)
+            .single();
+
+          if (basketballError || !basketballData) {
+            console.warn(`No basketball details found for match ${item.id} with details_id ${item.details_id}`);
+            return null;
+          }
+
+          const homeTeam = basketballData.home_team;
+          const awayTeam = basketballData.away_team;
+
+          return {
+            id: item.id,
+            sport_key: 'basketball_nba',
+            sport_title: 'NBA',
+            sport_name: 'basketball',
+            league_name: 'nba',
+            commence_time: item.scheduled_start_time,
+            home_team: {
+              id: basketballData.home_team_id,
+              name: homeTeam ? `${homeTeam.city} ${homeTeam.name}` : basketballData.home_team_id,
+              logo: homeTeam?.logo_url || null
+            },
+            away_team: {
+              id: basketballData.away_team_id,
+              name: awayTeam ? `${awayTeam.city} ${awayTeam.name}` : basketballData.away_team_id,
+              logo: awayTeam?.logo_url || null
+            },
+            bookmakers: item.bookmakers || [],
+            scores: basketballData.scores || null,
+            completed: item.status === 'finished'
+          };
+        } else if (item.event_type === 'sandbox_metaverse') {
+          // Get sandbox details
+          const { data: sandboxData, error: sandboxError } = await supabaseClient
+            .from('match_details_sandbox_metaverse')
+            .select('*')
+            .eq('id', item.details_id)
+            .single();
+
+          if (sandboxError || !sandboxData) {
+            console.warn(`No sandbox details found for match ${item.id} with details_id ${item.details_id}`);
+            return null;
+          }
+
+          return {
+            id: item.id,
+            sport_key: 'sandbox_metaverse',
+            sport_title: 'The Sandbox Metaverse',
+            sport_name: 'esports',
+            league_name: 'sandbox',
+            commence_time: item.scheduled_start_time,
+            home_team: {
+              id: sandboxData.player1_id,
+              name: sandboxData.player1_name,
+              alias: sandboxData.player1_subtitle,
+              logo: sandboxData.player1_image_url
+            },
+            away_team: {
+              id: sandboxData.player2_id,
+              name: sandboxData.player2_name,
+              alias: sandboxData.player2_subtitle,
+              logo: sandboxData.player2_image_url
+            },
+            bookmakers: item.bookmakers || [],
+            scores: null,
+            completed: item.status === 'finished'
+          };
+        }
+        return null;
+      })
+    );
+
+    return processedMatches.filter(match => match !== null);
   } catch (error) {
     console.error('Exception getting upcoming matches:', error);
     return [];
@@ -719,3 +611,5 @@ export const updateMatchScores = async (
     return false;
   }
 }; 
+
+// TODO: Add new multi-sport architecture functions here after resolving TypeScript issues with mock Supabase client 
