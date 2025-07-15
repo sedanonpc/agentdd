@@ -587,4 +587,41 @@ export const cancelStraightBet = async (betId: string, userId: string): Promise<
   }
 }; 
 
+export const getStraightBetsByStatus = async (status: string, limit: number = 50): Promise<StraightBet[]> => {
+  try {
+    const { data, error } = await supabaseClient
+      .from('straight_bets')
+      .select('*')
+      .eq('status', status)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error fetching straight bets by status:', error);
+      throw new Error(`Failed to fetch bets by status: ${error.message}`);
+    }
+
+    return (data || []).map((betData: any) => ({
+      id: betData.id,
+      matchId: betData.match_id,
+      creatorId: betData.creator_id,
+      amount: betData.amount,
+      amountCurrency: betData.amount_currency,
+      creatorsPickId: betData.creators_pick_id,
+      creatorsNote: betData.creators_note,
+      status: betData.status as StraightBetStatus,
+      createdAt: betData.created_at,
+      updatedAt: betData.updated_at,
+      acceptorId: betData.acceptor_id || undefined,
+      acceptorsPickId: betData.acceptors_pick_id || undefined,
+      winnerUserId: betData.winner_user_id || undefined,
+      acceptedAt: betData.accepted_at || undefined,
+      completedAt: betData.completed_at || undefined
+    }));
+  } catch (error) {
+    console.error('Exception getting straight bets by status:', error);
+    throw error;
+  }
+}; 
+
  

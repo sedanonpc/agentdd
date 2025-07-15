@@ -4,6 +4,7 @@ import { Match } from '../../types/match';
 interface StraightBetCardProps {
   bet: any; // Replace 'any' with the correct StraightBet type if available
   match: Match | null;
+  status?: string;
 }
 
 const SPORT_LABELS: Record<string, string> = {
@@ -12,7 +13,7 @@ const SPORT_LABELS: Record<string, string> = {
   // Add more as needed
 };
 
-const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, match }) => {
+const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, match, status }) => {
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -20,7 +21,7 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, match }) => {
   };
 
   return (
-    <div className="bg-console-gray-terminal/80 border border-console-blue shadow-terminal rounded-lg p-4 flex flex-col gap-2">
+    <div className="bg-console-gray-terminal/80 border border-console-blue shadow-terminal rounded-lg p-4 flex flex-col gap-2 relative">
       <div className="flex justify-between items-center mb-1">
         <span className="text-xs font-mono text-console-white-dim uppercase">
           {match ? SPORT_LABELS[match.event_type] || match.event_type : 'Unknown Sport'}

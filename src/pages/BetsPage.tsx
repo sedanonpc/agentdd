@@ -16,6 +16,13 @@ const sortOptions = [
   { value: 'date', label: 'Created Date' },
 ];
 
+const statusOptions = [
+  { value: 'open', label: 'Open' },
+  { value: 'waiting_result', label: 'Waiting Result' },
+  { value: 'completed', label: 'Completed' },
+  // Do not include 'cancelled'
+];
+
 interface BetWithMatch {
   bet: any;
   match: Match | null;
@@ -54,21 +61,32 @@ const BetsPage: React.FC = () => {
   const [sportFilter, setSportFilter] = useState('all');
   const [sortBy, setSortBy] = useState('amount');
   const [sortAsc, setSortAsc] = useState(false); // false = descending, true = ascending
+  const [status, setStatus] = useState('open');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    getOpenStraightBets(100).then(async (openBets) => {
+    // Dynamically import the correct fetch function based on status
+    const fetchBets = async () => {
+      let betsRaw = [];
+      if (status === 'open') {
+        betsRaw = await getOpenStraightBets(100);
+      } else {
+        // For other statuses, fetch all bets and filter client-side (or implement a getBetsByStatus if available)
+        const { getStraightBetsByStatus } = await import('../services/straightBetsService');
+        betsRaw = await getStraightBetsByStatus(status, 100);
+      }
       const betsWithMatch: BetWithMatch[] = await Promise.all(
-        openBets.map(async (bet) => {
+        betsRaw.map(async (bet: any) => {
           const match = await getMatchById(bet.matchId);
           return { bet, match };
         })
       );
       setBets(betsWithMatch);
       setLoading(false);
-    });
-  }, []);
+    };
+    fetchBets();
+  }, [status]);
 
   // Filtering and sorting using match info
   const filtered = bets.filter(({ match }) =>
@@ -82,8 +100,18 @@ const BetsPage: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto mt-8">
-      <h1 className="text-2xl font-display text-console-white mb-6">Open Bets</h1>
+      <h1 className="text-2xl font-display text-console-white mb-6">Bets</h1>
       <div className="flex gap-4 mb-6 items-center">
+        {/* Status Filter Dropdown */}
+        <select
+          value={status}
+          onChange={e => setStatus(e.target.value)}
+          className="bg-console-gray-terminal text-console-white font-mono px-3 py-2 rounded border border-console-blue"
+        >
+          {statusOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
         {/* Sport Filter Dropdown */}
         <select
           value={sportFilter}
@@ -113,13 +141,13 @@ const BetsPage: React.FC = () => {
         </button>
       </div>
       {loading ? (
-        <div className="text-console-white-dim font-mono">Loading open bets...</div>
+        <div className="text-console-white-dim font-mono">Loading bets...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-console-white-dim font-mono">No open bets found.</div>
+        <div className="text-console-white-dim font-mono">No bets found.</div>
       ) : (
         <div className="space-y-4">
           {filtered.map(({ bet, match }) => (
-            <StraightBetCard key={bet.id} bet={bet} match={match} />
+            <StraightBetCard key={bet.id} bet={bet} match={match} status={status} />
           ))}
         </div>
       )}

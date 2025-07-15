@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Clock, CheckCircle, XCircle, Timer } from 'lucide-react';
 import { StraightBet, StraightBetStatus } from '../../services/straightBetsService';
+import BetShareModal from './BetShareModal';
 
 interface UserBetCardProps {
   bet: StraightBet;
@@ -8,7 +9,8 @@ interface UserBetCardProps {
 }
 
 const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
-  
+  const [showShareModal, setShowShareModal] = useState(false);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -71,6 +73,17 @@ const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
   const isUserCreator = true; // For now, since we're showing user's bets
   const userRole = isUserCreator ? 'Creator' : 'Acceptor';
 
+  // Adapt bet object for BetShareModal if needed
+  const betForModal = {
+    ...bet,
+    id: bet.id,
+    matchId: bet.matchId,
+    creator: bet.creatorId || bet.creator || '',
+    teamId: bet.creatorsPickId || bet.teamId || '',
+    amount: bet.amount,
+    description: bet.creatorsNote || bet.description || '',
+  };
+
   return (
     <div className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-4 hover:shadow-glow transition-all">
       {/* Header with status and amount */}
@@ -81,7 +94,6 @@ const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
             {statusInfo.label}
           </span>
         </div>
-        
         <div className="text-right">
           <div className="text-console-white font-mono text-lg">
             {bet.amount} <span className="text-[#E5FF03] text-sm">$DARE</span>
@@ -100,14 +112,12 @@ const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
             {bet.matchId}
           </span>
         </div>
-        
         <div className="flex items-center justify-between">
           <span className="text-console-white-dim text-sm font-mono">Pick:</span>
           <span className="text-console-white text-sm font-mono truncate ml-2 max-w-[200px]">
             {bet.creatorsPickId}
           </span>
         </div>
-
         {bet.creatorsNote && (
           <div className="flex items-start justify-between">
             <span className="text-console-white-dim text-sm font-mono shrink-0">Note:</span>
@@ -126,7 +136,6 @@ const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
             {formatDate(bet.createdAt)}
           </span>
         </div>
-        
         {bet.acceptedAt && (
           <div className="flex items-center justify-between text-xs">
             <span className="text-console-white-dim font-mono">Accepted:</span>
@@ -135,7 +144,6 @@ const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
             </span>
           </div>
         )}
-        
         {bet.completedAt && (
           <div className="flex items-center justify-between text-xs">
             <span className="text-console-white-dim font-mono">Completed:</span>
@@ -180,6 +188,19 @@ const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
             VIEW DETAILS
           </button>
         </div>
+      )}
+
+      {/* Share button */}
+      <div className="pt-3 mt-3 flex justify-end">
+        <button
+          onClick={() => setShowShareModal(true)}
+          className="px-3 py-1 bg-console-blue-bright text-console-black font-mono rounded shadow hover:bg-console-blue transition-colors text-xs"
+        >
+          Share
+        </button>
+      </div>
+      {showShareModal && (
+        <BetShareModal bet={betForModal} onClose={() => setShowShareModal(false)} />
       )}
     </div>
   );
