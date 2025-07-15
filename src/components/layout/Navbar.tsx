@@ -119,6 +119,7 @@ const Navbar: React.FC = () => {
   const navLinks = [
     { path: '/', label: 'TERMINAL', icon: Terminal },
     { path: '/matches', label: 'MATCHES', icon: Activity },
+    { path: '/bets', label: 'BETS', icon: Archive, requiresAuth: true }, // New Bets tab
     { path: '/leaderboard', label: 'RANKS', icon: Trophy },
     { path: '/chat', label: 'COMMS', icon: MessageSquare, requiresAuth: true },
     { path: '/profile', label: 'PROFILE', icon: User, requiresAuth: true },

@@ -420,6 +420,10 @@ export const freePoints = async (userId: string, amount: number): Promise<boolea
 
 
 
+/**
+ * @deprecated This function returns the legacy Match type and will be removed in a future version.
+ * New code should define and use a local getMatchById that returns the new Match type matching the database schema.
+ */
 export const getMatchById = async (id: string): Promise<Match | null> => {
   try {
     // Query the new multi-sport schema with joins

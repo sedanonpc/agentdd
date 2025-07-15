@@ -14,6 +14,7 @@ import LeaderboardPage from './pages/Leaderboard';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import UserBetListPage from './pages/UserBetListPage';
 import ProfilePage from './pages/ProfilePage';
+import BetsPage from './pages/BetsPage';
 import { Web3Provider } from './context/Web3Context';
 import { AuthProvider } from './context/AuthContext';
 import { BettingProvider } from './context/BettingContext';
@@ -138,6 +139,14 @@ function App() {
                       <Route 
                         path="/leaderboard" 
                         element={<LeaderboardPage />} 
+                      />
+                      <Route 
+                        path="/bets" 
+                        element={
+                          <ProtectedRoute>
+                            <BetsPage />
+                          </ProtectedRoute>
+                        } 
                       />
                     </Routes>
                   </main>

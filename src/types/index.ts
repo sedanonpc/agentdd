@@ -89,7 +89,10 @@ export interface BookmakerOdds {
   }[];
 }
 
-// Existing Match interface - keeping for backward compatibility during Phase 1
+/**
+ * @deprecated This Match type is deprecated and will be removed in a future version.
+ * It does not match the database schema. New code should define and use a local Match type that matches the columns of the `matches` table.
+ */
 export interface Match {
   id: string;
   sport_key: string;
