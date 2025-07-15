@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage';
 import LeaderboardPage from './pages/Leaderboard';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import UserBetListPage from './pages/UserBetListPage';
+import ProfilePage from './pages/ProfilePage';
 import { Web3Provider } from './context/Web3Context';
 import { AuthProvider } from './context/AuthContext';
 import { BettingProvider } from './context/BettingContext';
@@ -101,6 +102,14 @@ function App() {
                         element={
                           <ProtectedRoute>
                             <UserBetListPage />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      <Route 
+                        path="/profile" 
+                        element={
+                          <ProtectedRoute>
+                            <ProfilePage />
                           </ProtectedRoute>
                         } 
                       />
