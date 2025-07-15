@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, User, Database, MessageSquare, Terminal, LogOut, Trophy, RefreshCw, Star } from 'lucide-react';
+import { Activity, User, Database, MessageSquare, Terminal, LogOut, Trophy, RefreshCw, Star, Archive } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePoints } from '../../context/PointsContext';
 import PointsDisplay from '../../components/PointsDisplay';
@@ -119,9 +119,10 @@ const Navbar: React.FC = () => {
   const navLinks = [
     { path: '/', label: 'TERMINAL', icon: Terminal },
     { path: '/matches', label: 'MATCHES', icon: Activity },
+    { path: '/my-bets', label: 'MY BETS', icon: Archive, requiresAuth: true },
     { path: '/leaderboard', label: 'RANKS', icon: Trophy },
     { path: '/chat', label: 'COMMS', icon: MessageSquare, requiresAuth: true },
-    { path: '/admin', label: 'ADMIN', icon: Database, requiresAuth: true },
+    { path: '/admin', label: 'ADMIN', icon: Database, requiresAuth: true, requiresAdmin: true },
   ];
 
   const handleLogout = () => {

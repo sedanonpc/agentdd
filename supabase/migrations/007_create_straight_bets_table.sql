@@ -60,8 +60,12 @@ CREATE TABLE IF NOT EXISTS straight_bets (
     winner_user_id = acceptor_id
   ),
   CONSTRAINT valid_acceptance CHECK (
+    -- Open bets: no acceptor data
     (status = 'open' AND acceptor_id IS NULL AND accepted_at IS NULL AND acceptors_pick_id IS NULL) OR
-    (status != 'open' AND acceptor_id IS NOT NULL AND accepted_at IS NOT NULL AND acceptors_pick_id IS NOT NULL)
+    -- Cancelled bets: no acceptor data (can be cancelled before acceptance)
+    (status = 'cancelled' AND acceptor_id IS NULL AND accepted_at IS NULL AND acceptors_pick_id IS NULL) OR
+    -- Non-open, non-cancelled bets: must have acceptor data
+    (status NOT IN ('open', 'cancelled') AND acceptor_id IS NOT NULL AND accepted_at IS NOT NULL AND acceptors_pick_id IS NOT NULL)
   ),
   CONSTRAINT valid_completion CHECK (
     (status != 'completed' AND completed_at IS NULL AND winner_user_id IS NULL) OR
