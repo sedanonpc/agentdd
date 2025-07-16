@@ -16,6 +16,8 @@
 
 import { supabaseClient } from './supabaseService';
 import { recordTransaction } from './pointsService';
+import { getUserFreePoints, reservePoints } from './pointsService';
+import { awardBetAcceptanceBonus } from './pointsConfigService';
 import { v4 as uuidv4 } from 'uuid';
 
 // Straight bet status enum - matches database bet_status enum
@@ -30,6 +32,8 @@ export enum StraightBetStatus {
 export interface StraightBet {
   id: string; // UUID
   creatorId: string; // UUID - references user_accounts(id)
+  creatorAuthId?: string; // UUID - references auth.users(id) for comparison
+  creatorName?: string; // Display name of the creator (email or wallet address)
   matchId: string; // UUID - references matches(id)  
   creatorsPickId: string; // TEXT - team/player ID the creator is betting on
   amount: number; // DECIMAL(10,2) - amount being wagered
@@ -44,7 +48,7 @@ export interface StraightBet {
   createdAt: string; // TIMESTAMP WITH TIME ZONE
   updatedAt: string; // TIMESTAMP WITH TIME ZONE
   acceptedAt?: string; // TIMESTAMP WITH TIME ZONE, null if not accepted
-  completedAt?: string; // TIMESTAMP WITH TIME ZONE, null if not completed
+  completedAt?: string; // TIMESTAMP WITH TIME ZONE, null if not accepted
 }
 
 /**
@@ -388,7 +392,10 @@ export const getOpenStraightBets = async (limit: number = 50): Promise<StraightB
 
     const { data, error } = await supabaseClient
       .from('straight_bets')
-      .select('*')
+      .select(`
+        *,
+        creator:user_accounts!straight_bets_creator_id_fkey(email, wallet_address, user_id)
+      `)
       .eq('status', StraightBetStatus.OPEN)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -405,6 +412,8 @@ export const getOpenStraightBets = async (limit: number = 50): Promise<StraightB
       id: betData.id,
       matchId: betData.match_id,
       creatorId: betData.creator_id,
+      creatorAuthId: betData.creator?.user_id,
+      creatorName: betData.creator?.email || betData.creator?.wallet_address || 'Unknown',
       amount: betData.amount,
       amountCurrency: betData.amount_currency,
       creatorsPickId: betData.creators_pick_id,
@@ -591,7 +600,10 @@ export const getStraightBetsByStatus = async (status: string, limit: number = 50
   try {
     const { data, error } = await supabaseClient
       .from('straight_bets')
-      .select('*')
+      .select(`
+        *,
+        creator:user_accounts!straight_bets_creator_id_fkey(email, wallet_address, user_id)
+      `)
       .eq('status', status)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -605,6 +617,8 @@ export const getStraightBetsByStatus = async (status: string, limit: number = 50
       id: betData.id,
       matchId: betData.match_id,
       creatorId: betData.creator_id,
+      creatorAuthId: betData.creator?.user_id,
+      creatorName: betData.creator?.email || betData.creator?.wallet_address || 'Unknown',
       amount: betData.amount,
       amountCurrency: betData.amount_currency,
       creatorsPickId: betData.creators_pick_id,
@@ -622,6 +636,97 @@ export const getStraightBetsByStatus = async (status: string, limit: number = 50
     console.error('Exception getting straight bets by status:', error);
     throw error;
   }
+}; 
+
+/**
+ * Accept an open straight bet
+ *
+ * @param betId - The ID of the bet to accept
+ * @param acceptorId - The user_accounts.id of the acceptor
+ * @param acceptorsPickId - The team/player ID the acceptor is betting on
+ * @returns Promise<StraightBet> - The updated bet object
+ */
+export const acceptStraightBet = async (
+  betId: string,
+  acceptorId: string,
+  acceptorsPickId: string
+): Promise<StraightBet> => {
+  // Fetch the bet
+  const { data: betData, error: fetchError } = await supabaseClient
+    .from('straight_bets')
+    .select('*')
+    .eq('id', betId)
+    .single();
+
+  if (fetchError || !betData) {
+    throw new Error('Bet not found');
+  }
+
+  if (betData.status !== 'open') {
+    throw new Error('Bet is not open for acceptance');
+  }
+
+  if (betData.creator_id === acceptorId) {
+    throw new Error('You cannot accept your own bet');
+  }
+
+  // Check acceptor's free points
+  const freePoints = await getUserFreePoints(acceptorId);
+  if (freePoints < betData.amount) {
+    throw new Error('Insufficient points to accept this bet');
+  }
+
+  // Reserve points from acceptor
+  const reserved = await reservePoints(acceptorId, betData.amount);
+  if (!reserved) {
+    throw new Error('Failed to reserve points for bet acceptance');
+  }
+
+  // Update the bet in the database
+  const now = new Date().toISOString();
+  const { data: updatedData, error: updateError } = await supabaseClient
+    .from('straight_bets')
+    .update({
+      acceptor_id: acceptorId,
+      acceptors_pick_id: acceptorsPickId,
+      status: 'waiting_result',
+      accepted_at: now,
+      updated_at: now
+    })
+    .eq('id', betId)
+    .select()
+    .single();
+
+  if (updateError || !updatedData) {
+    throw new Error('Failed to update bet after acceptance');
+  }
+
+  // Award bet acceptance bonus to both users
+  try {
+    await awardBetAcceptanceBonus(betData.creator_id, acceptorId, betId, betData.match_id);
+  } catch (bonusError) {
+    // Log but do not fail the operation if bonus fails
+    console.error('Failed to award bet acceptance bonus:', bonusError);
+  }
+
+  // Return the updated bet object
+  return {
+    id: updatedData.id,
+    matchId: updatedData.match_id,
+    creatorId: updatedData.creator_id,
+    amount: updatedData.amount,
+    amountCurrency: updatedData.amount_currency,
+    creatorsPickId: updatedData.creators_pick_id,
+    creatorsNote: updatedData.creators_note,
+    status: updatedData.status as StraightBetStatus,
+    createdAt: updatedData.created_at,
+    updatedAt: updatedData.updated_at,
+    acceptorId: updatedData.acceptor_id || undefined,
+    acceptorsPickId: updatedData.acceptors_pick_id || undefined,
+    winnerUserId: updatedData.winner_user_id || undefined,
+    acceptedAt: updatedData.accepted_at || undefined,
+    completedAt: updatedData.completed_at || undefined
+  };
 }; 
 
  

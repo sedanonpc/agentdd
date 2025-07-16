@@ -22,6 +22,7 @@ import { MatchesProvider } from './context/MatchesContext';
 import { ChatProvider } from './context/ChatContext';
 import { PointsProvider } from './context/PointsContext';
 import { StraightBetsProvider } from './context/StraightBetsContext';
+import { BetsProvider } from './context/BetsContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { isSupabaseConfigured } from './services/supabaseService';
 import { ConsoleThemeProvider } from './theme/muiTheme';
@@ -68,8 +69,9 @@ function App() {
         <PointsProvider>
           <MatchesProvider>
             <StraightBetsProvider>
-              <BettingProvider>
-              <ChatProvider>
+              <BetsProvider>
+                <BettingProvider>
+                <ChatProvider>
               <ConsoleThemeProvider>
                 <div className="min-h-screen font-mono text-console-white bg-console-black bg-terminal-grid bg-grid relative">
                   {/* Scanline effect - positioned below content but above background */}
@@ -170,6 +172,7 @@ function App() {
               </ConsoleThemeProvider>
               </ChatProvider>
             </BettingProvider>
+              </BetsProvider>
             </StraightBetsProvider>
           </MatchesProvider>
         </PointsProvider>

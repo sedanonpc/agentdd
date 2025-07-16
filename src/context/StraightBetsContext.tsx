@@ -264,6 +264,8 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+
+
   // Load user bets when component mounts and user is authenticated
   useEffect(() => {
     if (isAuthenticated && user?.id) {
@@ -298,7 +300,7 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
 export const useStraightBets = (): StraightBetsContextType => {
   const context = useContext(StraightBetsContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useStraightBets must be used within a StraightBetsProvider');
   }
   return context;

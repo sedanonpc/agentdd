@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { Match, Team } from '../types'; // Add Match and Team import
+import { Team } from '../types'; // Add Team import
+import { Match, MatchWithDetails, NBAMatchDetail, SandboxMetaverseMatchDetail } from '../types/match';
 
 // Supabase configuration
 // Hardcoded values as a fallback when env variables have issues
@@ -442,22 +443,13 @@ export const getMatchById = async (id: string): Promise<Match | null> => {
       
       return {
         id: data.id,
-        sport_key: 'basketball_nba', // Based on event_type
-        sport_title: 'Basketball', // Default for basketball
-        commence_time: data.scheduled_start_time, // Map scheduled_start_time to commence_time
-        home_team: {
-          id: basketballDetails.home_team_id,
-          name: basketballDetails.home_team_name,
-          logo: basketballDetails.home_team_logo
-        },
-        away_team: {
-          id: basketballDetails.away_team_id,
-          name: basketballDetails.away_team_name,
-          logo: basketballDetails.away_team_logo
-        },
+        event_type: 'basketball_nba' as const,
+        details_id: data.details_id,
+        status: data.status,
+        scheduled_start_time: data.scheduled_start_time,
         bookmakers: data.bookmakers || [],
-        scores: basketballDetails.scores || null,
-        completed: data.status === 'finished'
+        created_at: data.created_at,
+        updated_at: data.updated_at
       };
     }
 
@@ -467,6 +459,128 @@ export const getMatchById = async (id: string): Promise<Match | null> => {
     return null;
   } catch (error) {
     console.error('Exception getting match by ID:', error);
+    return null;
+  }
+};
+
+/**
+ * Get match with details by ID using the new MatchWithDetails type
+ * @param id - The match ID
+ * @returns Promise<MatchWithDetails | null> - The match with its specific details
+ */
+export const getMatchWithDetailsById = async (id: string): Promise<MatchWithDetails | null> => {
+  try {
+    // First get the main match data
+    const { data: matchData, error: matchError } = await supabaseClient
+      .from('matches')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (matchError || !matchData) {
+      console.error('Error getting match by ID:', matchError);
+      return null;
+    }
+
+    // Get details based on event_type
+    if (matchData.event_type === 'basketball_nba') {
+      const { data: basketballData, error: basketballError } = await supabaseClient
+        .from('match_details_basketball_nba')
+        .select(`
+          *,
+          home_team:teams_nba!match_details_basketball_nba_home_team_id_fkey(*),
+          away_team:teams_nba!match_details_basketball_nba_away_team_id_fkey(*)
+        `)
+        .eq('id', matchData.details_id)
+        .single();
+
+      if (basketballError || !basketballData) {
+        console.error('Error getting basketball details:', basketballError);
+        return null;
+      }
+
+      const match: Match = {
+        id: matchData.id,
+        event_type: matchData.event_type,
+        details_id: matchData.details_id,
+        status: matchData.status,
+        scheduled_start_time: matchData.scheduled_start_time,
+        bookmakers: matchData.bookmakers || [],
+        created_at: matchData.created_at,
+        updated_at: matchData.updated_at,
+      };
+
+      const details: NBAMatchDetail = {
+        id: basketballData.id,
+        home_team_id: basketballData.home_team_id,
+        home_team_name: basketballData.home_team?.name || basketballData.home_team_id,
+        home_team_logo: basketballData.home_team?.logo_url,
+        away_team_id: basketballData.away_team_id,
+        away_team_name: basketballData.away_team?.name || basketballData.away_team_id,
+        away_team_logo: basketballData.away_team?.logo_url,
+        season: basketballData.season,
+        week: basketballData.week,
+        scores: basketballData.scores,
+        venue_name: basketballData.venue,
+        venue_city: basketballData.venue_city,
+        external_id: basketballData.external_id,
+        created_at: basketballData.created_at,
+        updated_at: basketballData.updated_at,
+      };
+
+      return {
+        match,
+        details,
+        event_type: 'basketball_nba'
+      };
+    } else if (matchData.event_type === 'sandbox_metaverse') {
+      const { data: sandboxData, error: sandboxError } = await supabaseClient
+        .from('match_details_sandbox_metaverse')
+        .select('*')
+        .eq('id', matchData.details_id)
+        .single();
+
+      if (sandboxError || !sandboxData) {
+        console.error('Error getting sandbox details:', sandboxError);
+        return null;
+      }
+
+      const match: Match = {
+        id: matchData.id,
+        event_type: matchData.event_type,
+        details_id: matchData.details_id,
+        status: matchData.status,
+        scheduled_start_time: matchData.scheduled_start_time,
+        bookmakers: matchData.bookmakers || [],
+        created_at: matchData.created_at,
+        updated_at: matchData.updated_at,
+      };
+
+      const details: SandboxMetaverseMatchDetail = {
+        id: sandboxData.id,
+        player1_id: sandboxData.player1_id,
+        player1_name: sandboxData.player1_name,
+        player1_subtitle: sandboxData.player1_subtitle,
+        player1_image_url: sandboxData.player1_image_url,
+        player2_id: sandboxData.player2_id,
+        player2_name: sandboxData.player2_name,
+        player2_subtitle: sandboxData.player2_subtitle,
+        player2_image_url: sandboxData.player2_image_url,
+        created_at: sandboxData.created_at,
+        updated_at: sandboxData.updated_at,
+      };
+
+      return {
+        match,
+        details,
+        event_type: 'sandbox_metaverse'
+      };
+    }
+
+    console.error('Unsupported event_type:', matchData.event_type);
+    return null;
+  } catch (error) {
+    console.error('Exception getting match with details by ID:', error);
     return null;
   }
 };

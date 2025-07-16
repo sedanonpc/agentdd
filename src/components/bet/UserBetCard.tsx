@@ -10,7 +10,7 @@ interface UserBetCardProps {
 
 const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
   const [showShareModal, setShowShareModal] = useState(false);
-
+  
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
