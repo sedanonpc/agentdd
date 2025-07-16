@@ -21,22 +21,64 @@ export const MatchesProvider: React.FC<{ children: ReactNode }> = ({ children })
   const { isLoading: authLoading, isAuthenticated } = useAuth();
 
   const fetchDetailsForMatch = async (match: Match): Promise<MatchWithDetails | null> => {
-    if (match.event_type === 'basketball_nba') {
+    if (match.eventType === 'basketball_nba') {
       const { data, error } = await supabaseClient
         .from('match_details_basketball_nba')
-        .select('*')
-        .eq('id', match.details_id)
+        .select(`
+          *,
+          home_team:teams_nba!match_details_basketball_nba_home_team_id_fkey(*),
+          away_team:teams_nba!match_details_basketball_nba_away_team_id_fkey(*)
+        `)
+        .eq('id', match.detailsId)
         .single();
       if (error || !data) return null;
-      return { match, details: data as NBAMatchDetail, event_type: 'basketball_nba' };
-    } else if (match.event_type === 'sandbox_metaverse') {
+      
+      // Convert database fields to camelCase to match interfaces
+      const details: NBAMatchDetail = {
+        id: data.id,
+        homeTeamId: data.home_team_id,
+        homeTeamName: data.home_team?.name || data.home_team_id,
+        homeTeamLogo: data.home_team?.logo_url,
+        awayTeamId: data.away_team_id,
+        awayTeamName: data.away_team?.name || data.away_team_id,
+        awayTeamLogo: data.away_team?.logo_url,
+        season: data.season,
+        week: data.week,
+        scores: data.scores,
+        venue: data.venue,
+        gameSubtitle: data.game_subtitle,
+        venueName: data.venue,
+        venueCity: data.venue_city,
+        externalId: data.external_id,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+      
+      return { match, details, eventType: 'basketball_nba' };
+    } else if (match.eventType === 'sandbox_metaverse') {
       const { data, error } = await supabaseClient
         .from('match_details_sandbox_metaverse')
         .select('*')
-        .eq('id', match.details_id)
+        .eq('id', match.detailsId)
         .single();
       if (error || !data) return null;
-      return { match, details: data as SandboxMetaverseMatchDetail, event_type: 'sandbox_metaverse' };
+      
+      // Convert database fields to camelCase to match interfaces
+      const details: SandboxMetaverseMatchDetail = {
+        id: data.id,
+        player1Id: data.player1_id,
+        player1Name: data.player1_name,
+        player1Subtitle: data.player1_subtitle,
+        player1ImageUrl: data.player1_image_url,
+        player2Id: data.player2_id,
+        player2Name: data.player2_name,
+        player2Subtitle: data.player2_subtitle,
+        player2ImageUrl: data.player2_image_url,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+      
+      return { match, details, eventType: 'sandbox_metaverse' };
     }
     return null;
   };
@@ -46,7 +88,17 @@ export const MatchesProvider: React.FC<{ children: ReactNode }> = ({ children })
     setError(null);
     try {
       const dbMatches = await getUpcomingMatches(100);
-      const detailsPromises = dbMatches.map(fetchDetailsForMatch);
+      // Convert database field names to camelCase to match Match interface
+      const convertedMatches = dbMatches.map((match: any) => ({
+        id: match.id,
+        eventType: match.event_type,
+        detailsId: match.details_id,
+        status: match.status,
+        scheduledStartTime: match.scheduled_start_time,
+        createdAt: match.created_at,
+        updatedAt: match.updated_at
+      } as Match));
+      const detailsPromises = convertedMatches.map(fetchDetailsForMatch);
       const detailsResults = await Promise.all(detailsPromises);
       setMatchesWithDetails(detailsResults.filter(Boolean) as MatchWithDetails[]);
     } catch (err) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, MessageSquare } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 interface SandboxMatchCardProps {
   scheduledStartTime: string;
@@ -9,9 +9,7 @@ interface SandboxMatchCardProps {
   player2Name: string;
   player2Subtitle?: string;
   player2ImageUrl?: string;
-  onSelectForChat: () => void;
   onSelectForBetting: () => void;
-  isChatSelected: boolean;
   isBettingSelected: boolean;
 }
 
@@ -25,22 +23,27 @@ export const SandboxMatchCard: React.FC<SandboxMatchCardProps> = ({
   player2Name,
   player2Subtitle,
   player2ImageUrl,
-  onSelectForChat,
   onSelectForBetting,
-  isChatSelected,
   isBettingSelected
 }) => {
-  const handleChatButtonClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    onSelectForChat();
-  };
+  console.log('SandboxMatchCard props:', {
+    scheduledStartTime,
+    player1Name,
+    player1Subtitle,
+    player1ImageUrl,
+    player2Name,
+    player2Subtitle,
+    player2ImageUrl,
+    isBettingSelected
+  });
+
   const handleBetButtonClick = (e: React.MouseEvent) => {
     e.preventDefault();
     onSelectForBetting();
   };
   return (
     <div className={`bg-console-gray-terminal/70 backdrop-blur-xs border-1 ${
-      isChatSelected || isBettingSelected ? 'border-console-blue-bright shadow-glow' : 'border-console-blue shadow-terminal'
+      isBettingSelected ? 'border-console-blue-bright shadow-glow' : 'border-console-blue shadow-terminal'
     } overflow-hidden hover:shadow-glow transition-all group`}>
       <div className="bg-console-gray/70 backdrop-blur-xs p-3">
         <div className="flex flex-wrap justify-between items-center">
@@ -122,7 +125,8 @@ export const SandboxMatchCard: React.FC<SandboxMatchCardProps> = ({
             </span>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap justify-between items-center gap-2">
+        {/* BET NOW Button - positioned in lower right for consistency */}
+        <div className="mt-4 flex justify-end">
           <button
             onClick={handleBetButtonClick}
             className={`flex items-center gap-1 px-3 py-1 ${
@@ -131,15 +135,6 @@ export const SandboxMatchCard: React.FC<SandboxMatchCardProps> = ({
           >
             <Zap className="h-4 w-4" />
             <span className="text-xs font-mono">BET NOW</span>
-          </button>
-          <button
-            onClick={handleChatButtonClick}
-            className={`flex items-center gap-1 px-2 py-1 ${
-              isChatSelected ? 'bg-[#00A4FF] text-console-white' : 'bg-console-black/50 text-[#00A4FF]'
-            } border-1 ${isChatSelected ? 'border-[#00A4FF]' : 'border-[#00A4FF]'} hover:bg-[#00A4FF]/70 hover:text-console-white transition-colors`}
-          >
-            <MessageSquare className="h-4 w-4" />
-            <span className="text-xs font-mono">COMMUNITY CHAT</span>
           </button>
         </div>
       </div>

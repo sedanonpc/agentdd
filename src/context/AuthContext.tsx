@@ -15,7 +15,8 @@ import {
 import { User } from '@supabase/supabase-js';
 
 interface AuthUser {
-  id: string;
+  accountId: string;  // This is user_accounts.id
+  userId: string;  // This is auth.users.id
   email?: string;
   walletAddress?: string;
   isAdmin?: boolean;
@@ -63,21 +64,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (supabaseUser) {
               const account = await getUserAccount(supabaseUser.id);
               
-              setUser({
-                id: supabaseUser.id,
-                email: supabaseUser.email,
-                walletAddress: account?.wallet_address,
-                isAdmin: account?.is_admin || false
-              });
-              
-              // Update admin status
-              setIsAdmin(account?.is_admin || false);
-              setAuthMethod('email');
+              if (account) {
+                setUser({
+                  accountId: account.id,  // Use user_accounts.id
+                  userId: supabaseUser.id,  // Store auth.users.id separately
+                  email: supabaseUser.email,
+                  walletAddress: account.wallet_address,
+                  isAdmin: account.is_admin || false
+                });
+                
+                // Update admin status
+                setIsAdmin(account.is_admin || false);
+                setAuthMethod('email');
+              }
             }
           } else if (isConnected && account) {
             // User is connected via wallet
             setUser({
-              id: account,
+              accountId: account,
+              userId: account, // For wallet users, the wallet address is both the id and authId
               walletAddress: account
             });
             setAuthMethod('wallet');
@@ -93,7 +98,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           } else if (isConnected && account) {
             // User is connected via wallet
             setUser({
-              id: account,
+              accountId: account,
+              userId: account, // For wallet users, the wallet address is both the id and authId
               walletAddress: account
             });
             setAuthMethod('wallet');
@@ -142,7 +148,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           // Set or update the user with wallet info
           setUser({
-            id: account,
+            accountId: account,
+            userId: account, // For wallet users, the wallet address is both the id and authId
             walletAddress: account
           });
           setAuthMethod('wallet');
@@ -150,7 +157,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // User already logged in with email, update their wallet address
           setUser({
             ...user,
-            walletAddress: account
+            walletAddress: account,
+            userId: user.accountId // Keep the existing authId
           });
         }
       } else if (authMethod === 'wallet' && !isConnected) {
@@ -173,21 +181,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (supabaseUser) {
           const account = await getUserAccount(supabaseUser.id);
           
-          setUser({
-            id: supabaseUser.id,
-            email: supabaseUser.email,
-            walletAddress: account?.wallet_address,
-            isAdmin: account?.is_admin || false
-          });
-          
-          // Update admin status
-          setIsAdmin(account?.is_admin || false);
-          setAuthMethod('email');
+          if (account) {
+            setUser({
+              accountId: account.id,  // Use user_accounts.id
+              userId: supabaseUser.id,  // Store auth.users.id separately
+              email: supabaseUser.email,
+              walletAddress: account.wallet_address,
+              isAdmin: account.is_admin || false
+            });
+            
+            // Update admin status
+            setIsAdmin(account.is_admin || false);
+            setAuthMethod('email');
+          }
         }
       } else {
         // Fallback to mock authentication
         const mockUser = {
-          id: `user_${Date.now()}`,
+          accountId: `user_${Date.now()}`,
+          userId: `user_${Date.now()}`, // For mock users, use the same generated ID
           email: email
         };
         
@@ -215,7 +227,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const { user: supabaseUser } = await signUpWithEmail(email, password);
         if (supabaseUser) {
           setUser({
-            id: supabaseUser.id,
+            accountId: supabaseUser.id,
+            userId: supabaseUser.id,
             email: supabaseUser.email
           });
           setAuthMethod('email');
@@ -239,12 +252,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (account) {
         if (isSupabaseAvailable && authMethod === 'email' && user) {
           // If user is already logged in via email, link the wallet to their account
-          await linkWalletToUser(user.id, account);
+          await linkWalletToUser(user.accountId, account);
           
           // Update the user state
           setUser({
             ...user,
-            walletAddress: account
+            walletAddress: account,
+            userId: user.accountId // Keep the existing authId
           });
         } else {
           // Check if this wallet user exists in the database
@@ -275,7 +289,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           // Set user state
           setUser({
-            id: account,
+            accountId: account,
+            userId: account, // For wallet users, the wallet address is both the id and authId
             walletAddress: account
           });
           setAuthMethod('wallet');

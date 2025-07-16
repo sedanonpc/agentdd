@@ -7,7 +7,11 @@ import Modal from '../common/Modal';
 
 interface StraightBetCardProps {
   bet: any; // Replace 'any' with the correct StraightBet type if available
-  matchWithDetails: MatchWithDetails | null;
+  matchWithDetails: {
+    id: string;
+    eventType: string;
+    details: any;
+  } | null;
   status?: string;
 }
 
@@ -26,62 +30,59 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Debug logging
+  console.log('🎯 StraightBetCard render:', {
+    betId: bet?.id,
+    creatorUsername: bet?.creatorUsername,
+    matchWithDetails: !!matchWithDetails,
+    eventType: matchWithDetails?.eventType,
+    detailsAvailable: !!matchWithDetails?.details
+  });
+
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString();
   };
 
-  // Determine if Accept button should be shown - use auth.users.id for comparison
-  const isCreator = user && bet.creatorAuthId === user.id;
+  // Determine if Accept button should be shown - use user_accounts.id for comparison
+  const isCreator = user && bet.creatorId === user.accountId;
   const isOpen = bet.status === 'open';
-  const canAccept = user && !isCreator && isOpen;
+  const canAccept = user && !isCreator && isOpen && userBalance >= bet.amount;
 
-  // Auto-determine the acceptor's pick based on match details
-  const getAcceptorsPick = (): string => {
-    if (!matchWithDetails) return '';
-    
-    if (matchWithDetails.event_type === 'basketball_nba') {
-      // For NBA, the acceptor picks the opposite team of what the creator picked
-      const creatorPick = bet.creatorsPickId;
-      const homeTeamId = matchWithDetails.details.home_team_id;
-      const awayTeamId = matchWithDetails.details.away_team_id;
-      
-      if (creatorPick === homeTeamId) {
-        return awayTeamId;
-      } else if (creatorPick === awayTeamId) {
-        return homeTeamId;
-      }
-      // If creator's pick doesn't match either team, default to away team
-      return awayTeamId;
-    } else if (matchWithDetails.event_type === 'sandbox_metaverse') {
-      // For Sandbox, the acceptor picks the opposite player of what the creator picked
-      const creatorPick = bet.creatorsPickId;
-      const player1Id = matchWithDetails.details.player1_id;
-      const player2Id = matchWithDetails.details.player2_id;
-      
-      if (creatorPick === player1Id) {
-        return player2Id;
-      } else if (creatorPick === player2Id) {
-        return player1Id;
-      }
-      // If creator's pick doesn't match either player, default to player2
-      return player2Id;
+  // Get display information for the match
+  const getMatchDisplayInfo = () => {
+    if (!matchWithDetails) {
+      return { sport: 'No Match Data', teams: 'Match details unavailable' };
     }
     
-    return '';
+    if (matchWithDetails.eventType === 'basketball_nba') {
+      const { homeTeamName, awayTeamName } = matchWithDetails.details;
+      return {
+        sport: SPORT_LABELS[matchWithDetails.eventType] || matchWithDetails.eventType,
+        teams: `${homeTeamName} vs ${awayTeamName}`
+      };
+    } else if (matchWithDetails.eventType === 'sandbox_metaverse') {
+      const { player1Name, player2Name } = matchWithDetails.details;
+      return {
+        sport: SPORT_LABELS[matchWithDetails.eventType] || matchWithDetails.eventType,
+        teams: `${player1Name} vs ${player2Name}`
+      };
+    }
+    
+    return { 
+      sport: matchWithDetails.eventType || 'Unknown Event Type',
+      teams: 'Match details unavailable'
+    };
   };
 
   // Get pick names for display
   const getPickNames = () => {
     if (!matchWithDetails) return { creatorPick: 'Unknown', acceptorPick: 'Unknown' };
     
-    if (matchWithDetails.event_type === 'basketball_nba') {
+    if (matchWithDetails.eventType === 'basketball_nba') {
+      const { homeTeamId, awayTeamId, homeTeamName, awayTeamName } = matchWithDetails.details;
       const creatorPick = bet.creatorsPickId;
-      const homeTeamId = matchWithDetails.details.home_team_id;
-      const awayTeamId = matchWithDetails.details.away_team_id;
-      const homeTeamName = matchWithDetails.details.home_team_name;
-      const awayTeamName = matchWithDetails.details.away_team_name;
       
       let creatorPickName = 'Unknown';
       let acceptorPickName = 'Unknown';
@@ -95,12 +96,9 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails
       }
       
       return { creatorPick: creatorPickName, acceptorPick: acceptorPickName };
-    } else if (matchWithDetails.event_type === 'sandbox_metaverse') {
+    } else if (matchWithDetails.eventType === 'sandbox_metaverse') {
+      const { player1Id, player2Id, player1Name, player2Name } = matchWithDetails.details;
       const creatorPick = bet.creatorsPickId;
-      const player1Id = matchWithDetails.details.player1_id;
-      const player2Id = matchWithDetails.details.player2_id;
-      const player1Name = matchWithDetails.details.player1_name;
-      const player2Name = matchWithDetails.details.player2_name;
       
       let creatorPickName = 'Unknown';
       let acceptorPickName = 'Unknown';
@@ -117,6 +115,35 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails
     }
     
     return { creatorPick: 'Unknown', acceptorPick: 'Unknown' };
+  };
+
+  // Auto-determine the acceptor's pick based on match details
+  const getAcceptorsPick = (): string => {
+    if (!matchWithDetails) return '';
+    
+    if (matchWithDetails.eventType === 'basketball_nba') {
+      const creatorPick = bet.creatorsPickId;
+      const { homeTeamId, awayTeamId } = matchWithDetails.details;
+      
+      if (creatorPick === homeTeamId) {
+        return awayTeamId;
+      } else if (creatorPick === awayTeamId) {
+        return homeTeamId;
+      }
+      return awayTeamId;
+    } else if (matchWithDetails.eventType === 'sandbox_metaverse') {
+      const creatorPick = bet.creatorsPickId;
+      const { player1Id, player2Id } = matchWithDetails.details;
+      
+      if (creatorPick === player1Id) {
+        return player2Id;
+      } else if (creatorPick === player2Id) {
+        return player1Id;
+      }
+      return player2Id;
+    }
+    
+    return '';
   };
 
   const handleAccept = async () => {
@@ -144,29 +171,6 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails
     }
   };
 
-  // Get display information for the match
-  const getMatchDisplayInfo = () => {
-    if (!matchWithDetails) return { sport: 'Unknown Sport', teams: 'Match details unavailable' };
-    
-    if (matchWithDetails.event_type === 'basketball_nba') {
-      const homeTeam = matchWithDetails.details.home_team_name;
-      const awayTeam = matchWithDetails.details.away_team_name;
-      return {
-        sport: SPORT_LABELS[matchWithDetails.match.event_type] || matchWithDetails.match.event_type,
-        teams: `${homeTeam} vs ${awayTeam}`
-      };
-    } else if (matchWithDetails.event_type === 'sandbox_metaverse') {
-      const player1 = matchWithDetails.details.player1_name;
-      const player2 = matchWithDetails.details.player2_name;
-      return {
-        sport: SPORT_LABELS[matchWithDetails.match.event_type] || matchWithDetails.match.event_type,
-        teams: `${player1} vs ${player2}`
-      };
-    }
-    
-    return { sport: 'Unknown Sport', teams: 'Match details unavailable' };
-  };
-
   const matchInfo = getMatchDisplayInfo();
   const pickNames = getPickNames();
 
@@ -187,7 +191,7 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails
         {matchInfo.teams}
       </div>
       <div className="text-sm font-mono text-console-white-dim">
-        Created by: <span className="text-console-white">{bet.creatorName || 'Unknown'}</span>
+        Created by: <span className="text-console-white">{bet.creatorUsername || 'Unknown'}</span>
       </div>
       {bet.creatorsNote && (
         <div className="text-xs font-mono text-console-white-dim mt-2 italic">"{bet.creatorsNote}"</div>
@@ -214,7 +218,7 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails
               <div>Amount: <span className="text-[#E5FF03]">{bet.amount} $DARE</span></div>
               <div>Your Points: <span className="text-[#E5FF03]">{userBalance}</span></div>
               <div>Match: {matchInfo.teams}</div>
-              <div>Creator: <span className="text-console-white">{bet.creatorName || 'Unknown'}</span></div>
+              <div>Creator: <span className="text-console-white">{bet.creatorUsername || 'Unknown'}</span></div>
               <div>Creator's Pick: <span className="text-[#E5FF03]">{pickNames.creatorPick}</span></div>
             </div>
             

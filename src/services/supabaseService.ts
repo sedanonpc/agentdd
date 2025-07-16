@@ -501,31 +501,32 @@ export const getMatchWithDetailsById = async (id: string): Promise<MatchWithDeta
 
       const match: Match = {
         id: matchData.id,
-        event_type: matchData.event_type,
-        details_id: matchData.details_id,
+        eventType: matchData.event_type,
+        detailsId: matchData.details_id,
         status: matchData.status,
-        scheduled_start_time: matchData.scheduled_start_time,
-        bookmakers: matchData.bookmakers || [],
-        created_at: matchData.created_at,
-        updated_at: matchData.updated_at,
+        scheduledStartTime: matchData.scheduled_start_time,
+        createdAt: matchData.created_at,
+        updatedAt: matchData.updated_at,
       };
 
       const details: NBAMatchDetail = {
         id: basketballData.id,
-        home_team_id: basketballData.home_team_id,
-        home_team_name: basketballData.home_team?.name || basketballData.home_team_id,
-        home_team_logo: basketballData.home_team?.logo_url,
-        away_team_id: basketballData.away_team_id,
-        away_team_name: basketballData.away_team?.name || basketballData.away_team_id,
-        away_team_logo: basketballData.away_team?.logo_url,
+        homeTeamId: basketballData.home_team_id,
+        homeTeamName: basketballData.home_team?.name || basketballData.home_team_id,
+        homeTeamLogo: basketballData.home_team?.logo_url,
+        awayTeamId: basketballData.away_team_id,
+        awayTeamName: basketballData.away_team?.name || basketballData.away_team_id,
+        awayTeamLogo: basketballData.away_team?.logo_url,
         season: basketballData.season,
         week: basketballData.week,
         scores: basketballData.scores,
-        venue_name: basketballData.venue,
-        venue_city: basketballData.venue_city,
-        external_id: basketballData.external_id,
-        created_at: basketballData.created_at,
-        updated_at: basketballData.updated_at,
+        venue: basketballData.venue,
+        gameSubtitle: basketballData.game_subtitle,
+        venueName: basketballData.venue,
+        venueCity: basketballData.venue_city,
+        externalId: basketballData.external_id,
+        createdAt: basketballData.created_at,
+        updatedAt: basketballData.updated_at,
       };
 
       return {
@@ -547,27 +548,27 @@ export const getMatchWithDetailsById = async (id: string): Promise<MatchWithDeta
 
       const match: Match = {
         id: matchData.id,
-        event_type: matchData.event_type,
-        details_id: matchData.details_id,
+        eventType: matchData.event_type,
+        detailsId: matchData.details_id,
         status: matchData.status,
-        scheduled_start_time: matchData.scheduled_start_time,
+        scheduledStartTime: matchData.scheduled_start_time,
         bookmakers: matchData.bookmakers || [],
-        created_at: matchData.created_at,
-        updated_at: matchData.updated_at,
+        createdAt: matchData.created_at,
+        updatedAt: matchData.updated_at,
       };
 
       const details: SandboxMetaverseMatchDetail = {
         id: sandboxData.id,
-        player1_id: sandboxData.player1_id,
-        player1_name: sandboxData.player1_name,
-        player1_subtitle: sandboxData.player1_subtitle,
-        player1_image_url: sandboxData.player1_image_url,
-        player2_id: sandboxData.player2_id,
-        player2_name: sandboxData.player2_name,
-        player2_subtitle: sandboxData.player2_subtitle,
-        player2_image_url: sandboxData.player2_image_url,
-        created_at: sandboxData.created_at,
-        updated_at: sandboxData.updated_at,
+        player1Id: sandboxData.player1_id,
+        player1Name: sandboxData.player1_name,
+        player1Subtitle: sandboxData.player1_subtitle,
+        player1ImageUrl: sandboxData.player1_image_url,
+        player2Id: sandboxData.player2_id,
+        player2Name: sandboxData.player2_name,
+        player2Subtitle: sandboxData.player2_subtitle,
+        player2ImageUrl: sandboxData.player2_image_url,
+        createdAt: sandboxData.created_at,
+        updatedAt: sandboxData.updated_at,
       };
 
       return {

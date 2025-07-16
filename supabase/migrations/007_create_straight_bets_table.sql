@@ -33,12 +33,14 @@ END$$;
 CREATE TABLE IF NOT EXISTS straight_bets (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   creator_id UUID NOT NULL REFERENCES user_accounts(id) ON DELETE CASCADE,
+  creator_username TEXT NOT NULL,  -- Store username directly
   match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
   creators_pick_id TEXT NOT NULL,
   amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
   amount_currency currency_type NOT NULL DEFAULT 'points',
   creators_note TEXT,
   acceptor_id UUID REFERENCES user_accounts(id) ON DELETE CASCADE,
+  acceptor_username TEXT,  -- Store username directly (nullable since bet might not be accepted yet)
   acceptors_pick_id TEXT,
   status bet_status NOT NULL DEFAULT 'open',
   winner_user_id UUID REFERENCES user_accounts(id) ON DELETE SET NULL,
@@ -61,11 +63,11 @@ CREATE TABLE IF NOT EXISTS straight_bets (
   ),
   CONSTRAINT valid_acceptance CHECK (
     -- Open bets: no acceptor data
-    (status = 'open' AND acceptor_id IS NULL AND accepted_at IS NULL AND acceptors_pick_id IS NULL) OR
+    (status = 'open' AND acceptor_id IS NULL AND accepted_at IS NULL AND acceptors_pick_id IS NULL AND acceptor_username IS NULL) OR
     -- Cancelled bets: no acceptor data (can be cancelled before acceptance)
-    (status = 'cancelled' AND acceptor_id IS NULL AND accepted_at IS NULL AND acceptors_pick_id IS NULL) OR
+    (status = 'cancelled' AND acceptor_id IS NULL AND accepted_at IS NULL AND acceptors_pick_id IS NULL AND acceptor_username IS NULL) OR
     -- Non-open, non-cancelled bets: must have acceptor data
-    (status NOT IN ('open', 'cancelled') AND acceptor_id IS NOT NULL AND accepted_at IS NOT NULL AND acceptors_pick_id IS NOT NULL)
+    (status NOT IN ('open', 'cancelled') AND acceptor_id IS NOT NULL AND accepted_at IS NOT NULL AND acceptors_pick_id IS NOT NULL AND acceptor_username IS NOT NULL)
   ),
   CONSTRAINT valid_completion CHECK (
     (status != 'completed' AND completed_at IS NULL AND winner_user_id IS NULL) OR
@@ -103,15 +105,13 @@ ALTER TABLE straight_bets ENABLE ROW LEVEL SECURITY;
 -- Users can view bets they created or accepted
 CREATE POLICY "Users can view their own bets" ON straight_bets
     FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM user_accounts 
-            WHERE user_accounts.id = creator_id 
-            AND user_accounts.user_id = auth.uid()
+        creator_id IN (
+            SELECT id FROM user_accounts 
+            WHERE user_id = auth.uid()
         ) OR 
-        EXISTS (
-            SELECT 1 FROM user_accounts 
-            WHERE user_accounts.id = acceptor_id 
-            AND user_accounts.user_id = auth.uid()
+        acceptor_id IN (
+            SELECT id FROM user_accounts 
+            WHERE user_id = auth.uid()
         )
     );
 
@@ -122,24 +122,25 @@ CREATE POLICY "Users can view open bets" ON straight_bets
 -- Users can create bets
 CREATE POLICY "Users can create bets" ON straight_bets
     FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM user_accounts 
-            WHERE user_accounts.id = creator_id 
-            AND user_accounts.user_id = auth.uid()
+        creator_id IN (
+            SELECT id FROM user_accounts 
+            WHERE user_id = auth.uid()
         )
     );
 
 -- Users can update their own open bets (e.g., to accept them)
 CREATE POLICY "Users can update bets" ON straight_bets
     FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM user_accounts 
-            WHERE user_accounts.id = creator_id 
-            AND user_accounts.user_id = auth.uid()
+        creator_id IN (
+            SELECT id FROM user_accounts 
+            WHERE user_id = auth.uid()
         ) OR 
         (status = 'open' AND auth.uid() IS NOT NULL)
     );
 
 -- Grant necessary permissions to authenticated users
 GRANT USAGE ON SCHEMA public TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.straight_bets TO authenticated; 
+GRANT SELECT, INSERT, UPDATE ON public.straight_bets TO authenticated;
+
+-- Remove the problematic RLS policy from user_accounts
+DROP POLICY IF EXISTS "Users can view basic account info of bet participants" ON public.user_accounts; 

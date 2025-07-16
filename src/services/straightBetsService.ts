@@ -33,13 +33,14 @@ export interface StraightBet {
   id: string; // UUID
   creatorId: string; // UUID - references user_accounts(id)
   creatorAuthId?: string; // UUID - references auth.users(id) for comparison
-  creatorName?: string; // Display name of the creator (email or wallet address)
+  creatorUsername: string; // Username of the creator (email or wallet address)
   matchId: string; // UUID - references matches(id)  
   creatorsPickId: string; // TEXT - team/player ID the creator is betting on
   amount: number; // DECIMAL(10,2) - amount being wagered
   amountCurrency: 'points'; // currency_type enum
   creatorsNote?: string; // TEXT - optional note from creator
   acceptorId?: string; // UUID - references user_accounts(id), null if not accepted
+  acceptorUsername?: string; // Username of the acceptor (email or wallet address), null if not accepted
   acceptorsPickId?: string; // TEXT - team/player ID the acceptor is betting on
   status: StraightBetStatus; // bet_status enum
   winnerUserId?: string; // UUID - references user_accounts(id), null if not completed
@@ -87,9 +88,25 @@ export const createStraightBet = async (
   try {
     const betId = uuidv4();
     
+    // Get creator's username from user_accounts
+    const { data: userData, error: userError } = await supabaseClient
+      .from('user_accounts')
+      .select('email, wallet_address')
+      .eq('id', creatorId)
+      .single();
+
+    if (userError || !userData) {
+      console.error('Error fetching creator info:', userError);
+      throw new Error('Failed to fetch creator information');
+    }
+
+    // Use email if available, otherwise use wallet address
+    const creatorUsername = userData.email || userData.wallet_address;
+    
     console.log('Creating straight bet in straight_bets table:', {
       betId,
       creatorId,
+      creatorUsername,
       matchId,
       creatorsPickId,
       amount,
@@ -102,6 +119,7 @@ export const createStraightBet = async (
       .insert({
         id: betId,
         creator_id: creatorId,
+        creator_username: creatorUsername,  // Add creator's username
         match_id: matchId,
         creators_pick_id: creatorsPickId,
         amount: amount,
@@ -153,6 +171,7 @@ export const createStraightBet = async (
       id: betData.id,
       matchId: betData.match_id,
       creatorId: betData.creator_id,
+      creatorUsername: betData.creator_username,
       amount: betData.amount,
       amountCurrency: betData.amount_currency,
       creatorsPickId: betData.creators_pick_id,
@@ -161,6 +180,8 @@ export const createStraightBet = async (
       createdAt: betData.created_at,
       updatedAt: betData.updated_at,
       acceptorId: betData.acceptor_id || undefined,
+      acceptorUsername: betData.acceptor_username || undefined,
+      acceptorsPickId: betData.acceptors_pick_id || undefined,
       winnerUserId: betData.winner_user_id || undefined,
       acceptedAt: betData.accepted_at || undefined,
       completedAt: betData.completed_at || undefined
@@ -360,6 +381,7 @@ export const getUserStraightBets = async (
       id: betData.id,
       matchId: betData.match_id,
       creatorId: betData.creator_id,
+      creatorUsername: betData.creator_username,
       amount: betData.amount,
       amountCurrency: betData.amount_currency,
       creatorsPickId: betData.creators_pick_id,
@@ -368,6 +390,7 @@ export const getUserStraightBets = async (
       createdAt: betData.created_at,
       updatedAt: betData.updated_at,
       acceptorId: betData.acceptor_id || undefined,
+      acceptorUsername: betData.acceptor_username || undefined,
       acceptorsPickId: betData.acceptors_pick_id || undefined,
       winnerUserId: betData.winner_user_id || undefined,
       acceptedAt: betData.accepted_at || undefined,
@@ -390,11 +413,17 @@ export const getOpenStraightBets = async (limit: number = 50): Promise<StraightB
   try {
     console.log('Fetching open straight bets');
 
+    // First get the bets with basic match info
     const { data, error } = await supabaseClient
       .from('straight_bets')
       .select(`
         *,
-        creator:user_accounts!straight_bets_creator_id_fkey(email, wallet_address, user_id)
+        creator:user_accounts!straight_bets_creator_id_fkey(email, wallet_address, user_id),
+        match:matches!straight_bets_match_id_fkey(
+          id,
+          event_type,
+          details_id
+        )
       `)
       .eq('status', StraightBetStatus.OPEN)
       .order('created_at', { ascending: false })
@@ -405,28 +434,79 @@ export const getOpenStraightBets = async (limit: number = 50): Promise<StraightB
       throw new Error(`Failed to fetch open bets: ${error.message}`);
     }
 
-    console.log(`Found ${data?.length || 0} open straight bets`);
+    // Now fetch details for each match based on event type
+    const betsWithDetails = await Promise.all((data || []).map(async (betData: any) => {
+      const match = betData.match;
+      let details = null;
 
-    // Convert database records to StraightBet interface
-    return (data || []).map((betData: any) => ({
-      id: betData.id,
-      matchId: betData.match_id,
-      creatorId: betData.creator_id,
-      creatorAuthId: betData.creator?.user_id,
-      creatorName: betData.creator?.email || betData.creator?.wallet_address || 'Unknown',
-      amount: betData.amount,
-      amountCurrency: betData.amount_currency,
-      creatorsPickId: betData.creators_pick_id,
-      creatorsNote: betData.creators_note,
-      status: betData.status as StraightBetStatus,
-      createdAt: betData.created_at,
-      updatedAt: betData.updated_at,
-      acceptorId: betData.acceptor_id || undefined,
-      acceptorsPickId: betData.acceptors_pick_id || undefined,
-      winnerUserId: betData.winner_user_id || undefined,
-      acceptedAt: betData.accepted_at || undefined,
-      completedAt: betData.completed_at || undefined
+      if (match) {
+        if (match.event_type === 'basketball_nba') {
+          // Get NBA match details
+          const { data: nbaDetails } = await supabaseClient
+            .from('match_details_basketball_nba')
+            .select(`
+              *,
+              home_team:teams_nba!home_team_id(name),
+              away_team:teams_nba!away_team_id(name)
+            `)
+            .eq('id', match.details_id)
+            .single();
+
+          if (nbaDetails) {
+            details = {
+              homeTeamId: nbaDetails.home_team_id,
+              homeTeamName: nbaDetails.home_team?.name,
+              awayTeamId: nbaDetails.away_team_id,
+              awayTeamName: nbaDetails.away_team?.name
+            };
+          }
+        } else if (match.event_type === 'sandbox_metaverse') {
+          // Get Sandbox match details
+          const { data: sandboxDetails } = await supabaseClient
+            .from('match_details_sandbox_metaverse')
+            .select('*')
+            .eq('id', match.details_id)
+            .single();
+
+          if (sandboxDetails) {
+            details = {
+              player1Id: sandboxDetails.player1_id,
+              player1Name: sandboxDetails.player1_name,
+              player2Id: sandboxDetails.player2_id,
+              player2Name: sandboxDetails.player2_name
+            };
+          }
+        }
+      }
+
+      return {
+        id: betData.id,
+        matchId: betData.match_id,
+        creatorId: betData.creator_id,
+        creatorUsername: betData.creator_username,
+        amount: betData.amount,
+        amountCurrency: betData.amount_currency,
+        creatorsPickId: betData.creators_pick_id,
+        creatorsNote: betData.creators_note,
+        status: betData.status as StraightBetStatus,
+        createdAt: betData.created_at,
+        updatedAt: betData.updated_at,
+        acceptorId: betData.acceptor_id || undefined,
+        acceptorUsername: betData.acceptor_username || undefined,
+        acceptorsPickId: betData.acceptors_pick_id || undefined,
+        winnerUserId: betData.winner_user_id || undefined,
+        acceptedAt: betData.accepted_at || undefined,
+        completedAt: betData.completed_at || undefined,
+        matchWithDetails: match ? {
+          id: match.id,
+          eventType: match.event_type,
+          details
+        } : null
+      };
     }));
+
+    console.log(`Found ${betsWithDetails.length} open straight bets`);
+    return betsWithDetails;
 
   } catch (error) {
     console.error('Exception getting open straight bets:', error);
@@ -598,11 +678,17 @@ export const cancelStraightBet = async (betId: string, userId: string): Promise<
 
 export const getStraightBetsByStatus = async (status: string, limit: number = 50): Promise<StraightBet[]> => {
   try {
+    // First get the bets with basic match info
     const { data, error } = await supabaseClient
       .from('straight_bets')
       .select(`
         *,
-        creator:user_accounts!straight_bets_creator_id_fkey(email, wallet_address, user_id)
+        creator:user_accounts!straight_bets_creator_id_fkey(email, wallet_address, user_id),
+        match:matches!straight_bets_match_id_fkey(
+          id,
+          event_type,
+          details_id
+        )
       `)
       .eq('status', status)
       .order('created_at', { ascending: false })
@@ -613,25 +699,77 @@ export const getStraightBetsByStatus = async (status: string, limit: number = 50
       throw new Error(`Failed to fetch bets by status: ${error.message}`);
     }
 
-    return (data || []).map((betData: any) => ({
-      id: betData.id,
-      matchId: betData.match_id,
-      creatorId: betData.creator_id,
-      creatorAuthId: betData.creator?.user_id,
-      creatorName: betData.creator?.email || betData.creator?.wallet_address || 'Unknown',
-      amount: betData.amount,
-      amountCurrency: betData.amount_currency,
-      creatorsPickId: betData.creators_pick_id,
-      creatorsNote: betData.creators_note,
-      status: betData.status as StraightBetStatus,
-      createdAt: betData.created_at,
-      updatedAt: betData.updated_at,
-      acceptorId: betData.acceptor_id || undefined,
-      acceptorsPickId: betData.acceptors_pick_id || undefined,
-      winnerUserId: betData.winner_user_id || undefined,
-      acceptedAt: betData.accepted_at || undefined,
-      completedAt: betData.completed_at || undefined
+    // Now fetch details for each match based on event type
+    const betsWithDetails = await Promise.all((data || []).map(async (betData: any) => {
+      const match = betData.match;
+      let details = null;
+
+      if (match) {
+        if (match.event_type === 'basketball_nba') {
+          // Get NBA match details
+          const { data: nbaDetails } = await supabaseClient
+            .from('match_details_basketball_nba')
+            .select(`
+              *,
+              home_team:teams_nba!home_team_id(name),
+              away_team:teams_nba!away_team_id(name)
+            `)
+            .eq('id', match.details_id)
+            .single();
+
+          if (nbaDetails) {
+            details = {
+              homeTeamId: nbaDetails.home_team_id,
+              homeTeamName: nbaDetails.home_team?.name,
+              awayTeamId: nbaDetails.away_team_id,
+              awayTeamName: nbaDetails.away_team?.name
+            };
+          }
+        } else if (match.event_type === 'sandbox_metaverse') {
+          // Get Sandbox match details
+          const { data: sandboxDetails } = await supabaseClient
+            .from('match_details_sandbox_metaverse')
+            .select('*')
+            .eq('id', match.details_id)
+            .single();
+
+          if (sandboxDetails) {
+            details = {
+              player1Id: sandboxDetails.player1_id,
+              player1Name: sandboxDetails.player1_name,
+              player2Id: sandboxDetails.player2_id,
+              player2Name: sandboxDetails.player2_name
+            };
+          }
+        }
+      }
+
+      return {
+        id: betData.id,
+        matchId: betData.match_id,
+        creatorId: betData.creator_id,
+        creatorUsername: betData.creator_username,
+        amount: betData.amount,
+        amountCurrency: betData.amount_currency,
+        creatorsPickId: betData.creators_pick_id,
+        creatorsNote: betData.creators_note,
+        status: betData.status as StraightBetStatus,
+        createdAt: betData.created_at,
+        updatedAt: betData.updated_at,
+        acceptorId: betData.acceptor_id || undefined,
+        acceptorsPickId: betData.acceptors_pick_id || undefined,
+        winnerUserId: betData.winner_user_id || undefined,
+        acceptedAt: betData.accepted_at || undefined,
+        completedAt: betData.completed_at || undefined,
+        matchWithDetails: match ? {
+          id: match.id,
+          eventType: match.event_type,
+          details
+        } : null
+      };
     }));
+
+    return betsWithDetails;
   } catch (error) {
     console.error('Exception getting straight bets by status:', error);
     throw error;
@@ -651,82 +789,79 @@ export const acceptStraightBet = async (
   acceptorId: string,
   acceptorsPickId: string
 ): Promise<StraightBet> => {
-  // Fetch the bet
-  const { data: betData, error: fetchError } = await supabaseClient
-    .from('straight_bets')
-    .select('*')
-    .eq('id', betId)
-    .single();
-
-  if (fetchError || !betData) {
-    throw new Error('Bet not found');
-  }
-
-  if (betData.status !== 'open') {
-    throw new Error('Bet is not open for acceptance');
-  }
-
-  if (betData.creator_id === acceptorId) {
-    throw new Error('You cannot accept your own bet');
-  }
-
-  // Check acceptor's free points
-  const freePoints = await getUserFreePoints(acceptorId);
-  if (freePoints < betData.amount) {
-    throw new Error('Insufficient points to accept this bet');
-  }
-
-  // Reserve points from acceptor
-  const reserved = await reservePoints(acceptorId, betData.amount);
-  if (!reserved) {
-    throw new Error('Failed to reserve points for bet acceptance');
-  }
-
-  // Update the bet in the database
-  const now = new Date().toISOString();
-  const { data: updatedData, error: updateError } = await supabaseClient
-    .from('straight_bets')
-    .update({
-      acceptor_id: acceptorId,
-      acceptors_pick_id: acceptorsPickId,
-      status: 'waiting_result',
-      accepted_at: now,
-      updated_at: now
-    })
-    .eq('id', betId)
-    .select()
-    .single();
-
-  if (updateError || !updatedData) {
-    throw new Error('Failed to update bet after acceptance');
-  }
-
-  // Award bet acceptance bonus to both users
   try {
-    await awardBetAcceptanceBonus(betData.creator_id, acceptorId, betId, betData.match_id);
-  } catch (bonusError) {
-    // Log but do not fail the operation if bonus fails
-    console.error('Failed to award bet acceptance bonus:', bonusError);
-  }
+    // Get acceptor's username from user_accounts
+    const { data: userData, error: userError } = await supabaseClient
+      .from('user_accounts')
+      .select('email, wallet_address')
+      .eq('id', acceptorId)
+      .single();
 
-  // Return the updated bet object
-  return {
-    id: updatedData.id,
-    matchId: updatedData.match_id,
-    creatorId: updatedData.creator_id,
-    amount: updatedData.amount,
-    amountCurrency: updatedData.amount_currency,
-    creatorsPickId: updatedData.creators_pick_id,
-    creatorsNote: updatedData.creators_note,
-    status: updatedData.status as StraightBetStatus,
-    createdAt: updatedData.created_at,
-    updatedAt: updatedData.updated_at,
-    acceptorId: updatedData.acceptor_id || undefined,
-    acceptorsPickId: updatedData.acceptors_pick_id || undefined,
-    winnerUserId: updatedData.winner_user_id || undefined,
-    acceptedAt: updatedData.accepted_at || undefined,
-    completedAt: updatedData.completed_at || undefined
-  };
+    if (userError || !userData) {
+      console.error('Error fetching acceptor info:', userError);
+      throw new Error('Failed to fetch acceptor information');
+    }
+
+    // Use email if available, otherwise use wallet address
+    const acceptorUsername = userData.email || userData.wallet_address;
+
+    // Update bet with acceptor information
+    const { data: updatedBet, error: updateError } = await supabaseClient
+      .from('straight_bets')
+      .update({
+        acceptor_id: acceptorId,
+        acceptor_username: acceptorUsername,  // Add acceptor's username
+        acceptors_pick_id: acceptorsPickId,
+        status: 'waiting_result',
+        accepted_at: new Date().toISOString()
+      })
+      .eq('id', betId)
+      .eq('status', 'open')  // Ensure bet is still open
+      .select()
+      .single();
+
+    if (updateError || !updatedBet) {
+      throw new Error('Failed to update bet after acceptance');
+    }
+
+    // Award bet acceptance bonus to both users
+    try {
+      await awardBetAcceptanceBonus(updatedBet.creator_id, acceptorId, betId, updatedBet.match_id);
+    } catch (bonusError) {
+      // Log but do not fail the operation if bonus fails
+      console.error('Failed to award bet acceptance bonus:', bonusError);
+    }
+
+    // Return the updated bet object
+    return {
+      id: updatedBet.id,
+      matchId: updatedBet.match_id,
+      creatorId: updatedBet.creator_id,
+      creatorUsername: updatedBet.creator_username,
+      amount: updatedBet.amount,
+      amountCurrency: updatedBet.amount_currency,
+      creatorsPickId: updatedBet.creators_pick_id,
+      creatorsNote: updatedBet.creators_note,
+      status: updatedBet.status as StraightBetStatus,
+      createdAt: updatedBet.created_at,
+      updatedAt: updatedBet.updated_at,
+      acceptorId: updatedBet.acceptor_id || undefined,
+      acceptorUsername: updatedBet.acceptor_username || undefined,
+      acceptorsPickId: updatedBet.acceptors_pick_id || undefined,
+      winnerUserId: updatedBet.winner_user_id || undefined,
+      acceptedAt: updatedBet.accepted_at || undefined,
+      completedAt: updatedBet.completed_at || undefined
+    };
+  } catch (error) {
+    console.error('Error in acceptStraightBet:', error);
+    
+    // Re-throw with more context if it's not already our custom error
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error('An unexpected error occurred while accepting the bet');
+    }
+  }
 }; 
 
  
