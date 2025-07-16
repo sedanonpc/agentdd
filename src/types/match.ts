@@ -5,7 +5,6 @@ export interface Match {
   details_id: string;
   status: string; // e.g., 'upcoming', 'finished'
   scheduled_start_time: string;
-  bookmakers?: BookmakerOdds[];
   created_at: string;
   updated_at: string;
   // Add any other columns from the matches table as needed
