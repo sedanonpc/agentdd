@@ -16,7 +16,7 @@ interface BetDetailsModalProps {
 const BetDetailsModal: React.FC<BetDetailsModalProps> = ({ bet, isOpen, onClose }) => {
   const navigate = useNavigate();
   const { getMatchById } = useMatches();
-  const { cancelStraightBet, isCancellingBet } = useStraightBets();
+  const { isCancellingBet } = useStraightBets();
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   
   if (!bet) return null;
@@ -112,24 +112,6 @@ const BetDetailsModal: React.FC<BetDetailsModalProps> = ({ bet, isOpen, onClose 
     return pickId; // Fallback to ID if not found
   };
 
-  const handleCancelBet = async () => {
-    if (!bet) return;
-    
-    try {
-      const success = await cancelStraightBet(bet.id);
-      if (success) {
-        toast.success('Bet cancelled successfully');
-        setShowCancelConfirmation(false);
-        onClose();
-      } else {
-        toast.error('Failed to cancel bet');
-      }
-    } catch (error) {
-      console.error('Error cancelling bet:', error);
-      toast.error('Error cancelling bet');
-    }
-  };
-
   const handleViewMatch = () => {
     if (match) {
       onClose();
@@ -203,14 +185,23 @@ const BetDetailsModal: React.FC<BetDetailsModalProps> = ({ bet, isOpen, onClose 
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-console-white-dim font-mono text-sm">Sport:</span>
+                    <span className="text-console-white-dim font-mono text-sm">Your Pick:</span>
                     <span className="text-console-white font-mono text-sm">
-                      {match.sport_key === 'sandbox_metaverse' ? 'The Sandbox Metaverse' : 'NBA Basketball'}
+                      {getPickName(userPickId)}
                     </span>
                   </div>
                   
+                  {opponentPickId && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-console-white-dim font-mono text-sm">Opponent's Pick:</span>
+                      <span className="text-console-white font-mono text-sm">
+                        {getPickName(opponentPickId)}
+                      </span>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between">
-                    <span className="text-console-white-dim font-mono text-sm">Scheduled:</span>
+                    <span className="text-console-white-dim font-mono text-sm">Start Time:</span>
                     <span className="text-console-white font-mono text-sm">
                       {formatDate(match.commence_time)}
                     </span>
@@ -219,180 +210,24 @@ const BetDetailsModal: React.FC<BetDetailsModalProps> = ({ bet, isOpen, onClose 
               </div>
             )}
 
-            {/* Bet Details */}
-            <div className="bg-console-black/30 p-4 rounded border border-console-blue/30">
-              <h3 className="text-console-white font-mono text-sm mb-3 flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-console-blue" />
-                BET DETAILS
-              </h3>
-              
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-console-white-dim font-mono text-sm">Your Pick:</span>
-                  <span className="text-console-white font-mono text-sm">
-                    {getPickName(userPickId)}
-                  </span>
-                </div>
-                
-                {opponentPickId && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-console-white-dim font-mono text-sm">Opponent Pick:</span>
-                    <span className="text-console-white font-mono text-sm">
-                      {getPickName(opponentPickId)}
-                    </span>
-                  </div>
-                )}
-                
-                {bet.creatorsNote && (
-                  <div className="flex items-start justify-between">
-                    <span className="text-console-white-dim font-mono text-sm">Note:</span>
-                    <span className="text-console-white font-mono text-sm text-right max-w-[300px] break-words">
-                      {bet.creatorsNote}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Timestamps */}
-            <div className="bg-console-black/30 p-4 rounded border border-console-blue/30">
-              <h3 className="text-console-white font-mono text-sm mb-3 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-console-blue" />
-                TIMELINE
-              </h3>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-console-white-dim font-mono text-sm">Created:</span>
-                  <span className="text-console-white-dim font-mono text-sm">
-                    {formatDate(bet.createdAt)}
-                  </span>
-                </div>
-                
-                {bet.acceptedAt && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-console-white-dim font-mono text-sm">Accepted:</span>
-                    <span className="text-console-white-dim font-mono text-sm">
-                      {formatDate(bet.acceptedAt)}
-                    </span>
-                  </div>
-                )}
-                
-                {bet.completedAt && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-console-white-dim font-mono text-sm">Completed:</span>
-                    <span className="text-console-white-dim font-mono text-sm">
-                      {formatDate(bet.completedAt)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Result (if completed) */}
-            {bet.status === StraightBetStatus.COMPLETED && bet.winnerUserId && (
-              <div className="bg-console-black/30 p-4 rounded border border-console-blue/30">
-                <h3 className="text-console-white font-mono text-sm mb-3 flex items-center gap-2">
-                  <Trophy className="h-4 w-4 text-[#E5FF03]" />
-                  RESULT
-                </h3>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-console-white-dim font-mono text-sm">Outcome:</span>
-                  <span className={`font-mono text-sm ${bet.winnerUserId === bet.creatorId ? 'text-green-400' : 'text-red-400'}`}>
-                    {bet.winnerUserId === bet.creatorId ? 'YOU WON!' : 'YOU LOST'}
-                  </span>
-                </div>
-              </div>
-            )}
-
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-console-blue/30">
+            <div className="flex items-center justify-between gap-4">
               <button
-                onClick={onClose}
-                className="bg-console-gray/20 hover:bg-console-gray/30 text-console-white-dim font-mono text-sm py-2 px-4 border border-console-gray/50 hover:border-console-gray transition-colors"
+                onClick={handleViewMatch}
+                className="flex-1 bg-console-blue/10 hover:bg-console-blue/20 text-console-blue border border-console-blue/30 py-2 px-4 rounded font-mono text-sm transition-colors"
               >
-                CLOSE
+                View Match
               </button>
               
               {bet.status === StraightBetStatus.OPEN && (
                 <button
-                  onClick={() => setShowCancelConfirmation(true)}
+                  className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 py-2 px-4 rounded font-mono text-sm transition-colors"
                   disabled={isCancellingBet}
-                  className="bg-red-500/20 hover:bg-red-500/30 text-red-400 font-mono text-sm py-2 px-4 border border-red-500/50 hover:border-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  CANCEL BET
-                </button>
-              )}
-              
-              {bet.status === StraightBetStatus.WAITING_RESULT && match && (
-                <button
-                  onClick={handleViewMatch}
-                  className="bg-console-blue/20 hover:bg-console-blue/30 text-console-white font-mono text-sm py-2 px-4 border border-console-blue/50 hover:border-console-blue transition-colors"
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  VIEW MATCH
+                  Cancel Bet
                 </button>
               )}
             </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Cancel Confirmation Modal */}
-      <Modal isOpen={showCancelConfirmation} onClose={() => setShowCancelConfirmation(false)}>
-        <div className="bg-console-gray-terminal border border-console-blue p-6 max-w-md w-full">
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-4 pb-3 border-b border-console-blue/30">
-            <AlertTriangle className="h-6 w-6 text-red-400" />
-            <h2 className="text-lg font-display text-console-white uppercase tracking-wider">
-              CONFIRM CANCELLATION
-            </h2>
-          </div>
-
-          {/* Content */}
-          <div className="mb-6">
-            <p className="text-console-white-dim font-mono text-sm mb-4">
-              Are you sure you want to cancel this bet? This action cannot be undone.
-            </p>
-            
-            <div className="bg-console-black/30 p-4 rounded border border-console-blue/30">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-console-white-dim font-mono text-sm">Bet Amount:</span>
-                <span className="text-console-white font-mono text-sm">
-                  {bet.amount} <span className="text-[#E5FF03]">$DARE</span>
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-console-white-dim font-mono text-sm">Your Pick:</span>
-                <span className="text-console-white font-mono text-sm">
-                  {getPickName(userPickId)}
-                </span>
-              </div>
-            </div>
-            
-            <p className="text-console-white-dim font-mono text-xs mt-3">
-              Your {bet.amount} $DARE points will be refunded to your account.
-            </p>
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={() => setShowCancelConfirmation(false)}
-              className="bg-console-gray/20 hover:bg-console-gray/30 text-console-white-dim font-mono text-sm py-2 px-4 border border-console-gray/50 hover:border-console-gray transition-colors"
-            >
-              KEEP BET
-            </button>
-            
-            <button
-              onClick={handleCancelBet}
-              disabled={isCancellingBet}
-              className="bg-red-500/20 hover:bg-red-500/30 text-red-400 font-mono text-sm py-2 px-4 border border-red-500/50 hover:border-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isCancellingBet ? 'CANCELLING...' : 'CANCEL BET'}
-            </button>
           </div>
         </div>
       </Modal>

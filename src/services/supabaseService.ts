@@ -195,28 +195,61 @@ const createDummyClient = () => {
 // Export the Supabase client - use real or dummy based on configuration
 export const supabaseClient = shouldUseDummyClient ? createDummyClient() : supabase;
 
+// Helper function to wait for user account creation
+const waitForUserAccount = async (userId: string, maxAttempts = 10): Promise<UserAccount | null> => {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const account = await getUserAccount(userId);
+      if (account) {
+        console.log('User account created successfully');
+        return account;
+      }
+      // Wait 200ms between attempts
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch (error) {
+      console.log('Still waiting for user account creation...');
+    }
+  }
+  return null;
+};
+
 // Auth functions
 export const signUpWithEmail = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-  
-  // Special handling for existing user error
-  if (error) {
-    // Check if this is an existing user error
-    if (error.message?.includes('User already registered')) {
-      // Try to sign in instead
-      console.log('User already exists, attempting sign in...');
-      const signInResult = await signInWithEmail(email, password);
-      return signInResult;
-    }
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
     
+    // Special handling for existing user error
+    if (error) {
+      // Check if this is an existing user error
+      if (error.message?.includes('User already registered')) {
+        // Try to sign in instead
+        console.log('User already exists, attempting sign in...');
+        const signInResult = await signInWithEmail(email, password);
+        return signInResult;
+      }
+      throw error;
+    }
+
+    if (!data.user) {
+      throw new Error('No user data returned from signup');
+    }
+
+    // Wait for the database trigger to complete and user account to be created
+    console.log('Waiting for user account creation...');
+    const account = await waitForUserAccount(data.user.id);
+    
+    if (!account) {
+      throw new Error('Timeout waiting for user account creation');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Signup error:', error);
     throw error;
   }
-  
-  // Database trigger automatically handles account creation and signup bonus
-  return data;
 };
 
 export const signInWithEmail = async (email: string, password: string) => {

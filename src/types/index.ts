@@ -152,19 +152,6 @@ export interface MatchAnalysis {
   recommendation?: string;
 }
 
-// Escrow Types
-export interface Escrow {
-  id: string;
-  betId: string;
-  creatorId: string;
-  acceptorId?: string;
-  totalAmount: number;
-  creatorAmount: number;
-  acceptorAmount: number;
-  status: 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'REFUNDED';
-  timestamp: number;
-}
-
 // Standings Types
 export type ClinchedStatus = 'playoff' | 'division' | 'homeCourt' | null;
 

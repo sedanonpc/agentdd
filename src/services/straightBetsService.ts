@@ -31,19 +31,18 @@ export enum StraightBetStatus {
 // Straight bet interface - uses TypeScript camelCase conventions
 export interface StraightBet {
   id: string; // UUID
-  creatorId: string; // UUID - references user_accounts(id)
-  creatorAuthId?: string; // UUID - references auth.users(id) for comparison
+  creatorUserId: string; // UUID - references auth.users.id
   creatorUsername: string; // Username of the creator (email or wallet address)
   matchId: string; // UUID - references matches(id)  
   creatorsPickId: string; // TEXT - team/player ID the creator is betting on
   amount: number; // DECIMAL(10,2) - amount being wagered
   amountCurrency: 'points'; // currency_type enum
   creatorsNote?: string; // TEXT - optional note from creator
-  acceptorId?: string; // UUID - references user_accounts(id), null if not accepted
+  acceptorUserId?: string; // UUID - references auth.users.id, null if not accepted
   acceptorUsername?: string; // Username of the acceptor (email or wallet address), null if not accepted
   acceptorsPickId?: string; // TEXT - team/player ID the acceptor is betting on
   status: StraightBetStatus; // bet_status enum
-  winnerUserId?: string; // UUID - references user_accounts(id), null if not completed
+  winnerUserId?: string; // UUID - references auth.users.id, null if not completed
   
   // Timestamps
   createdAt: string; // TIMESTAMP WITH TIME ZONE
@@ -70,15 +69,15 @@ export interface StraightBet {
  * @throws Error if validation fails or database operation fails
  */
 export const createStraightBet = async (
-  creatorId: string,
+  creatorUserId: string,  // Changed from creatorId to creatorUserId
   matchId: string,
   creatorsPickId: string,
   amount: number,
   creatorsNote?: string
 ): Promise<StraightBet> => {
   // Validate input parameters
-  if (!creatorId || !matchId || !creatorsPickId) {
-    throw new Error('Missing required parameters: creatorId, matchId, and creatorsPickId are required');
+  if (!creatorUserId || !matchId || !creatorsPickId) {
+    throw new Error('Missing required parameters: creatorUserId, matchId, and creatorsPickId are required');
   }
 
   if (amount <= 0) {
@@ -92,7 +91,7 @@ export const createStraightBet = async (
     const { data: userData, error: userError } = await supabaseClient
       .from('user_accounts')
       .select('email, wallet_address')
-      .eq('id', creatorId)
+      .eq('user_id', creatorUserId)  // Changed from id to user_id
       .single();
 
     if (userError || !userData) {
@@ -105,7 +104,7 @@ export const createStraightBet = async (
     
     console.log('Creating straight bet in straight_bets table:', {
       betId,
-      creatorId,
+      creatorUserId,
       creatorUsername,
       matchId,
       creatorsPickId,
@@ -118,8 +117,8 @@ export const createStraightBet = async (
       .from('straight_bets')
       .insert({
         id: betId,
-        creator_id: creatorId,
-        creator_username: creatorUsername,  // Add creator's username
+        creator_user_id: creatorUserId,
+        creator_username: creatorUsername,
         match_id: matchId,
         creators_pick_id: creatorsPickId,
         amount: amount,
@@ -138,18 +137,17 @@ export const createStraightBet = async (
     console.log('Straight bet created successfully in database:', betData);
 
     // Record points transaction for bet placement
-    // This reserves the points for the bet
     try {
       await recordTransaction(
-        creatorId,
+        creatorUserId,  // Changed from creatorId to creatorUserId
         'BET_PLACED',
         'RESERVED',
-        -amount, // Negative amount indicates points being reserved
+        -amount,
         betId,
         {
           bet_id: betId,
           match_id: matchId,
-          bettor_user_id: creatorId,
+          bettor_user_id: creatorUserId,
           team_id: creatorsPickId,
           bet_amount: amount
         }
@@ -158,11 +156,6 @@ export const createStraightBet = async (
       console.log('Points transaction recorded for straight bet placement');
     } catch (transactionError) {
       console.error('Error recording points transaction:', transactionError);
-      
-      // If points transaction fails, we should clean up the bet
-      // This is a critical error - we don't want bets without proper point reservations
-      console.error('Points transaction failed - bet record may need manual cleanup:', betId);
-      
       throw new Error('Failed to reserve points for bet. Bet creation cancelled.');
     }
 
@@ -170,7 +163,7 @@ export const createStraightBet = async (
     const createdBet: StraightBet = {
       id: betData.id,
       matchId: betData.match_id,
-      creatorId: betData.creator_id,
+      creatorUserId: betData.creator_user_id,
       creatorUsername: betData.creator_username,
       amount: betData.amount,
       amountCurrency: betData.amount_currency,
@@ -179,7 +172,7 @@ export const createStraightBet = async (
       status: betData.status as StraightBetStatus,
       createdAt: betData.created_at,
       updatedAt: betData.updated_at,
-      acceptorId: betData.acceptor_id || undefined,
+      acceptorUserId: betData.acceptor_user_id || undefined,
       acceptorUsername: betData.acceptor_username || undefined,
       acceptorsPickId: betData.acceptors_pick_id || undefined,
       winnerUserId: betData.winner_user_id || undefined,
@@ -189,11 +182,8 @@ export const createStraightBet = async (
 
     console.log('Straight bet creation completed successfully:', createdBet);
     return createdBet;
-
   } catch (error) {
     console.error('Error in createStraightBet:', error);
-    
-    // Re-throw with more context if it's not already our custom error
     if (error instanceof Error) {
       throw error;
     } else {
@@ -307,7 +297,7 @@ export const validateTeamForStraightBet = async (matchId: string, creatorsPickId
  * @throws Error if validation fails or bet creation fails
  */
 export const createStraightBetWithValidation = async (
-  creatorId: string,
+  creatorUserId: string,  // Changed from creatorId to creatorUserId
   matchId: string,
   creatorsPickId: string,
   amount: number,
@@ -335,7 +325,7 @@ export const createStraightBetWithValidation = async (
   }
 
   // Create the bet
-  return await createStraightBet(creatorId, matchId, creatorsPickId, amount, creatorsNote);
+  return await createStraightBet(creatorUserId, matchId, creatorsPickId, amount, creatorsNote);
 };
 
 /**
@@ -358,7 +348,7 @@ export const getUserStraightBets = async (
     let query = supabaseClient
       .from('straight_bets')
       .select('*')
-      .or(`creator_id.eq.${userAccountId},acceptor_id.eq.${userAccountId}`)
+      .or(`creator_user_id.eq.${userAccountId},acceptor_user_id.eq.${userAccountId}`)
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -380,7 +370,7 @@ export const getUserStraightBets = async (
     return (data || []).map((betData: any) => ({
       id: betData.id,
       matchId: betData.match_id,
-      creatorId: betData.creator_id,
+      creatorUserId: betData.creator_user_id,
       creatorUsername: betData.creator_username,
       amount: betData.amount,
       amountCurrency: betData.amount_currency,
@@ -389,7 +379,7 @@ export const getUserStraightBets = async (
       status: betData.status as StraightBetStatus,
       createdAt: betData.created_at,
       updatedAt: betData.updated_at,
-      acceptorId: betData.acceptor_id || undefined,
+      acceptorUserId: betData.acceptor_user_id || undefined,
       acceptorUsername: betData.acceptor_username || undefined,
       acceptorsPickId: betData.acceptors_pick_id || undefined,
       winnerUserId: betData.winner_user_id || undefined,
@@ -418,7 +408,6 @@ export const getOpenStraightBets = async (limit: number = 50): Promise<StraightB
       .from('straight_bets')
       .select(`
         *,
-        creator:user_accounts!straight_bets_creator_id_fkey(email, wallet_address, user_id),
         match:matches!straight_bets_match_id_fkey(
           id,
           event_type,
@@ -482,7 +471,7 @@ export const getOpenStraightBets = async (limit: number = 50): Promise<StraightB
       return {
         id: betData.id,
         matchId: betData.match_id,
-        creatorId: betData.creator_id,
+        creatorUserId: betData.creator_user_id,
         creatorUsername: betData.creator_username,
         amount: betData.amount,
         amountCurrency: betData.amount_currency,
@@ -491,7 +480,7 @@ export const getOpenStraightBets = async (limit: number = 50): Promise<StraightB
         status: betData.status as StraightBetStatus,
         createdAt: betData.created_at,
         updatedAt: betData.updated_at,
-        acceptorId: betData.acceptor_id || undefined,
+        acceptorUserId: betData.acceptor_user_id || undefined,
         acceptorUsername: betData.acceptor_username || undefined,
         acceptorsPickId: betData.acceptors_pick_id || undefined,
         winnerUserId: betData.winner_user_id || undefined,
@@ -515,278 +504,11 @@ export const getOpenStraightBets = async (limit: number = 50): Promise<StraightB
 };
 
 /**
- * Get a specific straight bet by ID
- * 
- * @param betId - ID of the bet to retrieve
- * @returns Promise<StraightBet | null> - The straight bet or null if not found
- */
-export const getStraightBetById = async (betId: string): Promise<StraightBet | null> => {
-  try {
-    console.log('Fetching straight bet by ID:', betId);
-
-    const { data, error } = await supabaseClient
-      .from('straight_bets')
-      .select('*')
-      .eq('id', betId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // No rows returned - bet not found
-        console.log('Straight bet not found:', betId);
-        return null;
-      }
-      console.error('Error fetching straight bet by ID:', error);
-      throw new Error(`Failed to fetch bet: ${error.message || 'Unknown error'}`);
-    }
-
-    console.log('Found straight bet:', betId);
-
-    // Convert database record to StraightBet interface
-    return {
-      id: data.id,
-      matchId: data.match_id,
-      creatorId: data.creator_id,
-      amount: data.amount,
-      amountCurrency: data.amount_currency,
-      creatorsPickId: data.creators_pick_id,
-      creatorsNote: data.creators_note,
-      status: data.status as StraightBetStatus,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      acceptorId: data.acceptor_id || undefined,
-      acceptorsPickId: data.acceptors_pick_id || undefined,
-      winnerUserId: data.winner_user_id || undefined,
-      acceptedAt: data.accepted_at || undefined,
-      completedAt: data.completed_at || undefined
-    };
-
-  } catch (error) {
-    console.error('Exception getting straight bet by ID:', error);
-    throw error;
-  }
-}; 
-
-/**
- * Cancels a straight bet and releases reserved points
- * 
- * This function:
- * 1. Validates that the bet exists and belongs to the user
- * 2. Validates that the bet is in 'open' status (can only cancel open bets)
- * 3. Updates the bet status to 'cancelled' in the database
- * 4. Records a points transaction to release the reserved points back to free points
- * 
- * @param betId - ID of the bet to cancel
- * @param userId - User ID requesting the cancellation (must be the bet creator)
- * @returns Promise<boolean> - True if cancelled successfully, false otherwise
- * @throws Error if validation fails or database operation fails
- */
-export const cancelStraightBet = async (betId: string, userId: string): Promise<boolean> => {
-  try {
-    console.log('Cancelling straight bet:', { betId, userId });
-
-    // First, get the bet to validate it exists and belongs to the user
-    const bet = await getStraightBetById(betId);
-    if (!bet) {
-      throw new Error('Bet not found');
-    }
-
-    // Validate that the user is the creator of the bet
-    if (bet.creatorId !== userId) {
-      throw new Error('You can only cancel bets that you created');
-    }
-
-    // Validate that the bet is in 'open' status (can only cancel open bets)
-    if (bet.status !== StraightBetStatus.OPEN) {
-      throw new Error('Only open bets can be cancelled');
-    }
-
-    console.log('Bet validation passed, proceeding with cancellation:', {
-      betId,
-      userId,
-      betAmount: bet.amount,
-      betStatus: bet.status
-    });
-
-    // Update the bet status to 'cancelled' in the database
-    const { error: updateError } = await supabaseClient
-      .from('straight_bets')
-      .update({ status: 'cancelled' })
-      .eq('id', betId)
-      .eq('creator_id', userId) // Additional safety check
-      .eq('status', 'open'); // Additional safety check
-
-    if (updateError) {
-      console.error('Error updating bet status to cancelled:', updateError);
-      throw new Error(`Failed to cancel bet: ${updateError.message}`);
-    }
-
-    console.log('Bet status updated to cancelled in database');
-
-    // Record points transaction to release reserved points back to free points
-    try {
-      await recordTransaction(
-        userId,
-        'BET_CANCELLED',
-        'FREE',
-        bet.amount, // Positive amount indicates points being released back to free
-        betId,
-        {
-          bet_id: betId,
-          match_id: bet.matchId,
-          bettor_user_id: userId,
-          team_id: bet.creatorsPickId,
-          bet_amount: bet.amount,
-          action: 'cancellation'
-        }
-      );
-      
-      console.log('Points transaction recorded for bet cancellation');
-    } catch (transactionError) {
-      console.error('Error recording points transaction for cancellation:', transactionError);
-      
-      // If points transaction fails, we should revert the bet status
-      // This is a critical error - we don't want cancelled bets without proper point releases
-      console.error('Points transaction failed - reverting bet status:', betId);
-      
-      const { error: revertError } = await supabaseClient
-        .from('straight_bets')
-        .update({ status: 'open' })
-        .eq('id', betId);
-
-      if (revertError) {
-        console.error('Failed to revert bet status after points transaction failure:', revertError);
-      }
-      
-      throw new Error('Failed to release points for cancelled bet. Cancellation cancelled.');
-    }
-
-    console.log('Straight bet cancellation completed successfully:', betId);
-    return true;
-
-  } catch (error) {
-    console.error('Error in cancelStraightBet:', error);
-    
-    // Re-throw with more context if it's not already our custom error
-    if (error instanceof Error) {
-      throw error;
-    } else {
-      throw new Error('An unexpected error occurred while cancelling the bet');
-    }
-  }
-}; 
-
-export const getStraightBetsByStatus = async (status: string, limit: number = 50): Promise<StraightBet[]> => {
-  try {
-    // First get the bets with basic match info
-    const { data, error } = await supabaseClient
-      .from('straight_bets')
-      .select(`
-        *,
-        creator:user_accounts!straight_bets_creator_id_fkey(email, wallet_address, user_id),
-        match:matches!straight_bets_match_id_fkey(
-          id,
-          event_type,
-          details_id
-        )
-      `)
-      .eq('status', status)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      console.error('Error fetching straight bets by status:', error);
-      throw new Error(`Failed to fetch bets by status: ${error.message}`);
-    }
-
-    // Now fetch details for each match based on event type
-    const betsWithDetails = await Promise.all((data || []).map(async (betData: any) => {
-      const match = betData.match;
-      let details = null;
-
-      if (match) {
-        if (match.event_type === 'basketball_nba') {
-          // Get NBA match details
-          const { data: nbaDetails } = await supabaseClient
-            .from('match_details_basketball_nba')
-            .select(`
-              *,
-              home_team:teams_nba!home_team_id(name),
-              away_team:teams_nba!away_team_id(name)
-            `)
-            .eq('id', match.details_id)
-            .single();
-
-          if (nbaDetails) {
-            details = {
-              homeTeamId: nbaDetails.home_team_id,
-              homeTeamName: nbaDetails.home_team?.name,
-              awayTeamId: nbaDetails.away_team_id,
-              awayTeamName: nbaDetails.away_team?.name
-            };
-          }
-        } else if (match.event_type === 'sandbox_metaverse') {
-          // Get Sandbox match details
-          const { data: sandboxDetails } = await supabaseClient
-            .from('match_details_sandbox_metaverse')
-            .select('*')
-            .eq('id', match.details_id)
-            .single();
-
-          if (sandboxDetails) {
-            details = {
-              player1Id: sandboxDetails.player1_id,
-              player1Name: sandboxDetails.player1_name,
-              player2Id: sandboxDetails.player2_id,
-              player2Name: sandboxDetails.player2_name
-            };
-          }
-        }
-      }
-
-      return {
-        id: betData.id,
-        matchId: betData.match_id,
-        creatorId: betData.creator_id,
-        creatorUsername: betData.creator_username,
-        amount: betData.amount,
-        amountCurrency: betData.amount_currency,
-        creatorsPickId: betData.creators_pick_id,
-        creatorsNote: betData.creators_note,
-        status: betData.status as StraightBetStatus,
-        createdAt: betData.created_at,
-        updatedAt: betData.updated_at,
-        acceptorId: betData.acceptor_id || undefined,
-        acceptorsPickId: betData.acceptors_pick_id || undefined,
-        winnerUserId: betData.winner_user_id || undefined,
-        acceptedAt: betData.accepted_at || undefined,
-        completedAt: betData.completed_at || undefined,
-        matchWithDetails: match ? {
-          id: match.id,
-          eventType: match.event_type,
-          details
-        } : null
-      };
-    }));
-
-    return betsWithDetails;
-  } catch (error) {
-    console.error('Exception getting straight bets by status:', error);
-    throw error;
-  }
-}; 
-
-/**
  * Accept an open straight bet
- *
- * @param betId - The ID of the bet to accept
- * @param acceptorId - The user_accounts.id of the acceptor
- * @param acceptorsPickId - The team/player ID the acceptor is betting on
- * @returns Promise<StraightBet> - The updated bet object
  */
 export const acceptStraightBet = async (
   betId: string,
-  acceptorId: string,
+  acceptorUserId: string,  // Changed from acceptorId to acceptorUserId
   acceptorsPickId: string
 ): Promise<StraightBet> => {
   try {
@@ -794,7 +516,7 @@ export const acceptStraightBet = async (
     const { data: userData, error: userError } = await supabaseClient
       .from('user_accounts')
       .select('email, wallet_address')
-      .eq('id', acceptorId)
+      .eq('user_id', acceptorUserId)  // Changed from id to user_id
       .single();
 
     if (userError || !userData) {
@@ -809,8 +531,8 @@ export const acceptStraightBet = async (
     const { data: updatedBet, error: updateError } = await supabaseClient
       .from('straight_bets')
       .update({
-        acceptor_id: acceptorId,
-        acceptor_username: acceptorUsername,  // Add acceptor's username
+        acceptor_user_id: acceptorUserId,
+        acceptor_username: acceptorUsername,
         acceptors_pick_id: acceptorsPickId,
         status: 'waiting_result',
         accepted_at: new Date().toISOString()
@@ -826,7 +548,7 @@ export const acceptStraightBet = async (
 
     // Award bet acceptance bonus to both users
     try {
-      await awardBetAcceptanceBonus(updatedBet.creator_id, acceptorId, betId, updatedBet.match_id);
+      await awardBetAcceptanceBonus(updatedBet.creator_user_id, acceptorUserId, betId, updatedBet.match_id);
     } catch (bonusError) {
       // Log but do not fail the operation if bonus fails
       console.error('Failed to award bet acceptance bonus:', bonusError);
@@ -836,7 +558,7 @@ export const acceptStraightBet = async (
     return {
       id: updatedBet.id,
       matchId: updatedBet.match_id,
-      creatorId: updatedBet.creator_id,
+      creatorUserId: updatedBet.creator_user_id,
       creatorUsername: updatedBet.creator_username,
       amount: updatedBet.amount,
       amountCurrency: updatedBet.amount_currency,
@@ -845,7 +567,7 @@ export const acceptStraightBet = async (
       status: updatedBet.status as StraightBetStatus,
       createdAt: updatedBet.created_at,
       updatedAt: updatedBet.updated_at,
-      acceptorId: updatedBet.acceptor_id || undefined,
+      acceptorUserId: updatedBet.acceptor_user_id || undefined,
       acceptorUsername: updatedBet.acceptor_username || undefined,
       acceptorsPickId: updatedBet.acceptors_pick_id || undefined,
       winnerUserId: updatedBet.winner_user_id || undefined,
@@ -854,14 +576,10 @@ export const acceptStraightBet = async (
     };
   } catch (error) {
     console.error('Error in acceptStraightBet:', error);
-    
-    // Re-throw with more context if it's not already our custom error
     if (error instanceof Error) {
       throw error;
     } else {
       throw new Error('An unexpected error occurred while accepting the bet');
     }
   }
-}; 
-
- 
+};

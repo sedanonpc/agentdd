@@ -45,8 +45,8 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails
     return date.toLocaleString();
   };
 
-  // Determine if Accept button should be shown - use user_accounts.id for comparison
-  const isCreator = user && bet.creatorId === user.accountId;
+  // Determine if Accept button should be shown - use auth.users.id for comparison
+  const isCreator = user && bet.creatorUserId === user.userId;
   const isOpen = bet.status === 'open';
   const canAccept = user && !isCreator && isOpen && userBalance >= bet.amount;
 

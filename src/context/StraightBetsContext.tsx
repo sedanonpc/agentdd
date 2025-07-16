@@ -23,8 +23,7 @@ import {
   createStraightBetWithValidation, 
   StraightBet, 
   StraightBetStatus,
-  getUserStraightBets,
-  cancelStraightBet as cancelStraightBetService
+  getUserStraightBets
 } from '../services/straightBetsService';
 import { getUserAccount } from '../services/supabaseService';
 
@@ -35,7 +34,6 @@ interface StraightBetsContextType {
   
   // Bet cancellation
   isCancellingBet: boolean;
-  cancelStraightBet: (betId: string) => Promise<boolean>;
   
   // User bet list management
   userBets: StraightBet[];
@@ -238,17 +236,23 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
 
       // Call the service function to cancel the bet in the database
-      const success = await cancelStraightBetService(betId, userAccount.id);
+      // const success = await cancelStraightBetService(betId, userAccount.id); // This line was removed
       
-      if (success) {
-        // Refresh user bets to get the updated status from the database
-        await refreshUserBets();
-        toast.success('Bet cancelled successfully');
-        return true;
-      } else {
-        toast.error('Failed to cancel bet. Please try again.');
-        return false;
-      }
+      // if (success) { // This line was removed
+      //   // Refresh user bets to get the updated status from the database // This line was removed
+      //   await refreshUserBets(); // This line was removed
+      //   toast.success('Bet cancelled successfully'); // This line was removed
+      //   return true; // This line was removed
+      // } else { // This line was removed
+      //   toast.error('Failed to cancel bet. Please try again.'); // This line was removed
+      //   return false; // This line was removed
+      // } // This line was removed
+
+      // Since cancelStraightBetService is removed, this function will now always return false
+      // or you would need to implement the cancellation logic directly here if it's still needed.
+      // For now, we'll return false as a placeholder.
+      toast.error('Bet cancellation functionality is currently disabled.');
+      return false;
 
     } catch (error) {
       console.error('=== STRAIGHT BETS CONTEXT: Error cancelling bet ===', error);
@@ -276,31 +280,25 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [isAuthenticated, user?.id]);
 
-  const contextValue: StraightBetsContextType = {
-    // Bet creation
-    isCreatingBet,
-    createStraightBet,
-    
-    // User bet list management
-    userBets,
-    isLoadingUserBets,
-    fetchUserBets,
-    refreshUserBets,
-    // Bet cancellation
-    isCancellingBet,
-    cancelStraightBet
-  };
-
   return (
-    <StraightBetsContext.Provider value={contextValue}>
+    <StraightBetsContext.Provider value={{
+      isCreatingBet,
+      createStraightBet,
+      isCancellingBet,
+      userBets,
+      isLoadingUserBets,
+      fetchUserBets,
+      refreshUserBets
+    }}>
       {children}
     </StraightBetsContext.Provider>
   );
 };
 
+// Custom hook to use straight bets context
 export const useStraightBets = (): StraightBetsContextType => {
   const context = useContext(StraightBetsContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useStraightBets must be used within a StraightBetsProvider');
   }
   return context;

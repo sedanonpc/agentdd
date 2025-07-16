@@ -121,28 +121,39 @@ const LoginPage: React.FC = () => {
         toast.warning('Database connection issue. Registration may fail.');
       }
       
+      // Show loading message
+      toast.info('Creating your account...', { autoClose: false });
+      
       await registerWithEmail(email, password);
       
-      // Show success toast
+      // Clear the loading message and show success
+      toast.dismiss();
       toast.success('Registration successful!');
       
-      // If we get here, registration or automatic login was successful
+      // Navigate to dashboard
       navigate('/dashboard');
     } catch (error) {
       console.error('Registration error:', error);
       
+      // Clear any existing toasts
+      toast.dismiss();
+      
       if (error instanceof Error) {
+        // Handle specific error cases
+        if (error.message.includes('Timeout waiting for user account')) {
+          setError('Account creation is taking longer than expected. Please try logging in.');
+          toast.error('Account creation timeout. Please try logging in.');
+          setActiveTab('login');
+        }
         // Handle network errors specifically
-        if (error.message.includes('fetch') || error.message.includes('network')) {
+        else if (error.message.includes('fetch') || error.message.includes('network')) {
           setError('Network error. Please check your internet connection and try again.');
           toast.error('Network error. Please check your connection.');
         }
-        // Provide a more descriptive error message
+        // Handle user already exists
         else if (error.message.includes('User already registered')) {
           setError('Account already exists. Try logging in instead.');
           toast.info('Account already exists. Try logging in instead.');
-          
-          // Automatically switch to login tab
           setActiveTab('login');
         } else {
           setError(error.message || 'Registration failed');

@@ -78,7 +78,7 @@ const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
     ...bet,
     id: bet.id,
     matchId: bet.matchId,
-    creator: bet.creatorId || bet.creator || '',
+    creator: bet.creatorUserId || bet.creator || '',
     teamId: bet.creatorsPickId || bet.teamId || '',
     amount: bet.amount,
     description: bet.creatorsNote || bet.description || '',
@@ -155,7 +155,7 @@ const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
       </div>
 
       {/* Acceptor info if bet is accepted */}
-      {bet.acceptorId && (
+      {bet.acceptorUserId && (
         <div className="border-t border-console-blue/20 pt-3 mt-3">
           <div className="flex items-center justify-between text-xs">
             <span className="text-console-white-dim font-mono">Opponent Pick:</span>
@@ -171,8 +171,8 @@ const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
         <div className="border-t border-console-blue/20 pt-3 mt-3">
           <div className="flex items-center justify-between text-xs">
             <span className="text-console-white-dim font-mono">Winner:</span>
-            <span className={`font-mono ${bet.winnerUserId === bet.creatorId ? 'text-green-400' : 'text-red-400'}`}>
-              {bet.winnerUserId === bet.creatorId ? 'You Won!' : 'You Lost'}
+            <span className={`font-mono ${bet.winnerUserId === bet.creatorUserId ? 'text-green-400' : 'text-red-400'}`}>
+              {bet.winnerUserId === bet.creatorUserId ? 'You Won!' : 'You Lost'}
             </span>
           </div>
         </div>
