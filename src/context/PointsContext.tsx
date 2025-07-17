@@ -45,7 +45,6 @@ import {
   addBetWinPoints,
   awardPoints
 } from '../services/pointsService';
-import { Escrow } from '../types';
 
 // Define the context type
 interface PointsContextType {
@@ -55,16 +54,9 @@ interface PointsContextType {
   loadingBalance: boolean;
   transactions: Transaction[];
   escrowedPoints: number;
-  deductPoints: (amount: number, betId: string, description: string, silent?: boolean) => Promise<boolean>;
   addPoints: (amount: number, type: 'BET_WON' | 'REWARD', description: string, betId?: string) => Promise<boolean>;
   getTransactionHistory: () => Transaction[];
   exportTransactions: () => string; // Export transactions as JSON string
-  createBetEscrow: (betId: string, amount: number, silent?: boolean) => Promise<Escrow | null>;
-  acceptBetEscrow: (escrowId: string, amount: number) => Promise<Escrow | null>;
-  settleBetEscrow: (escrowId: string, winnerId: string) => Promise<boolean>;
-  refundBetEscrow: (escrowId: string) => Promise<boolean>;
-  getEscrowInfo: (escrowId: string) => Escrow | null;
-  getEscrowByBet: (betId: string) => Escrow | null;
 }
 
 // Create the context
@@ -146,53 +138,7 @@ export const PointsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
-  // Deduct points for placing a bet
-  const deductPoints = async (amount: number, betId: string, description: string, silent: boolean = false): Promise<boolean> => {
-    if (!user?.userId) {
-      if (!silent) toast.error('Please sign in to place bets');
-      return false;
-    }
 
-    if (amount <= 0) {
-      if (!silent) toast.error('Amount must be greater than 0');
-      return false;
-    }
-
-    if (freePointsBalance < amount) {
-      if (!silent) toast.error('Insufficient balance');
-      return false;
-    }
-
-    try {
-      // Use service to deduct points
-      const success = await deductBetPoints(user.userId, amount, betId);
-      
-      if (success) {
-        // Update local state
-        setFreePointsBalance(prev => prev - amount);
-        setReservedPointsBalance(prev => prev + amount);
-        
-        // Add to transaction history
-        const newTransaction: Transaction = {
-          id: `${Date.now()}`,
-          userId: user.userId,
-          amount: -amount,
-          type: 'BET_PLACED',
-          description,
-          betId,
-          timestamp: Date.now()
-        };
-        setTransactions(prev => [newTransaction, ...prev]);
-        
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error deducting points:', error);
-      if (!silent) toast.error('Failed to deduct points');
-      return false;
-    }
-  };
 
   // Add points (from winning bet or reward)
   const addPoints = async (
@@ -249,13 +195,7 @@ export const PointsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return JSON.stringify(transactions, null, 2);
   };
 
-  // Stub functions for escrow functionality (to be removed)
-  const createBetEscrow = async (): Promise<Escrow | null> => null;
-  const acceptBetEscrow = async (): Promise<Escrow | null> => null;
-  const settleBetEscrow = async (): Promise<boolean> => false;
-  const refundBetEscrow = async (): Promise<boolean> => false;
-  const getEscrowInfo = (): Escrow | null => null;
-  const getEscrowByBet = (): Escrow | null => null;
+
 
   return (
     <PointsContext.Provider value={{
@@ -265,16 +205,9 @@ export const PointsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       loadingBalance,
       transactions,
       escrowedPoints,
-      deductPoints,
       addPoints,
       getTransactionHistory,
-      exportTransactions,
-      createBetEscrow,
-      acceptBetEscrow,
-      settleBetEscrow,
-      refundBetEscrow,
-      getEscrowInfo,
-      getEscrowByBet
+      exportTransactions
     }}>
       {children}
     </PointsContext.Provider>

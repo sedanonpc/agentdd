@@ -82,22 +82,12 @@ import { usePoints } from '../context/PointsContext';
 function MyComponent() {
   const { 
     userBalance, 
-    deductPoints, 
     addPoints,
     getTransactionHistory 
   } = usePoints();
 
   // Check balance
   console.log(`Current balance: ${userBalance}`);
-
-  // Deduct points (e.g., for placing a bet)
-  const handlePlaceBet = async (amount) => {
-    const success = await deductPoints(
-      amount, 
-      'bet123', 
-      'Placed bet on Lakers vs Bulls'
-    );
-  };
 
   // Add points (e.g., for winning a bet)
   const handleWinBet = async (amount) => {

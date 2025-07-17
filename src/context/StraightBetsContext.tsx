@@ -46,7 +46,7 @@ const StraightBetsContext = createContext<StraightBetsContextType | undefined>(u
 
 export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
-  const { userBalance, deductPoints } = usePoints();
+  const { userBalance } = usePoints();
   
   // Bet creation state
   const [isCreatingBet, setIsCreatingBet] = useState(false);
@@ -174,16 +174,9 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         userAccountId: userAccount.id
       });
 
-      // Deduct points from user's balance first (this reserves the points)
-      const deductResult = await deductPoints(amount, `bet-${Date.now()}`, `Bet placed on match ${matchId}`, true);
-      
-      if (!deductResult) {
-        console.log('=== STRAIGHT BETS CONTEXT: Failed to reserve points ===');
-        toast.error('Failed to reserve DARE points for bet');
-        return null;
-      }
+      // Note: Points will be deducted when the bet is created via the service
 
-      console.log('=== STRAIGHT BETS CONTEXT: Points deducted successfully ===');
+      console.log('=== STRAIGHT BETS CONTEXT: Creating bet ===');
 
       // Create the straight bet in the database using the user_accounts.id (not auth.users.id)
       const createdBet = await createStraightBetWithValidation(
