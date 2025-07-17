@@ -92,23 +92,24 @@ export const BetsProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * @returns Promise<boolean> - True if accepted successfully, false otherwise
    */
   const acceptBet = async (betId: string, acceptorsPickId: string, betType: 'straight' = 'straight'): Promise<boolean> => {
-    if (!isAuthenticated || !user?.id) {
+    if (!isAuthenticated || !user?.userId) {
       toast.error('Please sign in to accept bets');
       return false;
     }
 
     try {
-      // Get the user account from the database
-      const userAccount = await getUserAccount(user.id);
-      if (!userAccount || !userAccount.id) {
+      // Verify user account exists in the database
+      const userAccount = await getUserAccount(user.userId);
+      if (!userAccount) {
         toast.error('User account not found. Please try signing in again.');
         return false;
       }
 
       // Call the appropriate service based on bet type
       // This pattern allows for easy extension to other bet types
+      // Note: acceptStraightBetService expects auth.users.id, not user_accounts.id
       if (betType === 'straight') {
-        await acceptStraightBetService(betId, userAccount.id, acceptorsPickId);
+        await acceptStraightBetService(betId, user.userId, acceptorsPickId);
       } else {
         throw new Error(`Unsupported bet type: ${betType}`);
       }

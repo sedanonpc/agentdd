@@ -117,11 +117,25 @@ CREATE POLICY "Users can create bets" ON straight_bets
         creator_user_id = auth.uid()
     );
 
--- Users can update their own open bets (e.g., to accept them)
+-- Users can update their own bets or accept open bets
 CREATE POLICY "Users can update bets" ON straight_bets
     FOR UPDATE USING (
+        -- Allow creators to update their own bets
         creator_user_id = auth.uid() OR 
-        (status = 'open' AND auth.uid() IS NOT NULL)
+        
+        -- Allow authenticated users to accept open bets
+        (status = 'open' AND auth.uid() IS NOT NULL AND acceptor_user_id IS NULL) OR
+        
+        -- Allow service role for system operations
+        auth.role() = 'service_role'
+    )
+    WITH CHECK (
+        -- After update, allow if user is creator or acceptor
+        creator_user_id = auth.uid() OR 
+        acceptor_user_id = auth.uid() OR
+        
+        -- Allow service role for system operations
+        auth.role() = 'service_role'
     );
 
 -- Grant necessary permissions to authenticated users
