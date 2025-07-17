@@ -60,7 +60,7 @@ export interface StraightBet {
  * 3. Records points transaction for bet placement
  * 4. Returns the created straight bet object
  * 
- * @param creatorId - User ID of the bet creator
+ * @param creatorUserId - User ID of the bet creator (auth.users.id)
  * @param matchId - ID of the match being bet on
  * @param creatorsPickId - ID of the team/pick the creator is betting on
  * @param amount - Amount of points being wagered
@@ -136,26 +136,41 @@ export const createStraightBet = async (
 
     console.log('Straight bet created successfully in database:', betData);
 
-    // Record points transaction for bet placement
+    // Record points transactions for bet placement (deduct from FREE, add to RESERVED)
     try {
+      const commonEventId = crypto.randomUUID();
+      const metadata = {
+        bet_id: betId,
+        match_id: matchId,
+        bettor_user_id: creatorUserId,
+        team_id: creatorsPickId,
+        bet_amount: amount,
+        common_event_id: commonEventId
+      };
+
+      // Transaction 1: Deduct from FREE points
       await recordTransaction(
-        creatorUserId,  // Changed from creatorId to creatorUserId
+        creatorUserId,
+        'BET_PLACED',
+        'FREE',
+        -amount,
+        `Bet placed: deducted ${amount} from FREE points`,
+        metadata
+      );
+
+      // Transaction 2: Add to RESERVED points  
+      await recordTransaction(
+        creatorUserId,
         'BET_PLACED',
         'RESERVED',
-        -amount,
-        betId,
-        {
-          bet_id: betId,
-          match_id: matchId,
-          bettor_user_id: creatorUserId,
-          team_id: creatorsPickId,
-          bet_amount: amount
-        }
+        amount,
+        `Bet placed: added ${amount} to RESERVED points`,
+        metadata
       );
       
-      console.log('Points transaction recorded for straight bet placement');
+      console.log('Points transactions recorded for straight bet placement (FREE deduction and RESERVED addition)');
     } catch (transactionError) {
-      console.error('Error recording points transaction:', transactionError);
+      console.error('Error recording points transactions:', transactionError);
       throw new Error('Failed to reserve points for bet. Bet creation cancelled.');
     }
 
@@ -287,7 +302,7 @@ export const validateTeamForStraightBet = async (matchId: string, creatorsPickId
  * - Team/pick validation for the match
  * - User points balance validation
  * 
- * @param creatorId - User ID of the bet creator
+ * @param creatorUserId - User ID of the bet creator (auth.users.id)
  * @param matchId - ID of the match being bet on
  * @param creatorsPickId - ID of the team/pick the creator is betting on
  * @param amount - Amount of points being wagered

@@ -178,9 +178,9 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       console.log('=== STRAIGHT BETS CONTEXT: Creating bet ===');
 
-      // Create the straight bet in the database using the user_accounts.id (not auth.users.id)
+      // Create the straight bet in the database using auth.users.id (not user_accounts.id)
       const createdBet = await createStraightBetWithValidation(
-        userAccount.id, // Use user_accounts.id instead of auth.users.id
+        user.userId, // Use auth.users.id (user.userId from AuthContext)
         matchId,
         teamId,
         amount,
