@@ -18,6 +18,18 @@ const UserBetListPage: React.FC = () => {
     refreshUserBets 
   } = useStraightBets();
 
+  // Add debugging logs
+  console.log('=== USER BET LIST PAGE: Render ===', {
+    userBetsLength: userBets.length,
+    isLoadingUserBets,
+    userBets: userBets.map(bet => ({
+      id: bet.id,
+      creatorUserId: bet.creatorUserId,
+      amount: bet.amount,
+      status: bet.status
+    }))
+  });
+
   // Filter state
   const [selectedStatus, setSelectedStatus] = useState<StraightBetStatus | 'all'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);

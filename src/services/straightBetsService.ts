@@ -357,29 +357,53 @@ export const getUserStraightBets = async (
   limit: number = 50
 ): Promise<StraightBet[]> => {
   try {
-    console.log('Fetching straight bets for user:', userAccountId, 'with status:', status);
+    console.log('=== GET USER STRAIGHT BETS: Starting ===', {
+      userAccountId,
+      status,
+      limit,
+      note: 'This function expects either auth.users.id OR user_accounts.id'
+    });
 
     // Build the query
+    const orCondition = `creator_user_id.eq.${userAccountId},acceptor_user_id.eq.${userAccountId}`;
+    console.log('=== GET USER STRAIGHT BETS: Building query ===', {
+      table: 'straight_bets',
+      orCondition,
+      status
+    });
+
     let query = supabaseClient
       .from('straight_bets')
       .select('*')
-      .or(`creator_user_id.eq.${userAccountId},acceptor_user_id.eq.${userAccountId}`)
+      .or(orCondition)
       .order('created_at', { ascending: false })
       .limit(limit);
 
     // Add status filter if provided
     if (status) {
       query = query.eq('status', status);
+      console.log('=== GET USER STRAIGHT BETS: Added status filter ===', { status });
     }
 
+    console.log('=== GET USER STRAIGHT BETS: Executing query ===');
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching user straight bets:', error);
+      console.error('=== GET USER STRAIGHT BETS: Database error ===', error);
       throw new Error(`Failed to fetch user bets: ${error.message}`);
     }
 
-    console.log(`Found ${data?.length || 0} straight bets for user ${userAccountId}`);
+    console.log('=== GET USER STRAIGHT BETS: Query result ===', {
+      dataLength: data?.length || 0,
+      userAccountId,
+      rawData: data ? data.slice(0, 2).map(bet => ({
+        id: bet.id,
+        creator_user_id: bet.creator_user_id,
+        amount: bet.amount,
+        status: bet.status,
+        created_at: bet.created_at
+      })) : null
+    });
 
     // Convert database records to StraightBet interface
     return (data || []).map((betData: any) => ({

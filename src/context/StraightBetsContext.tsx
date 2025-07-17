@@ -64,40 +64,83 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
    * @param status - Optional status filter
    */
   const fetchUserBets = async (status?: StraightBetStatus): Promise<void> => {
+    console.log('=== FETCH USER BETS: Starting ===', {
+      isAuthenticated,
+      userId: user?.userId,
+      status
+    });
+
     if (!isAuthenticated || !user?.userId) {
-      console.log('User not authenticated, skipping bet fetch');
+      console.log('=== FETCH USER BETS: User not authenticated, skipping bet fetch ===');
       return;
     }
 
     setIsLoadingUserBets(true);
 
     try {
-      console.log('=== STRAIGHT BETS CONTEXT: Fetching user bets ===', {
-        authUserId: user.userId,
-        statusFilter: status
+      console.log('=== FETCH USER BETS: Getting user account ===', {
+        authUserId: user.userId
       });
 
       // Get the user account from the database
       const userAccount = await getUserAccount(user.userId);
+      console.log('=== FETCH USER BETS: User account result ===', {
+        userAccount: userAccount ? {
+          id: userAccount.id,
+          user_id: userAccount.user_id,
+          email: userAccount.email,
+          wallet_address: userAccount.wallet_address
+        } : null
+      });
+
       if (!userAccount || !userAccount.id) {
-        console.error('User account not found for bet fetching');
+        console.error('=== FETCH USER BETS: User account not found ===');
         toast.error('User account not found. Please try signing in again.');
         return;
       }
 
-      // Fetch user's bets using the user_accounts.id
-      const bets = await getUserStraightBets(userAccount.id, status);
-      
-      console.log('=== STRAIGHT BETS CONTEXT: Fetched user bets ===', {
+      console.log('=== FETCH USER BETS: Calling getUserStraightBets ===', {
         userAccountId: userAccount.id,
+        authUserId: user.userId,
+        statusFilter: status,
+        note: 'The issue might be here - we need to pass auth.users.id but are passing user_accounts.id'
+      });
+
+      // ISSUE IDENTIFIED: We should pass auth.users.id (user.userId) not user_accounts.id
+      // But first let's try both and see what happens
+      console.log('=== FETCH USER BETS: Trying with auth.users.id first ===');
+      
+      let bets = await getUserStraightBets(user.userId, status);
+      console.log('=== FETCH USER BETS: Result with auth.users.id ===', {
+        authUserId: user.userId,
+        betCount: bets.length
+      });
+
+      // If no bets found with auth.users.id, try with user_accounts.id
+      if (bets.length === 0) {
+        console.log('=== FETCH USER BETS: No bets found with auth.users.id, trying user_accounts.id ===');
+        bets = await getUserStraightBets(userAccount.id, status);
+        console.log('=== FETCH USER BETS: Result with user_accounts.id ===', {
+          userAccountId: userAccount.id,
+          betCount: bets.length
+        });
+      }
+      
+      console.log('=== FETCH USER BETS: Final result ===', {
         betCount: bets.length,
-        statusFilter: status
+        bets: bets.map(bet => ({
+          id: bet.id,
+          creatorUserId: bet.creatorUserId,
+          amount: bet.amount,
+          status: bet.status,
+          createdAt: bet.createdAt
+        }))
       });
 
       setUserBets(bets);
 
     } catch (error) {
-      console.error('Error fetching user bets:', error);
+      console.error('=== FETCH USER BETS: Error ===', error);
       toast.error('Failed to load your bets. Please try again.');
     } finally {
       setIsLoadingUserBets(false);
@@ -276,9 +319,16 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Load user bets when component mounts and user is authenticated
   useEffect(() => {
+    console.log('=== STRAIGHT BETS CONTEXT: useEffect triggered ===', {
+      isAuthenticated,
+      userId: user?.userId
+    });
+
     if (isAuthenticated && user?.userId) {
+      console.log('=== STRAIGHT BETS CONTEXT: User authenticated, fetching bets ===');
       fetchUserBets();
     } else {
+      console.log('=== STRAIGHT BETS CONTEXT: User not authenticated, clearing bets ===');
       // Clear bets when user logs out
       setUserBets([]);
     }
