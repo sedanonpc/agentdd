@@ -4,6 +4,9 @@ import { SandboxMatchCard } from '../components/match/SandboxMatchCard';
 import { MatchWithDetails } from '../types/match';
 import MatchBettingForm from '../components/match/MatchBettingForm';
 import Modal from '../components/common/Modal';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 // Simple NBA match card for display
 const NBAMatchCard: React.FC<{ match: MatchWithDetails; onSelectForBetting: () => void; isBettingSelected: boolean }> = ({ match, onSelectForBetting, isBettingSelected }) => {
@@ -53,8 +56,24 @@ const MatchesPage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedMatchForBetting, setSelectedMatchForBetting] = useState<MatchWithDetails | null>(null);
   const [showBettingModal, setShowBettingModal] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   const handleSelectForBetting = (match: MatchWithDetails) => {
+    console.log('=== MATCHES PAGE: handleSelectForBetting called ===', {
+      isAuthenticated,
+      matchId: match.match.id,
+      eventType: match.eventType
+    });
+
+    if (!isAuthenticated) {
+      console.log('=== MATCHES PAGE: User not authenticated, redirecting to login ===');
+      toast.error('Please sign in to place bets');
+      navigate('/login');
+      return;
+    }
+
+    console.log('=== MATCHES PAGE: Opening betting modal ===');
     setSelectedMatchForBetting(match);
     setShowBettingModal(true);
   };

@@ -64,7 +64,7 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
    * @param status - Optional status filter
    */
   const fetchUserBets = async (status?: StraightBetStatus): Promise<void> => {
-    if (!isAuthenticated || !user?.id) {
+    if (!isAuthenticated || !user?.userId) {
       console.log('User not authenticated, skipping bet fetch');
       return;
     }
@@ -73,12 +73,12 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     try {
       console.log('=== STRAIGHT BETS CONTEXT: Fetching user bets ===', {
-        authUserId: user.id,
+        authUserId: user.userId,
         statusFilter: status
       });
 
       // Get the user account from the database
-      const userAccount = await getUserAccount(user.id);
+      const userAccount = await getUserAccount(user.userId);
       if (!userAccount || !userAccount.id) {
         console.error('User account not found for bet fetching');
         toast.error('User account not found. Please try signing in again.');
@@ -126,17 +126,32 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     amount: number, 
     description: string
   ): Promise<StraightBet | null> => {
-    if (!isAuthenticated || !user?.id) {
+    console.log('=== STRAIGHT BETS CONTEXT: createStraightBet called ===', {
+      isAuthenticated,
+      userId: user?.userId,
+      matchId,
+      teamId,
+      amount,
+      description
+    });
+
+    if (!isAuthenticated || !user?.userId) {
+      console.log('=== STRAIGHT BETS CONTEXT: Bet creation failed - not authenticated ===');
       toast.error('Please sign in to place bets');
       return null;
     }
 
     if (amount <= 0) {
+      console.log('=== STRAIGHT BETS CONTEXT: Bet creation failed - invalid amount ===', { amount });
       toast.error('Please enter a valid bet amount');
       return null;
     }
 
     if (amount > userBalance) {
+      console.log('=== STRAIGHT BETS CONTEXT: Bet creation failed - insufficient balance ===', {
+        amount,
+        userBalance
+      });
       toast.error('Insufficient DARE points balance');
       return null;
     }
@@ -144,23 +159,18 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setIsCreatingBet(true);
 
     try {
-      console.log('=== STRAIGHT BETS CONTEXT: Creating bet ===', {
-        authUserId: user.id,
-        matchId,
-        teamId,
-        amount,
-        description
-      });
+      console.log('=== STRAIGHT BETS CONTEXT: Getting user account ===', { authUserId: user.userId });
 
       // Get the user account from the database to get the correct user_accounts.id
-      const userAccount = await getUserAccount(user.id);
+      const userAccount = await getUserAccount(user.userId);
       if (!userAccount || !userAccount.id) {
+        console.log('=== STRAIGHT BETS CONTEXT: User account not found ===');
         toast.error('User account not found. Please try signing in again.');
         return null;
       }
 
       console.log('=== STRAIGHT BETS CONTEXT: Found user account ===', {
-        authUserId: user.id,
+        authUserId: user.userId,
         userAccountId: userAccount.id
       });
 
@@ -168,6 +178,7 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const deductResult = await deductPoints(amount, `bet-${Date.now()}`, `Bet placed on match ${matchId}`, true);
       
       if (!deductResult) {
+        console.log('=== STRAIGHT BETS CONTEXT: Failed to reserve points ===');
         toast.error('Failed to reserve DARE points for bet');
         return null;
       }
@@ -215,7 +226,7 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
    * @returns Promise<boolean> - True if cancelled successfully, false otherwise
    */
   const cancelStraightBet = async (betId: string): Promise<boolean> => {
-    if (!isAuthenticated || !user?.id) {
+    if (!isAuthenticated || !user?.userId) {
       toast.error('Please sign in to cancel bets');
       return false;
     }
@@ -224,12 +235,12 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     try {
       console.log('=== STRAIGHT BETS CONTEXT: Cancelling bet ===', {
-        authUserId: user.id,
+        authUserId: user.userId,
         betId
       });
 
       // Get the user account from the database
-      const userAccount = await getUserAccount(user.id);
+      const userAccount = await getUserAccount(user.userId);
       if (!userAccount || !userAccount.id) {
         toast.error('User account not found. Please try signing in again.');
         return false;
@@ -272,13 +283,13 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Load user bets when component mounts and user is authenticated
   useEffect(() => {
-    if (isAuthenticated && user?.id) {
+    if (isAuthenticated && user?.userId) {
       fetchUserBets();
     } else {
       // Clear bets when user logs out
       setUserBets([]);
     }
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.userId]);
 
   return (
     <StraightBetsContext.Provider value={{

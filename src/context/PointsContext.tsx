@@ -1,3 +1,33 @@
+/*
+ * ⚠️ DEPRECATED - SCHEDULED FOR REFACTOR ⚠️
+ * 
+ * This context is deprecated and scheduled for refactoring.
+ * 
+ * DO NOT ADD NEW FEATURES TO THIS CONTEXT.
+ * DO NOT EXTEND THIS CONTEXT'S FUNCTIONALITY.
+ * 
+ * Current Issues:
+ * 1. This context mixes concerns:
+ *    - Points balance display (should be in UserAccountContext)
+ *    - Points transactions (should be in straightBetsService)
+ *    - Transaction history (to be moved to a dedicated context)
+ *    - Escrow functionality (to be removed)
+ * 
+ * Future Architecture:
+ * - A new UserAccountContext will be created to handle:
+ *   - User account data including points balances
+ *   - Account preferences and settings
+ * 
+ * - Points manipulation will be moved to respective services:
+ *   - straightBetsService for bet-related points
+ *   - Other services for their specific point operations
+ * 
+ * Current Usage (to be migrated):
+ * - Components: PointsDisplay, Navbar, MarketplaceBetCard, StraightBetCard
+ * - Pages: DashboardPage, ProfilePage, AcceptBetPage, Leaderboard
+ * - Contexts: StraightBetsContext, BetsContext, BettingContext (also deprecated)
+ */
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { toast } from 'react-toastify';
