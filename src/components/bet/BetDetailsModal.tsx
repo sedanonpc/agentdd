@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { StraightBet, StraightBetStatus } from '../../services/straightBetsService';
 import { useMatches } from '../../context/MatchesContext';
 import { useStraightBets } from '../../context/StraightBetsContext';
+import { NBAMatchDetail, SandboxMetaverseMatchDetail } from '../../types/match';
 import Modal from '../common/Modal';
 import { toast } from 'react-toastify';
 
@@ -15,13 +16,13 @@ interface BetDetailsModalProps {
 
 const BetDetailsModal: React.FC<BetDetailsModalProps> = ({ bet, isOpen, onClose }) => {
   const navigate = useNavigate();
-  const { getMatchById } = useMatches();
+  const { getMatchByIdWithDetails } = useMatches();
   const { isCancellingBet } = useStraightBets();
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   
   if (!bet) return null;
   
-  const match = getMatchById(bet.matchId);
+  const matchWithDetails = getMatchByIdWithDetails(bet.matchId);
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -96,24 +97,28 @@ const BetDetailsModal: React.FC<BetDetailsModalProps> = ({ bet, isOpen, onClose 
   // Helper function to get team/player name from ID
   const getPickName = (pickId: string | undefined): string => {
     if (!pickId) return 'N/A';
-    if (!match) return pickId; // Fallback to ID if no match data
+    if (!matchWithDetails) return pickId; // Fallback to ID if no match data
     
     // For Sandbox matches, check if it's a player
-    if (match.sport_key === 'sandbox_metaverse') {
-      if (pickId === match.home_team.id) return match.home_team.name;
-      if (pickId === match.away_team.id) return match.away_team.name;
+    if (matchWithDetails.eventType === 'sandbox_metaverse') {
+      const details = matchWithDetails.details as SandboxMetaverseMatchDetail;
+      if (pickId === details.player1Id) return details.player1Name;
+      if (pickId === details.player2Id) return details.player2Name;
       return pickId; // Fallback
     }
     
     // For NBA matches, check if it's a team
-    if (pickId === match.home_team.id) return match.home_team.name;
-    if (pickId === match.away_team.id) return match.away_team.name;
+    if (matchWithDetails.eventType === 'basketball_nba') {
+      const details = matchWithDetails.details as NBAMatchDetail;
+      if (pickId === details.homeTeamId) return details.homeTeamName;
+      if (pickId === details.awayTeamId) return details.awayTeamName;
+    }
     
     return pickId; // Fallback to ID if not found
   };
 
   const handleViewMatch = () => {
-    if (match) {
+    if (matchWithDetails) {
       onClose();
       navigate(`/matches`);
       // TODO: In the future, we could navigate to a specific match detail page
@@ -169,7 +174,7 @@ const BetDetailsModal: React.FC<BetDetailsModalProps> = ({ bet, isOpen, onClose 
             </div>
 
             {/* Match Information */}
-            {match && (
+            {matchWithDetails && (
               <div className="bg-console-black/30 p-4 rounded border border-console-blue/30">
                 <h3 className="text-console-white font-mono text-sm mb-3 flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-console-blue" />
@@ -180,7 +185,10 @@ const BetDetailsModal: React.FC<BetDetailsModalProps> = ({ bet, isOpen, onClose 
                   <div className="flex items-center justify-between">
                     <span className="text-console-white-dim font-mono text-sm">Match:</span>
                     <span className="text-console-white font-mono text-sm">
-                      {match.home_team.name} vs {match.away_team.name}
+                      {matchWithDetails.eventType === 'basketball_nba' 
+                        ? `${(matchWithDetails.details as NBAMatchDetail).homeTeamName} vs ${(matchWithDetails.details as NBAMatchDetail).awayTeamName}`
+                        : `${(matchWithDetails.details as SandboxMetaverseMatchDetail).player1Name} vs ${(matchWithDetails.details as SandboxMetaverseMatchDetail).player2Name}`
+                      }
                     </span>
                   </div>
                   
@@ -203,7 +211,7 @@ const BetDetailsModal: React.FC<BetDetailsModalProps> = ({ bet, isOpen, onClose 
                   <div className="flex items-center justify-between">
                     <span className="text-console-white-dim font-mono text-sm">Start Time:</span>
                     <span className="text-console-white font-mono text-sm">
-                      {formatDate(match.commence_time)}
+                      {formatDate(matchWithDetails.match.scheduledStartTime)}
                     </span>
                   </div>
                 </div>
