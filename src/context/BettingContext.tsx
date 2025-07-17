@@ -50,7 +50,7 @@ const debounce = (fn: Function, ms = 300) => {
 
 export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { account, isConnected } = useWeb3();
-  const { deductPoints, addPoints, createBetEscrow, acceptBetEscrow, settleBetEscrow, refundBetEscrow, getEscrowByBet } = usePoints();
+  const { addPoints } = usePoints();
   const { user, isAuthenticated } = useAuth();
   const { getMatchById: getMatchFromContext } = useMatches(); // Get match data from MatchesContext
   
@@ -153,13 +153,7 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return null;
       }
 
-      // Deduct points from the user
-      const deductResult = await deductPoints(amount, `bet_${Date.now()}`, `Created bet on ${match.home_team.name} vs ${match.away_team.name}`, true);
-      
-      if (!deductResult) {
-        toast.error('Failed to deduct DARE points');
-        return null;
-      }
+      // Note: Points will be deducted when the bet is created via the service
 
       // Create the bet
       const createdBet = await createBet(userId, matchId, teamId, amount, description);
@@ -315,13 +309,7 @@ export const BettingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
-      // Deduct points from the user accepting the bet
-      const deductResult = await deductPoints(bet.amount, bet.id, `Accepted bet ${bet.id}`, true);
-      
-      if (!deductResult) {
-        toast.error('Failed to deduct DARE points');
-        return false;
-      }
+      // Note: Points will be deducted when the bet is accepted via the service
       
       // Accept the bet
       const acceptedBet = await acceptBetService(bet.id, userId, '');

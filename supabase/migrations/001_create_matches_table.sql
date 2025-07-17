@@ -162,6 +162,11 @@ CREATE POLICY "Allow authenticated users to read matches"
   TO authenticated
   USING (true);
 
+CREATE POLICY "Allow anonymous users to insert matches" 
+  ON matches FOR INSERT 
+  TO anon 
+  WITH CHECK (true);
+
 CREATE POLICY "Allow authenticated users to insert matches" 
   ON matches FOR INSERT 
   TO authenticated 
@@ -185,6 +190,11 @@ CREATE POLICY "Allow authenticated users to read basketball details"
   TO authenticated
   USING (true);
 
+CREATE POLICY "Allow anonymous users to insert basketball details" 
+  ON match_details_basketball_nba FOR INSERT 
+  TO anon 
+  WITH CHECK (true);
+
 CREATE POLICY "Allow authenticated users to insert basketball details" 
   ON match_details_basketball_nba FOR INSERT 
   TO authenticated 
@@ -207,6 +217,11 @@ CREATE POLICY "Allow authenticated users to read sandbox details"
   ON match_details_sandbox_metaverse FOR SELECT 
   TO authenticated
   USING (true);
+
+CREATE POLICY "Allow anonymous users to insert sandbox details" 
+  ON match_details_sandbox_metaverse FOR INSERT 
+  TO anon 
+  WITH CHECK (true);
 
 CREATE POLICY "Allow authenticated users to insert sandbox details" 
   ON match_details_sandbox_metaverse FOR INSERT 
@@ -238,4 +253,9 @@ GRANT SELECT, INSERT, UPDATE ON public.match_details_basketball_nba TO authentic
 GRANT SELECT, INSERT, UPDATE ON public.match_details_sandbox_metaverse TO authenticated;
 GRANT SELECT ON public.teams_nba TO authenticated;
 GRANT SELECT ON public.teams_nba TO anon;
-GRANT SELECT ON public.match_details_sandbox_metaverse TO anon; 
+GRANT SELECT ON public.match_details_sandbox_metaverse TO anon;
+GRANT SELECT ON public.match_details_basketball_nba TO anon;
+GRANT SELECT ON public.matches TO anon;
+GRANT INSERT ON public.matches TO anon;
+GRANT INSERT ON public.match_details_basketball_nba TO anon;
+GRANT INSERT ON public.match_details_sandbox_metaverse TO anon; 

@@ -18,7 +18,7 @@ const AcceptBetPage: React.FC = () => {
   const { getMatchById } = useMatches();
   const { account, connectWallet } = useWeb3();
   const { isAuthenticated, loginWithEmail, authMethod } = useAuth();
-  const { userBalance, deductPoints, createBetEscrow } = usePoints();
+  const { userBalance } = usePoints();
   
   const [loading, setLoading] = useState<boolean>(true);
   const [accepting, setAccepting] = useState<boolean>(false);
@@ -283,16 +283,6 @@ const AcceptBetPage: React.FC = () => {
         timestamp: Date.now(),
         description: "Accepted via shared bet invitation"
       };
-      
-      // Create escrow for the bet but disable toast notification
-      const escrowResult = await createBetEscrow(betId, parseFloat(betAmount), true);
-      
-      if (!escrowResult) {
-        throw new Error("Failed to create escrow");
-      }
-      
-      // Silently deduct DARE points without additional notification
-      await deductPoints(parseFloat(betAmount), betId, "Bet acceptance", true);
       
       // Call acceptBet function from BettingContext
       await acceptBet(bet);

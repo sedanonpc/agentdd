@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { Match, Team } from '../types'; // Add Match and Team import
+import { Match } from '../types/match';
+import { MatchWithDetails, NBAMatchDetail, SandboxMetaverseMatchDetail } from '../types/match';
 
 // Supabase configuration
 // Hardcoded values as a fallback when env variables have issues
@@ -194,28 +195,61 @@ const createDummyClient = () => {
 // Export the Supabase client - use real or dummy based on configuration
 export const supabaseClient = shouldUseDummyClient ? createDummyClient() : supabase;
 
+// Helper function to wait for user account creation
+const waitForUserAccount = async (userId: string, maxAttempts = 10): Promise<UserAccount | null> => {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const account = await getUserAccount(userId);
+      if (account) {
+        console.log('User account created successfully');
+        return account;
+      }
+      // Wait 200ms between attempts
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch (error) {
+      console.log('Still waiting for user account creation...');
+    }
+  }
+  return null;
+};
+
 // Auth functions
 export const signUpWithEmail = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-  
-  // Special handling for existing user error
-  if (error) {
-    // Check if this is an existing user error
-    if (error.message?.includes('User already registered')) {
-      // Try to sign in instead
-      console.log('User already exists, attempting sign in...');
-      const signInResult = await signInWithEmail(email, password);
-      return signInResult;
-    }
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
     
+    // Special handling for existing user error
+    if (error) {
+      // Check if this is an existing user error
+      if (error.message?.includes('User already registered')) {
+        // Try to sign in instead
+        console.log('User already exists, attempting sign in...');
+        const signInResult = await signInWithEmail(email, password);
+        return signInResult;
+      }
+      throw error;
+    }
+
+    if (!data.user) {
+      throw new Error('No user data returned from signup');
+    }
+
+    // Wait for the database trigger to complete and user account to be created
+    console.log('Waiting for user account creation...');
+    const account = await waitForUserAccount(data.user.id);
+    
+    if (!account) {
+      throw new Error('Timeout waiting for user account creation');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Signup error:', error);
     throw error;
   }
-  
-  // Database trigger automatically handles account creation and signup bonus
-  return data;
 };
 
 export const signInWithEmail = async (email: string, password: string) => {
@@ -420,6 +454,10 @@ export const freePoints = async (userId: string, amount: number): Promise<boolea
 
 
 
+/**
+ * @deprecated This function returns the legacy Match type and will be removed in a future version.
+ * New code should define and use a local getMatchById that returns the new Match type matching the database schema.
+ */
 export const getMatchById = async (id: string): Promise<Match | null> => {
   try {
     // Query the new multi-sport schema with joins
@@ -438,22 +476,13 @@ export const getMatchById = async (id: string): Promise<Match | null> => {
       
       return {
         id: data.id,
-        sport_key: 'basketball_nba', // Based on event_type
-        sport_title: 'Basketball', // Default for basketball
-        commence_time: data.scheduled_start_time, // Map scheduled_start_time to commence_time
-        home_team: {
-          id: basketballDetails.home_team_id,
-          name: basketballDetails.home_team_name,
-          logo: basketballDetails.home_team_logo
-        },
-        away_team: {
-          id: basketballDetails.away_team_id,
-          name: basketballDetails.away_team_name,
-          logo: basketballDetails.away_team_logo
-        },
+        event_type: 'basketball_nba' as const,
+        details_id: data.details_id,
+        status: data.status,
+        scheduled_start_time: data.scheduled_start_time,
         bookmakers: data.bookmakers || [],
-        scores: basketballDetails.scores || null,
-        completed: data.status === 'finished'
+        created_at: data.created_at,
+        updated_at: data.updated_at
       };
     }
 
@@ -467,16 +496,137 @@ export const getMatchById = async (id: string): Promise<Match | null> => {
   }
 };
 
+/**
+ * Get match with details by ID using the new MatchWithDetails type
+ * @param id - The match ID
+ * @returns Promise<MatchWithDetails | null> - The match with its specific details
+ */
+export const getMatchWithDetailsById = async (id: string): Promise<MatchWithDetails | null> => {
+  try {
+    // First get the main match data
+    const { data: matchData, error: matchError } = await supabaseClient
+      .from('matches')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (matchError || !matchData) {
+      console.error('Error getting match by ID:', matchError);
+      return null;
+    }
+
+    // Get details based on event_type
+    if (matchData.event_type === 'basketball_nba') {
+      const { data: basketballData, error: basketballError } = await supabaseClient
+        .from('match_details_basketball_nba')
+        .select(`
+          *,
+          home_team:teams_nba!match_details_basketball_nba_home_team_id_fkey(*),
+          away_team:teams_nba!match_details_basketball_nba_away_team_id_fkey(*)
+        `)
+        .eq('id', matchData.details_id)
+        .single();
+
+      if (basketballError || !basketballData) {
+        console.error('Error getting basketball details:', basketballError);
+        return null;
+      }
+
+      const match: Match = {
+        id: matchData.id,
+        eventType: matchData.event_type,
+        detailsId: matchData.details_id,
+        status: matchData.status,
+        scheduledStartTime: matchData.scheduled_start_time,
+        createdAt: matchData.created_at,
+        updatedAt: matchData.updated_at,
+      };
+
+      const details: NBAMatchDetail = {
+        id: basketballData.id,
+        homeTeamId: basketballData.home_team_id,
+        homeTeamName: basketballData.home_team?.name || basketballData.home_team_id,
+        homeTeamLogo: basketballData.home_team?.logo_url,
+        awayTeamId: basketballData.away_team_id,
+        awayTeamName: basketballData.away_team?.name || basketballData.away_team_id,
+        awayTeamLogo: basketballData.away_team?.logo_url,
+        season: basketballData.season,
+        week: basketballData.week,
+        scores: basketballData.scores,
+        venue: basketballData.venue,
+        gameSubtitle: basketballData.game_subtitle,
+        venueName: basketballData.venue,
+        venueCity: basketballData.venue_city,
+        externalId: basketballData.external_id,
+        createdAt: basketballData.created_at,
+        updatedAt: basketballData.updated_at,
+      };
+
+      return {
+        match,
+        details,
+        event_type: 'basketball_nba'
+      };
+    } else if (matchData.event_type === 'sandbox_metaverse') {
+      const { data: sandboxData, error: sandboxError } = await supabaseClient
+        .from('match_details_sandbox_metaverse')
+        .select('*')
+        .eq('id', matchData.details_id)
+        .single();
+
+      if (sandboxError || !sandboxData) {
+        console.error('Error getting sandbox details:', sandboxError);
+        return null;
+      }
+
+      const match: Match = {
+        id: matchData.id,
+        eventType: matchData.event_type,
+        detailsId: matchData.details_id,
+        status: matchData.status,
+        scheduledStartTime: matchData.scheduled_start_time,
+        bookmakers: matchData.bookmakers || [],
+        createdAt: matchData.created_at,
+        updatedAt: matchData.updated_at,
+      };
+
+      const details: SandboxMetaverseMatchDetail = {
+        id: sandboxData.id,
+        player1Id: sandboxData.player1_id,
+        player1Name: sandboxData.player1_name,
+        player1Subtitle: sandboxData.player1_subtitle,
+        player1ImageUrl: sandboxData.player1_image_url,
+        player2Id: sandboxData.player2_id,
+        player2Name: sandboxData.player2_name,
+        player2Subtitle: sandboxData.player2_subtitle,
+        player2ImageUrl: sandboxData.player2_image_url,
+        createdAt: sandboxData.created_at,
+        updatedAt: sandboxData.updated_at,
+      };
+
+      return {
+        match,
+        details,
+        event_type: 'sandbox_metaverse'
+      };
+    }
+
+    console.error('Unsupported event_type:', matchData.event_type);
+    return null;
+  } catch (error) {
+    console.error('Exception getting match with details by ID:', error);
+    return null;
+  }
+};
+
 export const getUpcomingMatches = async (limit: number = 50): Promise<Match[]> => {
   try {
     const now = new Date().toISOString();
     
-    // First get matches from the main table (all event types)
-    // Temporarily allowing past matches for testing - remove this filter in production
+    // Get matches from the main table (all event types)
     const { data: matchesData, error: matchesError } = await supabaseClient
       .from('matches')
       .select('*')
-      // .gt('scheduled_start_time', now)  // Commented out to include past matches for testing
       .eq('status', 'upcoming')
       .order('scheduled_start_time', { ascending: true })
       .limit(limit);
@@ -491,92 +641,19 @@ export const getUpcomingMatches = async (limit: number = 50): Promise<Match[]> =
       return [];
     }
 
-    // Process matches by event type
-    const processedMatches = await Promise.all(
-      matchesData.map(async (item) => {
-        if (item.event_type === 'basketball_nba') {
-          // Get basketball details with team info
-          const { data: basketballData, error: basketballError } = await supabaseClient
-            .from('match_details_basketball_nba')
-            .select(`
-              *,
-              home_team:teams_nba!match_details_basketball_nba_home_team_id_fkey(*),
-              away_team:teams_nba!match_details_basketball_nba_away_team_id_fkey(*)
-            `)
-            .eq('id', item.details_id)
-            .single();
+    // Convert to new Match type structure
+    const matches: Match[] = matchesData.map((item: any) => ({
+      id: item.id,
+      event_type: item.event_type,
+      details_id: item.details_id,
+      status: item.status,
+      scheduled_start_time: item.scheduled_start_time,
+      bookmakers: item.bookmakers || [],
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    }));
 
-          if (basketballError || !basketballData) {
-            console.warn(`No basketball details found for match ${item.id} with details_id ${item.details_id}`);
-            return null;
-          }
-
-          const homeTeam = basketballData.home_team;
-          const awayTeam = basketballData.away_team;
-
-          return {
-            id: item.id,
-            sport_key: 'basketball_nba',
-            sport_title: 'NBA',
-            sport_name: 'basketball',
-            league_name: 'nba',
-            commence_time: item.scheduled_start_time,
-            home_team: {
-              id: basketballData.home_team_id,
-              name: homeTeam ? `${homeTeam.city} ${homeTeam.name}` : basketballData.home_team_id,
-              logo: homeTeam?.logo_url || null
-            },
-            away_team: {
-              id: basketballData.away_team_id,
-              name: awayTeam ? `${awayTeam.city} ${awayTeam.name}` : basketballData.away_team_id,
-              logo: awayTeam?.logo_url || null
-            },
-            bookmakers: item.bookmakers || [],
-            scores: basketballData.scores || null,
-            completed: item.status === 'finished'
-          };
-        } else if (item.event_type === 'sandbox_metaverse') {
-          // Get sandbox details
-          const { data: sandboxData, error: sandboxError } = await supabaseClient
-            .from('match_details_sandbox_metaverse')
-            .select('*')
-            .eq('id', item.details_id)
-            .single();
-
-          if (sandboxError || !sandboxData) {
-            console.warn(`No sandbox details found for match ${item.id} with details_id ${item.details_id}`);
-            return null;
-          }
-
-          return {
-            id: item.id,
-            sport_key: 'sandbox_metaverse',
-            sport_title: 'The Sandbox Metaverse',
-            sport_name: 'esports',
-            league_name: 'sandbox',
-            commence_time: item.scheduled_start_time,
-            home_team: {
-              id: sandboxData.player1_id,
-              name: sandboxData.player1_name,
-              alias: sandboxData.player1_subtitle,
-              logo: sandboxData.player1_image_url
-            },
-            away_team: {
-              id: sandboxData.player2_id,
-              name: sandboxData.player2_name,
-              alias: sandboxData.player2_subtitle,
-              logo: sandboxData.player2_image_url
-            },
-            bookmakers: item.bookmakers || [],
-            scores: null,
-            completed: item.status === 'finished'
-          };
-        }
-        return null;
-      })
-    );
-
-    return processedMatches.filter(match => match !== null);
+    return matches;
   } catch (error) {
     console.error('Exception getting upcoming matches:', error);
     return [];

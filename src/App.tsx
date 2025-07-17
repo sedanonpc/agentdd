@@ -13,6 +13,8 @@ import LoginPage from './pages/LoginPage';
 import LeaderboardPage from './pages/Leaderboard';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import UserBetListPage from './pages/UserBetListPage';
+import ProfilePage from './pages/ProfilePage';
+import BetsPage from './pages/BetsPage';
 import { Web3Provider } from './context/Web3Context';
 import { AuthProvider } from './context/AuthContext';
 import { BettingProvider } from './context/BettingContext';
@@ -20,6 +22,7 @@ import { MatchesProvider } from './context/MatchesContext';
 import { ChatProvider } from './context/ChatContext';
 import { PointsProvider } from './context/PointsContext';
 import { StraightBetsProvider } from './context/StraightBetsContext';
+import { BetsProvider } from './context/BetsContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { isSupabaseConfigured } from './services/supabaseService';
 import { ConsoleThemeProvider } from './theme/muiTheme';
@@ -66,8 +69,9 @@ function App() {
         <PointsProvider>
           <MatchesProvider>
             <StraightBetsProvider>
-              <BettingProvider>
-              <ChatProvider>
+              <BetsProvider>
+                <BettingProvider>
+                <ChatProvider>
               <ConsoleThemeProvider>
                 <div className="min-h-screen font-mono text-console-white bg-console-black bg-terminal-grid bg-grid relative">
                   {/* Scanline effect - positioned below content but above background */}
@@ -105,6 +109,14 @@ function App() {
                         } 
                       />
                       <Route 
+                        path="/profile" 
+                        element={
+                          <ProtectedRoute>
+                            <ProfilePage />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      <Route 
                         path="/admin" 
                         element={
                           <AdminDashboardPage />
@@ -130,6 +142,14 @@ function App() {
                         path="/leaderboard" 
                         element={<LeaderboardPage />} 
                       />
+                      <Route 
+                        path="/bets" 
+                        element={
+                          <ProtectedRoute>
+                            <BetsPage />
+                          </ProtectedRoute>
+                        } 
+                      />
                     </Routes>
                   </main>
                     
@@ -152,6 +172,7 @@ function App() {
               </ConsoleThemeProvider>
               </ChatProvider>
             </BettingProvider>
+              </BetsProvider>
             </StraightBetsProvider>
           </MatchesProvider>
         </PointsProvider>

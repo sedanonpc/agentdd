@@ -32,16 +32,18 @@ END$$;
 -- Create the straight_bets table
 CREATE TABLE IF NOT EXISTS straight_bets (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  creator_id UUID NOT NULL REFERENCES user_accounts(id) ON DELETE CASCADE,
+  creator_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  creator_username TEXT NOT NULL,  -- Store username directly
   match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
   creators_pick_id TEXT NOT NULL,
   amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
   amount_currency currency_type NOT NULL DEFAULT 'points',
   creators_note TEXT,
-  acceptor_id UUID REFERENCES user_accounts(id) ON DELETE CASCADE,
+  acceptor_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  acceptor_username TEXT,  -- Store username directly (nullable since bet might not be accepted yet)
   acceptors_pick_id TEXT,
   status bet_status NOT NULL DEFAULT 'open',
-  winner_user_id UUID REFERENCES user_accounts(id) ON DELETE SET NULL,
+  winner_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   
   -- Timestamps
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
@@ -53,19 +55,19 @@ CREATE TABLE IF NOT EXISTS straight_bets (
   CONSTRAINT different_picks CHECK (
     acceptors_pick_id IS NULL OR creators_pick_id != acceptors_pick_id
   ),
-  CONSTRAINT creator_not_acceptor CHECK (creator_id != acceptor_id),
+  CONSTRAINT creator_not_acceptor CHECK (creator_user_id != acceptor_user_id),
   CONSTRAINT winner_is_participant CHECK (
     winner_user_id IS NULL OR 
-    winner_user_id = creator_id OR 
-    winner_user_id = acceptor_id
+    winner_user_id = creator_user_id OR 
+    winner_user_id = acceptor_user_id
   ),
   CONSTRAINT valid_acceptance CHECK (
     -- Open bets: no acceptor data
-    (status = 'open' AND acceptor_id IS NULL AND accepted_at IS NULL AND acceptors_pick_id IS NULL) OR
+    (status = 'open' AND acceptor_user_id IS NULL AND accepted_at IS NULL AND acceptors_pick_id IS NULL AND acceptor_username IS NULL) OR
     -- Cancelled bets: no acceptor data (can be cancelled before acceptance)
-    (status = 'cancelled' AND acceptor_id IS NULL AND accepted_at IS NULL AND acceptors_pick_id IS NULL) OR
+    (status = 'cancelled' AND acceptor_user_id IS NULL AND accepted_at IS NULL AND acceptors_pick_id IS NULL AND acceptor_username IS NULL) OR
     -- Non-open, non-cancelled bets: must have acceptor data
-    (status NOT IN ('open', 'cancelled') AND acceptor_id IS NOT NULL AND accepted_at IS NOT NULL AND acceptors_pick_id IS NOT NULL)
+    (status NOT IN ('open', 'cancelled') AND acceptor_user_id IS NOT NULL AND accepted_at IS NOT NULL AND acceptors_pick_id IS NOT NULL AND acceptor_username IS NOT NULL)
   ),
   CONSTRAINT valid_completion CHECK (
     (status != 'completed' AND completed_at IS NULL AND winner_user_id IS NULL) OR
@@ -74,8 +76,8 @@ CREATE TABLE IF NOT EXISTS straight_bets (
 );
 
 -- Create indexes for better query performance
-CREATE INDEX idx_straight_bets_creator_id ON straight_bets(creator_id);
-CREATE INDEX idx_straight_bets_acceptor_id ON straight_bets(acceptor_id);
+CREATE INDEX idx_straight_bets_creator_user_id ON straight_bets(creator_user_id);
+CREATE INDEX idx_straight_bets_acceptor_user_id ON straight_bets(acceptor_user_id);
 CREATE INDEX idx_straight_bets_match_id ON straight_bets(match_id);
 CREATE INDEX idx_straight_bets_status ON straight_bets(status);
 CREATE INDEX idx_straight_bets_created_at ON straight_bets(created_at);
@@ -94,8 +96,6 @@ CREATE TRIGGER update_straight_bets_updated_at_trigger
     FOR EACH ROW
     EXECUTE FUNCTION update_straight_bets_updated_at();
 
-
-
 -- Enable Row Level Security
 ALTER TABLE straight_bets ENABLE ROW LEVEL SECURITY;
 
@@ -103,16 +103,8 @@ ALTER TABLE straight_bets ENABLE ROW LEVEL SECURITY;
 -- Users can view bets they created or accepted
 CREATE POLICY "Users can view their own bets" ON straight_bets
     FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM user_accounts 
-            WHERE user_accounts.id = creator_id 
-            AND user_accounts.user_id = auth.uid()
-        ) OR 
-        EXISTS (
-            SELECT 1 FROM user_accounts 
-            WHERE user_accounts.id = acceptor_id 
-            AND user_accounts.user_id = auth.uid()
-        )
+        creator_user_id = auth.uid() OR 
+        acceptor_user_id = auth.uid()
     );
 
 -- Users can view open bets from others (for accepting)
@@ -122,24 +114,33 @@ CREATE POLICY "Users can view open bets" ON straight_bets
 -- Users can create bets
 CREATE POLICY "Users can create bets" ON straight_bets
     FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM user_accounts 
-            WHERE user_accounts.id = creator_id 
-            AND user_accounts.user_id = auth.uid()
-        )
+        creator_user_id = auth.uid()
     );
 
--- Users can update their own open bets (e.g., to accept them)
+-- Users can update their own bets or accept open bets
 CREATE POLICY "Users can update bets" ON straight_bets
     FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM user_accounts 
-            WHERE user_accounts.id = creator_id 
-            AND user_accounts.user_id = auth.uid()
-        ) OR 
-        (status = 'open' AND auth.uid() IS NOT NULL)
+        -- Allow creators to update their own bets
+        creator_user_id = auth.uid() OR 
+        
+        -- Allow authenticated users to accept open bets
+        (status = 'open' AND auth.uid() IS NOT NULL AND acceptor_user_id IS NULL) OR
+        
+        -- Allow service role for system operations
+        auth.role() = 'service_role'
+    )
+    WITH CHECK (
+        -- After update, allow if user is creator or acceptor
+        creator_user_id = auth.uid() OR 
+        acceptor_user_id = auth.uid() OR
+        
+        -- Allow service role for system operations
+        auth.role() = 'service_role'
     );
 
 -- Grant necessary permissions to authenticated users
 GRANT USAGE ON SCHEMA public TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.straight_bets TO authenticated; 
+GRANT SELECT, INSERT, UPDATE ON public.straight_bets TO authenticated;
+
+-- Remove the problematic RLS policy from user_accounts
+DROP POLICY IF EXISTS "Users can view basic account info of bet participants" ON public.user_accounts; 

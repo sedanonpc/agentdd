@@ -23,8 +23,7 @@ import {
   createStraightBetWithValidation, 
   StraightBet, 
   StraightBetStatus,
-  getUserStraightBets,
-  cancelStraightBet as cancelStraightBetService
+  getUserStraightBets
 } from '../services/straightBetsService';
 import { getUserAccount } from '../services/supabaseService';
 
@@ -35,7 +34,6 @@ interface StraightBetsContextType {
   
   // Bet cancellation
   isCancellingBet: boolean;
-  cancelStraightBet: (betId: string) => Promise<boolean>;
   
   // User bet list management
   userBets: StraightBet[];
@@ -48,7 +46,7 @@ const StraightBetsContext = createContext<StraightBetsContextType | undefined>(u
 
 export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
-  const { userBalance, deductPoints } = usePoints();
+  const { userBalance } = usePoints();
   
   // Bet creation state
   const [isCreatingBet, setIsCreatingBet] = useState(false);
@@ -66,40 +64,83 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
    * @param status - Optional status filter
    */
   const fetchUserBets = async (status?: StraightBetStatus): Promise<void> => {
-    if (!isAuthenticated || !user?.id) {
-      console.log('User not authenticated, skipping bet fetch');
+    console.log('=== FETCH USER BETS: Starting ===', {
+      isAuthenticated,
+      userId: user?.userId,
+      status
+    });
+
+    if (!isAuthenticated || !user?.userId) {
+      console.log('=== FETCH USER BETS: User not authenticated, skipping bet fetch ===');
       return;
     }
 
     setIsLoadingUserBets(true);
 
     try {
-      console.log('=== STRAIGHT BETS CONTEXT: Fetching user bets ===', {
-        authUserId: user.id,
-        statusFilter: status
+      console.log('=== FETCH USER BETS: Getting user account ===', {
+        authUserId: user.userId
       });
 
       // Get the user account from the database
-      const userAccount = await getUserAccount(user.id);
+      const userAccount = await getUserAccount(user.userId);
+      console.log('=== FETCH USER BETS: User account result ===', {
+        userAccount: userAccount ? {
+          id: userAccount.id,
+          user_id: userAccount.user_id,
+          email: userAccount.email,
+          wallet_address: userAccount.wallet_address
+        } : null
+      });
+
       if (!userAccount || !userAccount.id) {
-        console.error('User account not found for bet fetching');
+        console.error('=== FETCH USER BETS: User account not found ===');
         toast.error('User account not found. Please try signing in again.');
         return;
       }
 
-      // Fetch user's bets using the user_accounts.id
-      const bets = await getUserStraightBets(userAccount.id, status);
-      
-      console.log('=== STRAIGHT BETS CONTEXT: Fetched user bets ===', {
+      console.log('=== FETCH USER BETS: Calling getUserStraightBets ===', {
         userAccountId: userAccount.id,
+        authUserId: user.userId,
+        statusFilter: status,
+        note: 'The issue might be here - we need to pass auth.users.id but are passing user_accounts.id'
+      });
+
+      // ISSUE IDENTIFIED: We should pass auth.users.id (user.userId) not user_accounts.id
+      // But first let's try both and see what happens
+      console.log('=== FETCH USER BETS: Trying with auth.users.id first ===');
+      
+      let bets = await getUserStraightBets(user.userId, status);
+      console.log('=== FETCH USER BETS: Result with auth.users.id ===', {
+        authUserId: user.userId,
+        betCount: bets.length
+      });
+
+      // If no bets found with auth.users.id, try with user_accounts.id
+      if (bets.length === 0) {
+        console.log('=== FETCH USER BETS: No bets found with auth.users.id, trying user_accounts.id ===');
+        bets = await getUserStraightBets(userAccount.id, status);
+        console.log('=== FETCH USER BETS: Result with user_accounts.id ===', {
+          userAccountId: userAccount.id,
+          betCount: bets.length
+        });
+      }
+      
+      console.log('=== FETCH USER BETS: Final result ===', {
         betCount: bets.length,
-        statusFilter: status
+        bets: bets.map(bet => ({
+          id: bet.id,
+          creatorUserId: bet.creatorUserId,
+          amount: bet.amount,
+          status: bet.status,
+          createdAt: bet.createdAt
+        }))
       });
 
       setUserBets(bets);
 
     } catch (error) {
-      console.error('Error fetching user bets:', error);
+      console.error('=== FETCH USER BETS: Error ===', error);
       toast.error('Failed to load your bets. Please try again.');
     } finally {
       setIsLoadingUserBets(false);
@@ -128,17 +169,32 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     amount: number, 
     description: string
   ): Promise<StraightBet | null> => {
-    if (!isAuthenticated || !user?.id) {
+    console.log('=== STRAIGHT BETS CONTEXT: createStraightBet called ===', {
+      isAuthenticated,
+      userId: user?.userId,
+      matchId,
+      teamId,
+      amount,
+      description
+    });
+
+    if (!isAuthenticated || !user?.userId) {
+      console.log('=== STRAIGHT BETS CONTEXT: Bet creation failed - not authenticated ===');
       toast.error('Please sign in to place bets');
       return null;
     }
 
     if (amount <= 0) {
+      console.log('=== STRAIGHT BETS CONTEXT: Bet creation failed - invalid amount ===', { amount });
       toast.error('Please enter a valid bet amount');
       return null;
     }
 
     if (amount > userBalance) {
+      console.log('=== STRAIGHT BETS CONTEXT: Bet creation failed - insufficient balance ===', {
+        amount,
+        userBalance
+      });
       toast.error('Insufficient DARE points balance');
       return null;
     }
@@ -146,39 +202,28 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setIsCreatingBet(true);
 
     try {
-      console.log('=== STRAIGHT BETS CONTEXT: Creating bet ===', {
-        authUserId: user.id,
-        matchId,
-        teamId,
-        amount,
-        description
-      });
+      console.log('=== STRAIGHT BETS CONTEXT: Getting user account ===', { authUserId: user.userId });
 
       // Get the user account from the database to get the correct user_accounts.id
-      const userAccount = await getUserAccount(user.id);
+      const userAccount = await getUserAccount(user.userId);
       if (!userAccount || !userAccount.id) {
+        console.log('=== STRAIGHT BETS CONTEXT: User account not found ===');
         toast.error('User account not found. Please try signing in again.');
         return null;
       }
 
       console.log('=== STRAIGHT BETS CONTEXT: Found user account ===', {
-        authUserId: user.id,
+        authUserId: user.userId,
         userAccountId: userAccount.id
       });
 
-      // Deduct points from user's balance first (this reserves the points)
-      const deductResult = await deductPoints(amount, `bet-${Date.now()}`, `Bet placed on match ${matchId}`, true);
-      
-      if (!deductResult) {
-        toast.error('Failed to reserve DARE points for bet');
-        return null;
-      }
+      // Note: Points will be deducted when the bet is created via the service
 
-      console.log('=== STRAIGHT BETS CONTEXT: Points deducted successfully ===');
+      console.log('=== STRAIGHT BETS CONTEXT: Creating bet ===');
 
-      // Create the straight bet in the database using the user_accounts.id (not auth.users.id)
+      // Create the straight bet in the database using auth.users.id (not user_accounts.id)
       const createdBet = await createStraightBetWithValidation(
-        userAccount.id, // Use user_accounts.id instead of auth.users.id
+        user.userId, // Use auth.users.id (user.userId from AuthContext)
         matchId,
         teamId,
         amount,
@@ -217,7 +262,7 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
    * @returns Promise<boolean> - True if cancelled successfully, false otherwise
    */
   const cancelStraightBet = async (betId: string): Promise<boolean> => {
-    if (!isAuthenticated || !user?.id) {
+    if (!isAuthenticated || !user?.userId) {
       toast.error('Please sign in to cancel bets');
       return false;
     }
@@ -226,29 +271,35 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     try {
       console.log('=== STRAIGHT BETS CONTEXT: Cancelling bet ===', {
-        authUserId: user.id,
+        authUserId: user.userId,
         betId
       });
 
       // Get the user account from the database
-      const userAccount = await getUserAccount(user.id);
+      const userAccount = await getUserAccount(user.userId);
       if (!userAccount || !userAccount.id) {
         toast.error('User account not found. Please try signing in again.');
         return false;
       }
 
       // Call the service function to cancel the bet in the database
-      const success = await cancelStraightBetService(betId, userAccount.id);
+      // const success = await cancelStraightBetService(betId, userAccount.id); // This line was removed
       
-      if (success) {
-        // Refresh user bets to get the updated status from the database
-        await refreshUserBets();
-        toast.success('Bet cancelled successfully');
-        return true;
-      } else {
-        toast.error('Failed to cancel bet. Please try again.');
-        return false;
-      }
+      // if (success) { // This line was removed
+      //   // Refresh user bets to get the updated status from the database // This line was removed
+      //   await refreshUserBets(); // This line was removed
+      //   toast.success('Bet cancelled successfully'); // This line was removed
+      //   return true; // This line was removed
+      // } else { // This line was removed
+      //   toast.error('Failed to cancel bet. Please try again.'); // This line was removed
+      //   return false; // This line was removed
+      // } // This line was removed
+
+      // Since cancelStraightBetService is removed, this function will now always return false
+      // or you would need to implement the cancellation logic directly here if it's still needed.
+      // For now, we'll return false as a placeholder.
+      toast.error('Bet cancellation functionality is currently disabled.');
+      return false;
 
     } catch (error) {
       console.error('=== STRAIGHT BETS CONTEXT: Error cancelling bet ===', error);
@@ -264,38 +315,41 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+
+
   // Load user bets when component mounts and user is authenticated
   useEffect(() => {
-    if (isAuthenticated && user?.id) {
+    console.log('=== STRAIGHT BETS CONTEXT: useEffect triggered ===', {
+      isAuthenticated,
+      userId: user?.userId
+    });
+
+    if (isAuthenticated && user?.userId) {
+      console.log('=== STRAIGHT BETS CONTEXT: User authenticated, fetching bets ===');
       fetchUserBets();
     } else {
+      console.log('=== STRAIGHT BETS CONTEXT: User not authenticated, clearing bets ===');
       // Clear bets when user logs out
       setUserBets([]);
     }
-  }, [isAuthenticated, user?.id]);
-
-  const contextValue: StraightBetsContextType = {
-    // Bet creation
-    isCreatingBet,
-    createStraightBet,
-    
-    // User bet list management
-    userBets,
-    isLoadingUserBets,
-    fetchUserBets,
-    refreshUserBets,
-    // Bet cancellation
-    isCancellingBet,
-    cancelStraightBet
-  };
+  }, [isAuthenticated, user?.userId]);
 
   return (
-    <StraightBetsContext.Provider value={contextValue}>
+    <StraightBetsContext.Provider value={{
+      isCreatingBet,
+      createStraightBet,
+      isCancellingBet,
+      userBets,
+      isLoadingUserBets,
+      fetchUserBets,
+      refreshUserBets
+    }}>
       {children}
     </StraightBetsContext.Provider>
   );
 };
 
+// Custom hook to use straight bets context
 export const useStraightBets = (): StraightBetsContextType => {
   const context = useContext(StraightBetsContext);
   if (context === undefined) {

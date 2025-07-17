@@ -31,12 +31,13 @@ ON public.user_accounts(email);
 -- Enable Row Level Security
 ALTER TABLE public.user_accounts ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy: Users can view their own account
+-- RLS Policy: Users can view their own account with full details
 CREATE POLICY "Users can view own account" ON public.user_accounts
 FOR SELECT USING (
   auth.uid() = user_id OR 
   auth.uid()::text = wallet_address
 );
+
 
 -- RLS Policy: Users can update their own account
 CREATE POLICY "Users can update own account" ON public.user_accounts
