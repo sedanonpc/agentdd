@@ -4,7 +4,6 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import Navbar from './components/layout/Navbar';
-import HomePage from './pages/HomePage';
 import MatchesPage from './pages/MatchesPage';
 import UserHomePage from './pages/UserHomePage';
 import ChatPage from './pages/ChatPage';
@@ -79,7 +78,7 @@ function App() {
                     <div className="relative z-[10]">
                       <main className="container mx-auto px-2 sm:px-4 pt-16 pb-20">
                         <Routes>
-                          <Route path="/" element={<HomePage />} />
+                          <Route path="/" element={<UserHomePage />} />
                           <Route path="/matches" element={
                             <ProtectedRoute>
                               <MatchesPage />
