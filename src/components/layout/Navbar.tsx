@@ -122,10 +122,15 @@ const Navbar: React.FC = () => {
   // isAdmin is already destructured from useAuth() above
 
   const navLinks = [
-    { path: '/dashboard', label: 'HOME', icon: Home }, // UserHomePage tab - available to all users
-    { path: '/matches', label: 'MATCHES', icon: Activity },
+    { 
+      path: '/dashboard', 
+      label: 'HOME', 
+      icon: Home,
+      requiresAuth: true // Will prompt login if not authenticated
+    },
+    { path: '/matches', label: 'MATCHES', icon: Activity, requiresAuth: false },
     { path: '/bets', label: 'BETS', icon: Archive, requiresAuth: true },
-    { path: '/chat', label: 'COMMS', icon: MessageSquare, requiresAuth: true },
+    { path: '/chat', label: 'CHAT', icon: MessageSquare, requiresAuth: true },
     { path: '/profile', label: 'PROFILE', icon: User, requiresAuth: true },
     { path: '/admin', label: 'ADMIN', icon: Database, requiresAuth: true, requiresAdmin: true },
   ];
@@ -133,6 +138,23 @@ const Navbar: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  // Handle navigation with authentication check
+  const handleNavigation = (link: any, event: React.MouseEvent) => {
+    // Always allow admin navigation if user is admin
+    if (link.requiresAdmin && !isAdmin) {
+      return;
+    }
+    
+    // If link requires auth and user is not authenticated, redirect to login
+    if (link.requiresAuth && !isAuthenticated) {
+      event.preventDefault();
+      // Store the intended destination for after login
+      sessionStorage.setItem('redirectAfterLogin', link.path);
+      navigate('/login');
+    }
+    // Otherwise, navigation proceeds normally via the Link component
   };
 
   // Simulate a refresh action
@@ -143,10 +165,9 @@ const Navbar: React.FC = () => {
     window.location.reload();
   };
 
-  // Get filtered links - we want to show ALL links on mobile, with smaller icons
+  // Get filtered links - now show all relevant links regardless of auth status
   const getFilteredLinks = () => {
     return navLinks.filter(link => 
-      (!link.requiresAuth || (link.requiresAuth && isAuthenticated)) && 
       (!link.requiresAdmin || (link.requiresAdmin && isAdmin))
     );
   };
@@ -232,6 +253,7 @@ const Navbar: React.FC = () => {
             <Link
               key={link.path}
               to={link.path}
+              onClick={(event) => handleNavigation(link, event)}
               className={`flex flex-col items-center justify-center py-2 ${isMobile ? 'px-2' : 'px-4'} ${
                 isActive 
                   ? 'text-console-white animate-pulse-blue' 

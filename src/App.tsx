@@ -6,6 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/layout/Navbar';
 import MatchesPage from './pages/MatchesPage';
 import UserHomePage from './pages/UserHomePage';
+import RootRouter from './components/common/RootRouter';
 import ChatPage from './pages/ChatPage';
 import AcceptBetPage from './pages/AcceptBetPage';
 import LoginPage from './pages/LoginPage';
@@ -78,7 +79,7 @@ function App() {
                     <div className="relative z-[10]">
                       <main className="container mx-auto px-2 sm:px-4 pt-16 pb-20">
                         <Routes>
-                          <Route path="/" element={<UserHomePage />} />
+                          <Route path="/" element={<RootRouter />} />
                           <Route path="/matches" element={
                             <ProtectedRoute>
                               <MatchesPage />

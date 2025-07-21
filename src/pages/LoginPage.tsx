@@ -32,7 +32,14 @@ const LoginPage: React.FC = () => {
   // Auto-redirect if authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/matches');
+      // Check if there's a redirect destination stored
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+      } else {
+        navigate('/matches');
+      }
     }
   }, [isAuthenticated, navigate]);
 
@@ -46,7 +53,13 @@ const LoginPage: React.FC = () => {
         // If connected and authenticated, navigate to matches page
         if (isConnected && account) {
           console.log("MetaMask connection detected, redirecting...");
-          navigate('/matches');
+          const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+          if (redirectPath) {
+            sessionStorage.removeItem('redirectAfterLogin');
+            navigate(redirectPath);
+          } else {
+            navigate('/matches');
+          }
           clearInterval(checkConnectionInterval);
         }
       }, 1000);
@@ -61,7 +74,13 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     if (isConnected && account) {
       console.log("Already connected to wallet, redirecting...");
-      navigate('/matches');
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+      } else {
+        navigate('/matches');
+      }
     }
   }, [isConnected, account, navigate]);
   
@@ -77,8 +96,14 @@ const LoginPage: React.FC = () => {
       // Show success toast
       toast.success('Login successful!');
       
-      // Navigate to dashboard
-      navigate('/dashboard');
+      // Check if there's a redirect destination stored
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Login error:', error);
       
@@ -130,8 +155,14 @@ const LoginPage: React.FC = () => {
       toast.dismiss();
       toast.success('Registration successful!');
       
-      // Navigate to dashboard
-      navigate('/dashboard');
+      // Check if there's a redirect destination stored
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Registration error:', error);
       
@@ -180,7 +211,13 @@ const LoginPage: React.FC = () => {
         setCheckingConnection(true);
       } else {
         // For desktop, navigate immediately on success
-        navigate('/matches');
+        const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+        if (redirectPath) {
+          sessionStorage.removeItem('redirectAfterLogin');
+          navigate(redirectPath);
+        } else {
+          navigate('/matches');
+        }
       }
     } catch (error) {
       if (error instanceof Error) {
