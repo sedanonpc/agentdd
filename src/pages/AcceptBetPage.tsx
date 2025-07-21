@@ -1,12 +1,18 @@
+/*
+ * DEPRECATED: This component is deprecated and will be replaced by a new share modal.
+ * The legacy escrow and betting logic has been commented out.
+ * This page will be removed in a future version.
+ */
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Check, X, AlertTriangle, Loader2, ShieldCheck, Calendar, Clock, TrendingUp, ArrowUp, ArrowDown, User } from 'lucide-react';
-import { useBetting } from '../context/BettingContext';
+// import { useBetting } from '../context/BettingContext'; // REMOVED: Legacy context
 import { useMatches } from '../context/MatchesContext';
 import { useWeb3 } from '../context/Web3Context';
 import { useAuth } from '../context/AuthContext';
 import { usePoints } from '../context/PointsContext';
-import { Bet, BetStatus } from '../types';
+// import { Bet, BetStatus } from '../types'; // REMOVED: Legacy types
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { formatDecimalOdds, decimalToAmerican } from '../utils/oddsUtils';
 import { QRCodeSVG } from 'qrcode.react';
@@ -14,7 +20,7 @@ import { QRCodeSVG } from 'qrcode.react';
 const AcceptBetPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { acceptBet } = useBetting();
+  // const { acceptBet } = useBetting(); // REMOVED: Legacy context
   const { getMatchById } = useMatches();
   const { account, connectWallet } = useWeb3();
   const { isAuthenticated, loginWithEmail, authMethod } = useAuth();
@@ -272,20 +278,20 @@ const AcceptBetPage: React.FC = () => {
     
     try {
       // Create a new bet object
-      const bet: Bet = {
-        id: betId,
-        creator: creator,
-        acceptor: account,
-        matchId: matchId,
-        teamId: teamId,
-        amount: parseFloat(betAmount),
-        status: BetStatus.ACTIVE,
-        timestamp: Date.now(),
-        description: "Accepted via shared bet invitation"
-      };
+      // const bet: Bet = { // REMOVED: Legacy types
+      //   id: betId,
+      //   creator: creator,
+      //   acceptor: account,
+      //   matchId: matchId,
+      //   teamId: teamId,
+      //   amount: parseFloat(betAmount),
+      //   status: BetStatus.ACTIVE,
+      //   timestamp: Date.now(),
+      //   description: "Accepted via shared bet invitation"
+      // };
       
-      // Call acceptBet function from BettingContext
-      await acceptBet(bet);
+      // Call acceptBet function from BettingContext // REMOVED: Legacy context
+      // await acceptBet(bet);
       
       // Show success message before redirect (in-page UI)
       setEscrowSuccess(true);

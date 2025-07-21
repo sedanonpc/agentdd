@@ -1,4 +1,17 @@
-import { Bet, BetStatus, LeaderboardEntry } from '../types';
+// Define the LeaderboardEntry interface locally to avoid import issues  
+interface LeaderboardEntry {
+  user_id: string;
+  username?: string;
+  wallet_address?: string;
+  total_bets: number;
+  wins: number;
+  losses: number;
+  total_wagered: number;
+  total_won: number;
+  win_rate: number;
+  dare_points?: number;
+  is_mock?: boolean;
+}
 
 // Mock data for leaderboard
 export const MOCK_LEADERBOARD_ENTRIES: LeaderboardEntry[] = [
@@ -65,14 +78,14 @@ export const MOCK_LEADERBOARD_ENTRIES: LeaderboardEntry[] = [
 ];
 
 // Mock bets for open marketplace
-export const MOCK_OPEN_BETS: Bet[] = [
+export const MOCK_OPEN_BETS: any[] = [
   {
     id: 'mock_bet_open_1',
     creator: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
     matchId: 'match_123',
     teamId: 'team_456',
     amount: 100,
-    status: BetStatus.OPEN,
+    status: 'OPEN',
     timestamp: Date.now() - 3600000, // 1 hour ago
     description: 'Lakers to win by 10 points',
     is_mock: true
@@ -83,7 +96,7 @@ export const MOCK_OPEN_BETS: Bet[] = [
     matchId: 'match_124',
     teamId: 'team_789',
     amount: 200,
-    status: BetStatus.OPEN,
+    status: 'OPEN',
     timestamp: Date.now() - 7200000, // 2 hours ago
     description: 'Warriors to win the championship',
     is_mock: true
@@ -94,7 +107,7 @@ export const MOCK_OPEN_BETS: Bet[] = [
     matchId: 'match_125',
     teamId: 'team_101',
     amount: 150,
-    status: BetStatus.OPEN,
+    status: 'OPEN',
     timestamp: Date.now() - 10800000, // 3 hours ago
     description: 'Bucks to win the next game',
     is_mock: true
@@ -102,7 +115,7 @@ export const MOCK_OPEN_BETS: Bet[] = [
 ];
 
 // Mock bets for closed marketplace
-export const MOCK_CLOSED_BETS: Bet[] = [
+export const MOCK_CLOSED_BETS: any[] = [
   {
     id: 'mock_bet_closed_1',
     creator: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
@@ -110,7 +123,7 @@ export const MOCK_CLOSED_BETS: Bet[] = [
     matchId: 'match_123',
     teamId: 'team_456',
     amount: 100,
-    status: BetStatus.COMPLETED,
+    status: 'COMPLETED',
     timestamp: Date.now() - 86400000, // 1 day ago
     description: 'Lakers to win by 10 points',
     winnerId: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
@@ -123,7 +136,7 @@ export const MOCK_CLOSED_BETS: Bet[] = [
     matchId: 'match_124',
     teamId: 'team_789',
     amount: 200,
-    status: BetStatus.COMPLETED,
+    status: 'COMPLETED',
     timestamp: Date.now() - 172800000, // 2 days ago
     description: 'Warriors to win the championship',
     winnerId: '0x9876a23c4b3d2e1f05678c9b0d2e1f05678c9b0d',
@@ -136,7 +149,7 @@ export const MOCK_CLOSED_BETS: Bet[] = [
     matchId: 'match_125',
     teamId: 'team_101',
     amount: 150,
-    status: BetStatus.CANCELLED,
+    status: 'CANCELLED',
     timestamp: Date.now() - 259200000, // 3 days ago
     description: 'Bucks to win the next game',
     is_mock: true
@@ -159,7 +172,7 @@ export const getMockLeaderboardEntries = (limit: number = 10): LeaderboardEntry[
   return entries.slice(0, limit);
 };
 
-export const getMockOpenBets = (limit: number = 50): Bet[] => {
+export const getMockOpenBets = (limit: number = 50): any[] => {
   // Make fresh timestamps
   const bets = [...MOCK_OPEN_BETS].map(bet => ({
     ...bet,
@@ -174,7 +187,7 @@ export const getMockOpenBets = (limit: number = 50): Bet[] => {
   return bets.slice(0, limit);
 };
 
-export const getMockClosedBets = (limit: number = 50): Bet[] => {
+export const getMockClosedBets = (limit: number = 50): any[] => {
   // Make fresh timestamps
   const bets = [...MOCK_CLOSED_BETS].map(bet => ({
     ...bet,

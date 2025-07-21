@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Send, ArrowLeft, MessageSquare, Users, Terminal, Loader2 } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
-import { useBetting } from '../context/BettingContext';
+// import { useBetting } from '../context/BettingContext'; // REMOVED: Legacy context
+import { useAuth } from '../context/AuthContext';
 import { useWeb3 } from '../context/Web3Context';
 import { Message } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -28,12 +29,12 @@ const ChatPage: React.FC = () => {
     sendGlobalMessage,
     isDareDevilTyping
   } = useChat();
-  const { getBetById } = useBetting();
+  // const { getBetById } = useBetting(); // REMOVED: Legacy context
   const { account, isConnected } = useWeb3();
   const [newMessage, setNewMessage] = useState('');
   const [showGlobalChat, setShowGlobalChat] = useState(!betId);
   
-  const bet = betId ? getBetById(betId) : null;
+  const bet = betId ? null : null; // REMOVED: Legacy context
   const chatMessages = currentChatId && messages[currentChatId] ? messages[currentChatId] : [];
   
   useEffect(() => {

@@ -23,7 +23,8 @@ import {
   createStraightBetWithValidation, 
   StraightBet, 
   StraightBetStatus,
-  getUserStraightBets
+  getUserStraightBets,
+  acceptStraightBet
 } from '../services/straightBetsService';
 import { getUserAccount } from '../services/supabaseService';
 
@@ -31,6 +32,9 @@ interface StraightBetsContextType {
   // Bet creation
   isCreatingBet: boolean;
   createStraightBet: (matchId: string, teamId: string, amount: number, description: string) => Promise<StraightBet | null>;
+  
+  // Bet acceptance
+  acceptBet: (betId: string, acceptorsPickId: string, betType?: 'straight') => Promise<boolean>;
   
   // Bet cancellation
   isCancellingBet: boolean;
@@ -256,6 +260,52 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   /**
+   * Accept a bet (generalized for all bet types)
+   * 
+   * This function provides a unified interface for accepting bets of any type.
+   * It performs common validation (authentication, points balance) and then
+   * delegates to the appropriate service based on the bet type.
+   * 
+   * The function is designed to be extensible - new bet types can be added
+   * by extending the betType parameter and adding the corresponding service calls.
+   * 
+   * @param betId - The ID of the bet to accept
+   * @param acceptorsPickId - The team/player ID the acceptor is betting on
+   * @param betType - The type of bet (defaults to 'straight', extensible for future types)
+   * @returns Promise<boolean> - True if accepted successfully, false otherwise
+   */
+  const acceptBet = async (betId: string, acceptorsPickId: string, betType: 'straight' = 'straight'): Promise<boolean> => {
+    if (!isAuthenticated || !user?.userId) {
+      toast.error('Please sign in to accept bets');
+      return false;
+    }
+
+    try {
+      // Verify user account exists in the database
+      const userAccount = await getUserAccount(user.userId);
+      if (!userAccount) {
+        toast.error('User account not found. Please try signing in again.');
+        return false;
+      }
+
+      // Call the appropriate service based on bet type
+      // This pattern allows for easy extension to other bet types
+      // Note: acceptStraightBet expects auth.users.id, not user_accounts.id
+      if (betType === 'straight') {
+        await acceptStraightBet(betId, user.userId, acceptorsPickId);
+      } else {
+        throw new Error(`Unsupported bet type: ${betType}`);
+      }
+
+      toast.success('Bet accepted successfully!');
+      return true;
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to accept bet');
+      return false;
+    }
+  };
+
+  /**
    * Cancels a straight bet (only if it's still open and belongs to the user)
    * 
    * @param betId - ID of the bet to cancel
@@ -338,6 +388,7 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     <StraightBetsContext.Provider value={{
       isCreatingBet,
       createStraightBet,
+      acceptBet,
       isCancellingBet,
       userBets,
       isLoadingUserBets,

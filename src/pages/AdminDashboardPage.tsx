@@ -681,7 +681,10 @@ const AdminDashboardPage: React.FC = () => {
                               setMatches(prev => prev.filter(m => m.id !== match.id));
                               toast.success('Match deleted');
                               
-                              // Refresh matches in the BettingContext
+                              // Refresh matches data
+                              console.log('Refreshing matches data...');
+
+                              // Refresh matches in the MatchesContext
                               try {
                                 await refreshMatches();
                               } catch (refreshError) {

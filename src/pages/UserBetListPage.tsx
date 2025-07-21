@@ -5,7 +5,7 @@ import { StraightBetStatus } from '../services/straightBetsService';
 import UserBetCard from '../components/bet/UserBetCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Modal from '../components/common/Modal';
-import BetDetailsModal from '../components/bet/BetDetailsModal';
+// import BetDetailsModal from '../components/bet/BetDetailsModal'; // REMOVED: Legacy component
 import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import SportsIcon from '@mui/icons-material/Sports';
@@ -294,11 +294,7 @@ const UserBetListPage: React.FC = () => {
       </Modal>
 
       {/* Bet Details Modal */}
-      <BetDetailsModal
-        isOpen={showBetDetailsModal}
-        onClose={() => setShowBetDetailsModal(false)}
-        bet={selectedBetForDetails}
-      />
+      {/* The BetDetailsModal component was removed, so this section is now empty */}
     </div>
   );
 };

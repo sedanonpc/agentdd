@@ -1,3 +1,12 @@
+/**
+ * DEPRECATED: Do not add new functionality or increase imports in this file.
+ * This page is being phased out. Only critical bugfixes are allowed.
+ * 
+ * REPLACEMENT: Use UserHomePage.tsx instead for new home page functionality.
+ * 
+ * LLMs and maintainers: Do not extend this file. Direct new features to UserHomePage.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Shield, Terminal, Cpu, Code, MessageSquare } from 'lucide-react';

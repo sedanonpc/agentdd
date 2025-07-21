@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, User, Database, MessageSquare, Terminal, LogOut, Trophy, RefreshCw, Star, Archive } from 'lucide-react';
+import { Activity, User, Database, MessageSquare, Terminal, LogOut, Trophy, RefreshCw, Star, Archive, Home } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePoints } from '../../context/PointsContext';
 import PointsDisplay from '../../components/PointsDisplay';
-import { getUsersByPoints, LeaderboardEntry } from '../../services/for_removal/betStorageService';
-import { getMockLeaderboardEntries } from '../../mockSupabase';
+// import { getUsersByPoints, LeaderboardEntry } from '../../services/for_removal/betStorageService';
+// import { getMockLeaderboardEntries } from '../../mockSupabase';
 
 const Navbar: React.FC = () => {
   const { user, authMethod, isAuthenticated, isAdmin, logout } = useAuth();
@@ -32,13 +32,17 @@ const Navbar: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Fetch user's rank based on $DARE points
+  // Fetch user's rank based on $DARE points - COMMENTED OUT DUE TO LEGACY SERVICE REMOVAL
   const fetchUserRank = useCallback(async () => {
     if (!user || !isAuthenticated) {
       setUserRank(null);
       return;
     }
 
+    // Legacy rank fetching disabled - will be reimplemented with new services
+    setUserRank(null);
+    
+    /*
     setIsLoading(true);
     try {
       // Get leaderboard data
@@ -95,6 +99,7 @@ const Navbar: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+    */
   }, [user, isAuthenticated, userBalance, authMethod]);
 
   // Fetch rank on mount and when user balance changes
@@ -117,10 +122,9 @@ const Navbar: React.FC = () => {
   // isAdmin is already destructured from useAuth() above
 
   const navLinks = [
-    { path: '/', label: 'TERMINAL', icon: Terminal },
+    { path: '/dashboard', label: 'HOME', icon: Home }, // UserHomePage tab - available to all users
     { path: '/matches', label: 'MATCHES', icon: Activity },
-    { path: '/bets', label: 'BETS', icon: Archive, requiresAuth: true }, // New Bets tab
-    { path: '/leaderboard', label: 'RANKS', icon: Trophy },
+    { path: '/bets', label: 'BETS', icon: Archive, requiresAuth: true },
     { path: '/chat', label: 'COMMS', icon: MessageSquare, requiresAuth: true },
     { path: '/profile', label: 'PROFILE', icon: User, requiresAuth: true },
     { path: '/admin', label: 'ADMIN', icon: Database, requiresAuth: true, requiresAdmin: true },
