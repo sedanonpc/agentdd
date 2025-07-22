@@ -8,7 +8,6 @@ import MatchesPage from './pages/MatchesPage';
 import UserHomePage from './pages/UserHomePage';
 import RootRouter from './components/common/RootRouter';
 import ChatPage from './pages/ChatPage';
-import AcceptBetPage from './pages/AcceptBetPage';
 import LoginPage from './pages/LoginPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import UserBetListPage from './pages/UserBetListPage';
@@ -107,7 +106,6 @@ function App() {
                               <MatchesPage />
                             </ProtectedRoute>
                           } />
-                          <Route path="/accept-bet" element={<AcceptBetPage />} />
                           <Route path="/login" element={<LoginPage />} />
                           <Route 
                             path="/dashboard" 
