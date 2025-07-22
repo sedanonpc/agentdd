@@ -3,7 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import Navbar from './components/layout/Navbar';
+import NavigationBar from './components/layout/NavigationBar';
 import MatchesPage from './pages/MatchesPage';
 import UserHomePage from './pages/UserHomePage';
 import RootRouter from './components/common/RootRouter';
@@ -51,7 +51,7 @@ const ConditionalNavbar: React.FC = () => {
     location.pathname.startsWith(route)
   );
   
-  return shouldHideNavbar ? null : <Navbar />;
+  return shouldHideNavbar ? null : <NavigationBar />;
 };
 
 function App() {
@@ -95,9 +95,8 @@ function App() {
                     
                     {/* Content container - ensures content is above effects but below navbar */}
                     <div className="relative z-[10]">
-                      <main className="container mx-auto px-2 sm:px-4 pt-16 pb-20" style={{
-                        paddingTop: location.pathname.startsWith('/bet/') || location.pathname.startsWith('/share-bet/') ? '0' : '4rem',
-                        paddingBottom: location.pathname.startsWith('/bet/') || location.pathname.startsWith('/share-bet/') ? '0' : '5rem'
+                      <main className="container mx-auto px-2 sm:px-4 pt-16" style={{
+                        paddingTop: location.pathname.startsWith('/bet/') || location.pathname.startsWith('/share-bet/') ? '0' : '4rem'
                       }}>
                         <Routes>
                           <Route path="/" element={<RootRouter />} />
@@ -176,7 +175,7 @@ function App() {
                         </Routes>
                       </main>
                       
-                      {/* Navbar is positioned with highest z-index to be on top */}
+                      {/* NavigationBar is positioned with highest z-index to be on top */}
                       <ConditionalNavbar />
                       
                       <ToastContainer 

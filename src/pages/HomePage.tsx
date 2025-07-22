@@ -401,7 +401,7 @@ const HomePage: React.FC = () => {
       </section>
       
       {/* Session ID indicator at bottom */}
-      <div className="fixed bottom-16 sm:bottom-20 left-2 sm:left-4 bg-console-black/60 backdrop-blur-xs border-1 border-console-blue px-1 sm:px-2 py-0.5 text-console-white-dim font-mono text-[10px] sm:text-xs z-[40]">
+      <div className="fixed bottom-4 left-2 sm:left-4 bg-console-black/60 backdrop-blur-xs border-1 border-console-blue px-1 sm:px-2 py-0.5 text-console-white-dim font-mono text-[10px] sm:text-xs z-[40]">
         SESSION: {getSessionID()}
       </div>
     </div>

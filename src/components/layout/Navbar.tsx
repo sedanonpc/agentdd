@@ -1,3 +1,11 @@
+/**
+ * @deprecated This component is deprecated and scheduled for deletion.
+ * Use NavigationBar.tsx instead.
+ * 
+ * This file is kept temporarily for reference during the transition period.
+ * DO NOT USE THIS COMPONENT IN NEW CODE.
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Activity, User, Database, MessageSquare, Terminal, LogOut, Trophy, RefreshCw, Star, Archive, Home } from 'lucide-react';
