@@ -372,9 +372,9 @@ export const getUserStraightBets = async (
       status
     });
 
-    let query = supabaseClient
+    let query = (supabaseClient
       .from('straight_bets')
-      .select('*')
+      .select('*') as any)
       .or(orCondition)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -396,7 +396,7 @@ export const getUserStraightBets = async (
     console.log('=== GET USER STRAIGHT BETS: Query result ===', {
       dataLength: data?.length || 0,
       userAccountId,
-      rawData: data ? data.slice(0, 2).map(bet => ({
+      rawData: data ? data.slice(0, 2).map((bet: any) => ({
         id: bet.id,
         creator_user_id: bet.creator_user_id,
         amount: bet.amount,
@@ -443,7 +443,7 @@ export const getOpenStraightBets = async (limit: number = 50): Promise<StraightB
     console.log('Fetching open straight bets');
 
     // First get the bets with basic match info
-    const { data, error } = await supabaseClient
+    const { data, error } = await (supabaseClient
       .from('straight_bets')
       .select(`
         *,
@@ -453,7 +453,7 @@ export const getOpenStraightBets = async (limit: number = 50): Promise<StraightB
           details_id
         )
       `)
-      .eq('status', StraightBetStatus.OPEN)
+      .eq('status', StraightBetStatus.OPEN) as any)
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -567,7 +567,7 @@ export const acceptStraightBet = async (
     const acceptorUsername = userData.email || userData.wallet_address;
 
     // Update bet with acceptor information
-    const { data: updatedBet, error: updateError } = await supabaseClient
+    const { data: updatedBet, error: updateError } = await (supabaseClient
       .from('straight_bets')
       .update({
         acceptor_user_id: acceptorUserId,
@@ -575,7 +575,7 @@ export const acceptStraightBet = async (
         acceptors_pick_id: acceptorsPickId,
         status: 'waiting_result',
         accepted_at: new Date().toISOString()
-      })
+      }) as any)
       .eq('id', betId)
       .eq('status', 'open')  // Ensure bet is still open
       .select()

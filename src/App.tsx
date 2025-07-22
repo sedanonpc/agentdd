@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -14,6 +14,8 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import UserBetListPage from './pages/UserBetListPage';
 import ProfilePage from './pages/ProfilePage';
 import BetsPage from './pages/BetsPage';
+import BetDetailView from './pages/BetDetailView';
+import ShareBetView from './pages/ShareBetView';
 import { Web3Provider } from './context/Web3Context';
 import { AuthProvider } from './context/AuthContext';
 import { MatchesProvider } from './context/MatchesContext';
@@ -38,7 +40,24 @@ const loadFonts = () => {
   document.head.appendChild(Orbitron);
 };
 
+// Component to conditionally render navbar
+const ConditionalNavbar: React.FC = () => {
+  const location = useLocation();
+  
+  // Routes where navbar should be hidden
+  const hideNavbarRoutes = ['/bet/', '/share-bet/'];
+  
+  // Check if current route should hide navbar
+  const shouldHideNavbar = hideNavbarRoutes.some(route => 
+    location.pathname.startsWith(route)
+  );
+  
+  return shouldHideNavbar ? null : <Navbar />;
+};
+
 function App() {
+  const location = useLocation();
+  
   // Force dark mode and load fonts
   useEffect(() => {
     document.documentElement.classList.add('dark');
@@ -77,7 +96,10 @@ function App() {
                     
                     {/* Content container - ensures content is above effects but below navbar */}
                     <div className="relative z-[10]">
-                      <main className="container mx-auto px-2 sm:px-4 pt-16 pb-20">
+                      <main className="container mx-auto px-2 sm:px-4 pt-16 pb-20" style={{
+                        paddingTop: location.pathname.startsWith('/bet/') || location.pathname.startsWith('/share-bet/') ? '0' : '4rem',
+                        paddingBottom: location.pathname.startsWith('/bet/') || location.pathname.startsWith('/share-bet/') ? '0' : '5rem'
+                      }}>
                         <Routes>
                           <Route path="/" element={<RootRouter />} />
                           <Route path="/matches" element={
@@ -141,11 +163,23 @@ function App() {
                               </ProtectedRoute>
                             } 
                           />
+                          <Route 
+                            path="/bet/:betId" 
+                            element={
+                              <ProtectedRoute>
+                                <BetDetailView />
+                              </ProtectedRoute>
+                            } 
+                          />
+                          <Route 
+                            path="/share-bet/:betId" 
+                            element={<ShareBetView />}
+                          />
                         </Routes>
                       </main>
                       
                       {/* Navbar is positioned with highest z-index to be on top */}
-                      <Navbar />
+                      <ConditionalNavbar />
                       
                       <ToastContainer 
                         position="bottom-right" 
