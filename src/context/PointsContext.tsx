@@ -1,31 +1,25 @@
 /*
- * ⚠️ DEPRECATED - SCHEDULED FOR REFACTOR ⚠️
- * 
- * This context is deprecated and scheduled for refactoring.
- * 
- * DO NOT ADD NEW FEATURES TO THIS CONTEXT.
- * DO NOT EXTEND THIS CONTEXT'S FUNCTIONALITY.
- * 
- * Current Issues:
- * 1. This context mixes concerns:
- *    - Points balance display (should be in UserAccountContext)
- *    - Points transactions (should be in straightBetsService)
- *    - Transaction history (to be moved to a dedicated context)
- *    - Escrow functionality (to be removed)
- * 
- * Future Architecture:
- * - A new UserAccountContext will be created to handle:
- *   - User account data including points balances
- *   - Account preferences and settings
- * 
- * - Points manipulation will be moved to respective services:
- *   - straightBetsService for bet-related points
- *   - Other services for their specific point operations
- * 
- * Current Usage (to be migrated):
- * - Components: PointsDisplay, Navbar, MarketplaceBetCard, StraightBetCard
- * - Pages: DashboardPage, ProfilePage, AcceptBetPage, Leaderboard
- * - Contexts: StraightBetsContext, BetsContext, BettingContext (also deprecated)
+ * Points Context - Manages user points balance and transactions
+ *
+ * This context handles:
+ * - User DARE points balance management
+ * - Points transaction history
+ * - Points-related operations (add, deduct, etc.)
+ * - Integration with Supabase for persistent storage
+ * - Mock data fallback for development
+ *
+ * The context automatically loads user points when a user is authenticated
+ * and keeps the balance in sync with the database.
+ *
+ * Integration with other systems:
+ * - Auth: Uses user authentication state to determine when to load points
+ * - Database: Directly interacts with Supabase for points operations
+ * - Contexts: StraightBetsContext (current betting system)
+ *
+ * Usage:
+ * ```tsx
+ * const { userBalance, transactions, addPoints, deductPoints } = usePoints();
+ * ```
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';

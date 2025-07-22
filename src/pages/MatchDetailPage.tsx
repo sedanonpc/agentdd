@@ -1,21 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, Clock, DollarSign, AlertCircle } from 'lucide-react';
-import { useBetting } from '../context/BettingContext';
+// import { useBetting } from '../context/BettingContext'; // REMOVED: Legacy context
 import { useMatches } from '../context/MatchesContext';
+import { useAuth } from '../context/AuthContext';
 import { useWeb3 } from '../context/Web3Context';
-import { Match } from '../types';
+import { usePoints } from '../context/PointsContext';
+import { useStraightBets } from '../context/StraightBetsContext';
+import { Wallet, AlertTriangle, TrendingUp, ArrowUp, ArrowDown, Calendar, Clock, DollarSign } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import MatchAnalysisCard from '../components/match/MatchAnalysisCard';
-import { getMatchAnalysis } from '../services/elizaService';
+import MatchBettingForm from '../components/match/MatchBettingForm';
+import { formatDecimalOdds, decimalToAmerican } from '../utils/oddsUtils';
+import { Match } from '../types';
 import { MatchAnalysis } from '../types';
 
 const MatchDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { createNewBet } = useBetting();
+  // const { createNewBet } = useBetting(); // REMOVED: Legacy context
+  const { createStraightBet } = useStraightBets(); // Use new betting context
   const { matches, loading: loadingMatches } = useMatches();
-  const { isConnected } = useWeb3();
+  const { isAuthenticated, loginWithEmail } = useAuth();
+  const { account, connectWallet } = useWeb3();
+  const { userBalance } = usePoints();
   
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,8 +51,8 @@ const MatchDetailPage: React.FC = () => {
   const loadAnalysis = async (matchId: string) => {
     setLoadingAnalysis(true);
     try {
-      const data = await getMatchAnalysis(matchId);
-      setAnalysis(data);
+      // const data = await getMatchAnalysis(matchId); // REMOVED: Legacy service
+      // setAnalysis(data);
     } catch (error) {
       console.error('Failed to load analysis:', error);
     } finally {
@@ -92,7 +99,7 @@ const MatchDetailPage: React.FC = () => {
   };
   
   const handleCreateBet = async () => {
-    if (!isConnected) {
+    if (!account) {
       alert('Please connect your wallet first');
       return;
     }
@@ -103,10 +110,10 @@ const MatchDetailPage: React.FC = () => {
     
     setIsCreatingBet(true);
     try {
-      const newBet = await createNewBet(match.id, selectedTeam, parseFloat(betAmount), description);
-      if (newBet) {
-        navigate(`/dashboard`);
-      }
+      // const newBet = await createNewBet(match.id, selectedTeam, parseFloat(betAmount), description); // REMOVED: Legacy context
+      // if (newBet) {
+      //   navigate(`/dashboard`);
+      // }
     } finally {
       setIsCreatingBet(false);
     }
@@ -123,7 +130,7 @@ const MatchDetailPage: React.FC = () => {
   if (!match) {
     return (
       <div className="flex flex-col items-center py-16">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+        <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
         <h2 className="text-2xl font-bold">Match Not Found</h2>
         <p className="text-slate-600 dark:text-slate-400 mt-2">
           The match you're looking for doesn't exist or has been removed.

@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
-import { Clock, CheckCircle, XCircle, Timer } from 'lucide-react';
+/*
+ * DEPRECATED: This component uses legacy betting components and will be replaced.
+ * The legacy BetShareModal has been commented out.
+ * This component will be updated or removed in a future version.
+ */
+
+import React, { useState, useEffect } from 'react';
+import { Clock, User, Trophy, Share2, TrendingUp, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { StraightBet, StraightBetStatus } from '../../services/straightBetsService';
-import BetShareModal from './BetShareModal';
+// import BetShareModal from './BetShareModal'; // REMOVED: Legacy component
+import { MatchWithDetails } from '../../types/match';
 
 interface UserBetCardProps {
   bet: StraightBet;
@@ -35,7 +42,7 @@ const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
       case StraightBetStatus.WAITING_RESULT:
         return {
           label: 'WAITING RESULT',
-          icon: Timer,
+          icon: Clock, // Changed from Timer to Clock for consistency
           color: 'text-blue-400',
           bgColor: 'bg-blue-400/10',
           borderColor: 'border-blue-400/30'
@@ -200,7 +207,19 @@ const UserBetCard: React.FC<UserBetCardProps> = ({ bet, onViewDetails }) => {
         </button>
       </div>
       {showShareModal && (
-        <BetShareModal bet={betForModal} onClose={() => setShowShareModal(false)} />
+        // <BetShareModal bet={betForModal} onClose={() => setShowShareModal(false)} /> // REMOVED: Legacy component
+        <div className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-4 rounded-lg">
+          <h3 className="text-console-white font-mono text-lg mb-3">Share Bet</h3>
+          <p className="text-console-white-dim text-sm mb-3">
+            This feature is currently unavailable. The legacy BetShareModal has been removed.
+          </p>
+          <button
+            onClick={() => setShowShareModal(false)}
+            className="w-full bg-console-blue/20 hover:bg-console-blue/30 text-console-white font-mono text-sm py-2 px-4 border border-console-blue/50 hover:border-console-blue transition-colors"
+          >
+            Close
+          </button>
+        </div>
       )}
     </div>
   );

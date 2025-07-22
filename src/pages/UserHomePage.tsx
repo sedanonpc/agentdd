@@ -1,101 +1,22 @@
-/**
- * DEPRECATED: Do not add new functionality or increase imports in this file.
- * This page is being phased out. Only critical bugfixes are allowed.
- * 
- * REPLACEMENT: Use UserHomePage.tsx instead for new home page functionality.
- * 
- * LLMs and maintainers: Do not extend this file. Direct new features to UserHomePage.
- */
-
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Terminal, Cpu, Code, MessageSquare } from 'lucide-react';
-import { Conference, Division, StandingsTeam } from '../types';
-import { fetchNBAStandings } from '../services/standingsService';
-import LoadingSpinner from '../components/common/LoadingSpinner';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Construction, MessageSquare, Code, Shield, Cpu } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import DareDevilChatModal from '../components/chat/DareDevilChatModal';
 
-const HomePage: React.FC = () => {
-  const [activeConference, setActiveConference] = useState<'Eastern' | 'Western'>('Eastern');
-  const [standings, setStandings] = useState<{ eastern: Conference, western: Conference } | null>(null);
-  const [loadingStandings, setLoadingStandings] = useState<boolean>(true);
-  const [isLiveData, setIsLiveData] = useState<boolean>(false);
-  const [dataSource, setDataSource] = useState<string>('mock');
+const UserHomePage: React.FC = () => {
   const [isDareDevilModalOpen, setIsDareDevilModalOpen] = useState<boolean>(false);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    // Fetch standings data when component mounts
-    const loadStandings = async () => {
-      try {
-        setLoadingStandings(true);
-        const response = await fetchNBAStandings();
-        setStandings({
-          eastern: response.eastern,
-          western: response.western
-        });
-        setIsLiveData(response.isLive);
-        setDataSource(response.dataSource);
-        console.log('=== HOME PAGE: Loaded standings data ===', response.dataSource);
-      } catch (error) {
-        console.error('Error loading standings:', error);
-      } finally {
-        setLoadingStandings(false);
-      }
-    };
-
-    loadStandings();
-  }, []);
-
-  const getTerminalTime = () => {
-    const now = new Date();
-    return now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  };
-
-  const getSessionID = () => {
-    // Generate a random session ID that remains consistent during the session
-    if (!window.sessionStorage.getItem('session_id')) {
-      const sessionId = Math.floor(Math.random() * 900000) + 100000;
-      window.sessionStorage.setItem('session_id', sessionId.toString());
+  const handleDareDevilClick = () => {
+    if (isAuthenticated) {
+      // Navigate to the Comms tab (/chat)
+      navigate('/chat');
+    } else {
+      // Prompt to log in
+      navigate('/login');
     }
-    return window.sessionStorage.getItem('session_id');
-  };
-
-  // Format win percentage to display as .XXX
-  const formatPct = (pct: number): string => {
-    return pct.toFixed(3).slice(1); // Remove the leading 0
-  };
-
-  // Function to render team row with clinched indicators
-  const renderTeamRow = (team: StandingsTeam) => {
-    return (
-      <tr key={team.name} className="border-b border-console-blue/20 hover:bg-console-blue/5">
-        <td className="px-2 sm:px-3 py-1 sm:py-2 text-left">
-          <div className="flex items-center">
-            <span>{team.name}</span>
-            {team.clinched === 'playoff' && <span className="ml-1 text-xs text-console-blue-bright">x</span>}
-            {team.clinched === 'division' && <span className="ml-1 text-xs text-yellow-300">y</span>}
-            {team.clinched === 'homeCourt' && <span className="ml-1 text-xs text-green-400">z</span>}
-          </div>
-        </td>
-        <td className="px-2 sm:px-3 py-1 sm:py-2 text-center text-console-white">{team.wins}</td>
-        <td className="px-2 sm:px-3 py-1 sm:py-2 text-center text-console-white-dim">{team.losses}</td>
-        <td className="px-2 sm:px-3 py-1 sm:py-2 text-center">{formatPct(team.winPercentage)}</td>
-        <td className="px-2 sm:px-3 py-1 sm:py-2 text-center">{team.last10}</td>
-        <td className={`px-2 sm:px-3 py-1 sm:py-2 text-center ${team.streak.startsWith('W') ? 'text-green-400' : 'text-red-400'}`}>{team.streak}</td>
-      </tr>
-    );
-  };
-
-  // Function to render a division
-  const renderDivision = (division: Division) => {
-    return (
-      <React.Fragment key={division.name}>
-        <tr className="bg-console-blue/10 border-b border-t border-console-blue/30">
-          <td colSpan={6} className="px-2 sm:px-3 py-1 text-console-blue-bright font-bold">{division.name.toUpperCase()}</td>
-        </tr>
-        {division.teams.map(team => renderTeamRow(team))}
-      </React.Fragment>
-    );
   };
 
   return (
@@ -112,22 +33,10 @@ const HomePage: React.FC = () => {
         </div>
       </section>
       
-      {/* Daredevil Banner - Optimized for transparency */}
-      <section className="w-full bg-transparent overflow-hidden px-2 sm:px-0">
-        {/* Full-width image container with transparent background */}
-        <div className="relative w-full flex justify-center max-w-6xl mx-auto">
-          <img 
-            src="https://i.ibb.co/rGh18fww/nba-banner-v3.png"
-            alt="Agent Daredevil - Wanna Bet?" 
-            className="w-full h-auto object-contain relative z-0"
-          />
-        </div>
-      </section>
-      
       {/* DareDevil Chat Button */}
       <div className="flex justify-center my-6 max-w-6xl mx-auto px-2 sm:px-0">
         <button
-          onClick={() => setIsDareDevilModalOpen(true)}
+          onClick={handleDareDevilClick}
           className="bg-red-900/80 text-white px-6 py-3 font-mono text-sm hover:bg-red-800 transition-all duration-300 flex items-center gap-3 border-1 border-red-500 shadow-glow-red w-full sm:w-auto justify-center relative overflow-hidden group"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-red-900/0 via-red-500/20 to-red-900/0 opacity-0 group-hover:opacity-100 animate-pulse-slow transition-opacity"></div>
@@ -296,116 +205,18 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* League Stats Section - Updated with dynamic data */}
-      <section className="bg-console-gray-terminal/70 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-4 sm:p-6 max-w-6xl mx-auto px-2 sm:px-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 pb-2 border-b border-console-blue/50 gap-2">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-display uppercase text-console-white tracking-wider">LEAGUE_STATS</h2>
-          <div className="text-xs text-console-white-dim font-mono bg-console-blue/20 px-3 py-1 flex items-center gap-2">
-            <span>2024/2025 SEASON</span>
-            {dataSource === 'yahoo' && isLiveData && (
-              <span className="px-2 py-0.5 bg-blue-600 text-white text-[10px] font-mono rounded">YAHOO DATA</span>
-            )}
-            {!isLiveData && (
-              <span className="px-2 py-0.5 bg-yellow-600 text-black text-[10px] font-mono rounded">MOCK DATA</span>
-            )}
-          </div>
+      {/* Work in progress content - at the bottom */}
+      <div className="bg-console-gray-terminal/60 backdrop-blur-xs border-1 border-console-blue shadow-terminal">
+        <div className="p-8 text-center">
+          <Construction className="h-16 w-16 text-console-blue-bright mx-auto mb-4" />
+          <h2 className="text-xl font-mono text-console-white mb-4">WORK IN PROGRESS</h2>
+          <p className="text-console-white-muted font-mono text-sm">
+            This page is currently under development. Please check back later.
+          </p>
         </div>
-        
-        {/* Conference Tabs */}
-        <div className="flex mb-4 border-b border-console-blue/30">
-          <button 
-            className={`px-3 sm:px-4 py-1 sm:py-2 font-mono text-sm ${
-              activeConference === 'Eastern' 
-                ? 'text-console-white bg-console-blue/90 border-t border-l border-r border-console-blue' 
-                : 'text-console-white-dim hover:text-console-white transition-colors'
-            }`}
-            onClick={() => setActiveConference('Eastern')}
-          >
-            EASTERN
-          </button>
-          <button 
-            className={`px-3 sm:px-4 py-1 sm:py-2 font-mono text-sm ${
-              activeConference === 'Western' 
-                ? 'text-console-white bg-console-blue/90 border-t border-l border-r border-console-blue' 
-                : 'text-console-white-dim hover:text-console-white transition-colors'
-            }`}
-            onClick={() => setActiveConference('Western')}
-          >
-            WESTERN
-          </button>
-        </div>
-        
-        {/* Standings Table */}
-        <div className="overflow-x-auto custom-scrollbar">
-          {loadingStandings ? (
-            <div className="flex justify-center py-12">
-              <LoadingSpinner size={6} color="text-console-blue-bright" />
-            </div>
-          ) : standings ? (
-            <table className="w-full text-xs sm:text-sm font-mono">
-              <thead className="bg-console-black/70 text-console-white-dim">
-                <tr>
-                  <th className="px-2 sm:px-3 py-1 sm:py-2 text-left">TEAM</th>
-                  <th className="px-2 sm:px-3 py-1 sm:py-2 text-center">W</th>
-                  <th className="px-2 sm:px-3 py-1 sm:py-2 text-center">L</th>
-                  <th className="px-2 sm:px-3 py-1 sm:py-2 text-center">PCT</th>
-                  <th className="px-2 sm:px-3 py-1 sm:py-2 text-center">LAST 10</th>
-                  <th className="px-2 sm:px-3 py-1 sm:py-2 text-center">STREAK</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Render divisions for the active conference */}
-                {activeConference === 'Eastern' 
-                  ? standings.eastern.divisions.map(division => renderDivision(division))
-                  : standings.western.divisions.map(division => renderDivision(division))
-                }
-              </tbody>
-            </table>
-          ) : (
-            <div className="text-center py-6 text-console-white-dim font-mono">
-              Failed to load standings data. Please try again later.
-            </div>
-          )}
-        </div>
-        
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 sm:mt-6 pt-2 border-t border-console-blue/50 gap-3">
-          <div className="text-xs text-console-white-dim flex flex-col gap-1">
-            <div>
-              <span className="text-console-blue-bright">*</span> Stats provided by Yahoo Sports
-            </div>
-            <div className="flex gap-3">
-              <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 bg-green-400"></span> Win</span>
-              <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 bg-red-400"></span> Loss</span>
-            </div>
-            <div className="flex flex-wrap gap-2 sm:gap-3 mt-1">
-              <span className="flex items-center gap-1"><span className="text-console-blue-bright text-xs">x</span> Clinched Playoff</span>
-              <span className="flex items-center gap-1"><span className="text-yellow-300 text-xs">y</span> Clinched Division</span>
-              <span className="flex items-center gap-1"><span className="text-green-400 text-xs">z</span> Clinched Home Court</span>
-            </div>
-          </div>
-          <div className="flex gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
-            <Link
-              to="/matches"
-              className="bg-console-blue/90 backdrop-blur-xs text-console-white font-mono uppercase tracking-wider px-3 sm:px-4 py-1 sm:py-2 shadow-button hover:shadow-glow transition-all duration-300 text-xs sm:text-sm flex items-center justify-center gap-2"
-            >
-              <span>VIEW MATCHES</span>
-            </Link>
-            <Link
-              to="/matches"
-              className="bg-black/50 backdrop-blur-xs border-1 border-yellow-400 text-yellow-300 font-mono uppercase tracking-wider px-3 sm:px-4 py-1 sm:py-2 hover:shadow-yellow transition-all text-xs sm:text-sm flex items-center justify-center gap-2 shadow-yellow-glow animate-pulse-subtle"
-            >
-              <span>PLACE BETS</span>
-            </Link>
-          </div>
-        </div>
-      </section>
-      
-      {/* Session ID indicator at bottom */}
-      <div className="fixed bottom-16 sm:bottom-20 left-2 sm:left-4 bg-console-black/60 backdrop-blur-xs border-1 border-console-blue px-1 sm:px-2 py-0.5 text-console-white-dim font-mono text-[10px] sm:text-xs z-[40]">
-        SESSION: {getSessionID()}
       </div>
     </div>
   );
 };
 
-export default HomePage;
+export default UserHomePage; 

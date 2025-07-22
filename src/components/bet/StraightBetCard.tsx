@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MatchWithDetails } from '../../types/match';
 import { useAuth } from '../../context/AuthContext';
 import { usePoints } from '../../context/PointsContext';
-import { useBets } from '../../context/BetsContext';
+import { useStraightBets } from '../../context/StraightBetsContext';
 import Modal from '../common/Modal';
 
 interface StraightBetCardProps {
@@ -24,7 +24,7 @@ const SPORT_LABELS: Record<string, string> = {
 const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails, status }) => {
   const { user } = useAuth();
   const { userBalance } = usePoints();
-  const { acceptBet } = useBets();
+  const { acceptBet } = useStraightBets();
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState<string | null>(null);
