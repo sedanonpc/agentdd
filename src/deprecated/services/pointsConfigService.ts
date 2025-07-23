@@ -1,5 +1,5 @@
-import { PointsTransactionType } from '../types/points';
-import { supabase } from './supabaseService';
+import { PointsTransactionType } from '../../types/points';
+import { supabase } from '../../services/supabaseService';
 
 /**
  * Interface for Points Configuration
@@ -154,7 +154,7 @@ export const awardPointsByAction = async (
        getUserFreePoints,
        recordTransaction
      } = await import('./pointsService');
-     const { updatePoints } = await import('./supabaseService');
+     const { updatePoints } = await import('../../services/supabaseService');
     
     // Get user's current free points
     const freePoints = await getUserFreePoints(userId);

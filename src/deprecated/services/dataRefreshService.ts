@@ -1,4 +1,4 @@
-import { Match } from '../types';
+import { Match } from '../../types';
 import { fetchNBAMatchesFromYahoo } from './yahooSportsApi';
 
 // Key for storing the last refresh timestamp in localStorage

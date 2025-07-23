@@ -1,4 +1,4 @@
-import { Division, Team, Conference, ClinchedStatus, StandingsTeam } from '../types';
+import { Division, Team, Conference, ClinchedStatus, StandingsTeam } from '../../types';
 
 interface StandingsResponse {
   eastern: Conference;

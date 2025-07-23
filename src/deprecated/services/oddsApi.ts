@@ -1,4 +1,4 @@
-import { Match } from '../types';
+import { Match } from '../../types';
 import { fetchNBAMatchesFromYahoo } from './yahooSportsApi';
 import { MOCK_MATCHES as BET_MATCHES } from '../data/mockMatches';
 import { getMatchesWithAutoRefresh, forceRefreshData } from './dataRefreshService';

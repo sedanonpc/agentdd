@@ -1,4 +1,10 @@
 /**
+ * @deprecated This utility is deprecated and should no longer be used.
+ * Do not add new functionality to this file.
+ * This file will be removed in a future version.
+ */
+
+/**
  * Converts decimal (European) odds to American odds format
  * @param decimalOdds The decimal odds value
  * @returns The equivalent American odds value

@@ -1,3 +1,9 @@
+/**
+ * @deprecated This component is deprecated and should no longer be used.
+ * Do not add new functionality to this file.
+ * This file will be removed in a future version.
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, MessageSquare, X } from 'lucide-react';
 import { useChat } from '../../context/ChatContext';

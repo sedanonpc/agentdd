@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import HomePage from '../../pages/HomePage';
+import HomePage from '../../deprecated/pages/HomePage';
 import LoadingSpinner from './LoadingSpinner';
 
 const RootRouter: React.FC = () => {

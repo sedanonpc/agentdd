@@ -9,7 +9,6 @@ import UserHomePage from './pages/UserHomePage';
 import RootRouter from './components/common/RootRouter';
 import ChatPage from './pages/ChatPage';
 import LoginPage from './pages/LoginPage';
-import AdminDashboardPage from './pages/AdminDashboardPage';
 import UserBetListPage from './pages/UserBetListPage';
 import ProfilePage from './pages/ProfilePage';
 import BetsPage from './pages/BetsPage';
@@ -130,12 +129,7 @@ function App() {
                               </ProtectedRoute>
                             } 
                           />
-                          <Route 
-                            path="/admin" 
-                            element={
-                              <AdminDashboardPage />
-                            } 
-                          />
+
                           <Route 
                             path="/chat" 
                             element={

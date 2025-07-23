@@ -1,4 +1,4 @@
-import { Match } from '../types';
+import { Match } from '../../types';
 
 // Interface for API response
 interface YahooScraperResponse {
