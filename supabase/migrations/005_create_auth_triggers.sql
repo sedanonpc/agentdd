@@ -22,7 +22,7 @@ BEGIN
     signup_bonus_amount := 500;
   END IF;
 
-  -- Create user account record
+  -- Create user account record (username auto-generated via table default)
   INSERT INTO public.user_accounts (
     user_id, 
     email, 
@@ -102,7 +102,7 @@ BEGIN
     signup_bonus_amount := 500;
   END IF;
 
-  -- Create user account record with signup bonus
+  -- Create user account record with signup bonus (username auto-generated via table default)
   INSERT INTO public.user_accounts (
     user_id, 
     wallet_address,
@@ -159,5 +159,5 @@ CREATE TRIGGER on_auth_user_created
   EXECUTE FUNCTION public.insert_rows_after_signup_from_email();
 
 -- Add comments for documentation
-COMMENT ON FUNCTION public.insert_rows_after_signup_from_email() IS 'Inserts user_accounts and points_transactions rows after email signup';
-COMMENT ON FUNCTION public.insert_rows_after_signup_from_wallet(TEXT, TEXT) IS 'Inserts user_accounts and points_transactions rows after wallet signup'; 
+COMMENT ON FUNCTION public.insert_rows_after_signup_from_email() IS 'Inserts user_accounts and points_transactions rows after email signup with auto-generated username';
+COMMENT ON FUNCTION public.insert_rows_after_signup_from_wallet(TEXT, TEXT) IS 'Inserts user_accounts and points_transactions rows after wallet signup with auto-generated username'; 

@@ -1,3 +1,17 @@
+/**
+ * @deprecated This service is being deprecated and broken down into domain-specific services.
+ * 
+ * DO NOT ADD NEW FUNCTIONALITY TO THIS FILE.
+ * 
+ * Migration plan:
+ * - Authentication functions → authService.ts
+ * - User account functions → userAccountsService.ts
+ * - Match functions → matchService.ts (future)
+ * 
+ * This file will be removed once all consumers have migrated to the new services.
+ * Use the domain-specific services for new development.
+ */
+
 import { createClient } from '@supabase/supabase-js';
 import { Match } from '../types/match';
 import { MatchWithDetails, NBAMatchDetail, SandboxMetaverseMatchDetail } from '../types/match';
