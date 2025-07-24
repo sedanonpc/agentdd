@@ -1,4 +1,4 @@
-import { supabase } from './supabaseService';
+import { supabase } from '../../services/supabaseService';
 import {
   getUserAccount,
   updateUserAccount,
@@ -7,8 +7,8 @@ import {
   reservePoints as supabaseReservePoints,
   freePoints as supabaseFreePoints,
   updatePoints
-} from './supabaseService';
-import { PointsTransactionRecord } from '../types/points';
+} from '../../services/supabaseService';
+import { PointsTransactionRecord } from '../../types/points';
 
 // Default starting points
 export const DEFAULT_POINTS = 500;

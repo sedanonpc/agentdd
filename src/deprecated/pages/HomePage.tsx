@@ -10,10 +10,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Shield, Terminal, Cpu, Code, MessageSquare } from 'lucide-react';
-import { Conference, Division, StandingsTeam } from '../types';
+import { Conference, Division, StandingsTeam } from '../../types';
 import { fetchNBAStandings } from '../services/standingsService';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import DareDevilChatModal from '../components/chat/DareDevilChatModal';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import DareDevilChatModal from '../../components/chat/DareDevilChatModal';
 
 const HomePage: React.FC = () => {
   const [activeConference, setActiveConference] = useState<'Eastern' | 'Western'>('Eastern');

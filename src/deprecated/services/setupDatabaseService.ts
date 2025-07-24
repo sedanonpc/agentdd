@@ -1,4 +1,4 @@
-import { supabase } from './supabaseService';
+import { supabase } from '../../services/supabaseService';
 
 /**
  * Setup database schema for DARE points, bets, and leaderboards

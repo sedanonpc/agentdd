@@ -15,9 +15,9 @@
  */
 
 import { supabaseClient } from './supabaseService';
-import { recordTransaction } from './pointsService';
-import { getUserFreePoints, reservePoints } from './pointsService';
-import { awardBetAcceptanceBonus } from './pointsConfigService';
+import { recordTransaction } from '../deprecated/services/pointsService';
+import { getUserFreePoints, reservePoints } from '../deprecated/services/pointsService';
+import { awardBetAcceptanceBonus } from '../deprecated/services/pointsConfigService';
 import { v4 as uuidv4 } from 'uuid';
 
 // Straight bet status enum - matches database bet_status enum

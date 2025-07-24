@@ -1,5 +1,11 @@
-import { supabase } from './supabaseService';
-import { Match, Team, EventType } from '../types';
+/**
+ * @deprecated This service is deprecated and should no longer be used.
+ * Do not add new functionality to this file.
+ * This file will be removed in a future version.
+ */
+
+import { supabase } from '../../services/supabaseService';
+import { Match, Team, EventType } from '../../types';
 
 // Check if a user is an admin
 export const checkAdminStatus = async (userId: string): Promise<boolean> => {

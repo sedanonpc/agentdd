@@ -1,4 +1,4 @@
-import { Match } from '../types';
+import { Match } from '../../types';
 
 // Constants for API access
 const CORS_PROXY = 'https://corsproxy.io/?';

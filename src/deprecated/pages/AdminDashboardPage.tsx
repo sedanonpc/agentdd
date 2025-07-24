@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { createMatch, createNBAMatch, createSandboxMatch, updateMatchScoresAdmin, deleteMatch } from '../services/adminService';
-import { Match, Team, EventType } from '../types';
+import { Match, Team, EventType } from '../../types';
 import { toast } from 'react-toastify';
-import { getUpcomingMatches } from '../services/supabaseService';
-import { useMatches } from '../context/MatchesContext';
-import { getNBATeams, NBATeam } from '../services/teamsService';
-import { getUSTimezones, getSoutheastAsianTimezones, convertLocalToUTC, getUserTimezone } from '../utils/timezoneUtils';
+import { getUpcomingMatches } from '../../services/supabaseService';
+import { useMatches } from '../../context/MatchesContext';
+import { getNBATeams, NBATeam } from '../../services/teamsService';
+import { getUSTimezones, getSoutheastAsianTimezones, convertLocalToUTC, getUserTimezone } from '../../utils/timezoneUtils';
 
 const AdminDashboardPage: React.FC = () => {
   const navigate = useNavigate();

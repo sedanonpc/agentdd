@@ -1,4 +1,4 @@
-import { MatchAnalysis } from '../types';
+import { MatchAnalysis } from '../../types';
 
 // Mock analysis data for development
 const MOCK_ANALYSES: Record<string, MatchAnalysis> = {

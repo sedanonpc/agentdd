@@ -1,4 +1,10 @@
 /**
+ * @deprecated This file is deprecated and should no longer be used.
+ * Do not add new functionality to this file.
+ * This file will be removed in a future version.
+ */
+
+/**
  * Data Source Configuration
  * 
  * This file controls where the MatchesPage fetches its match data from.

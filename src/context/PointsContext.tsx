@@ -1,3 +1,11 @@
+/**
+ * @deprecated This context is scheduled for deprecation and should no longer be used in new code.
+ * It will be replaced by UserAccountContext in a future update.
+ * Do not add new functionality to this file.
+ * 
+ * Existing usage should be gradually migrated to the new UserAccountContext when available.
+ */
+
 /*
  * Points Context - Manages user points balance and transactions
  *
@@ -38,7 +46,7 @@ import {
   deductBetPoints,
   addBetWinPoints,
   awardPoints
-} from '../services/pointsService';
+} from '../deprecated/services/pointsService';
 
 // Define the context type
 interface PointsContextType {
