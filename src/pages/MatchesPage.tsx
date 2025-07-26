@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useMatches } from '../context/MatchesContext';
 import { SandboxMatchCard } from '../components/match/SandboxMatchCard';
 import { MatchWithDetails } from '../types/match';
-import MatchBettingForm from '../components/match/MatchBettingForm';
+import StraightBetEditorView from '../components/bet/StraightBetEditorView';
 import Modal from '../components/common/Modal';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -83,7 +83,7 @@ const MatchesPage: React.FC = () => {
     setSelectedMatchForBetting(null);
   };
 
-  // Convert MatchWithDetails to legacy Match format for MatchBettingForm
+  // Convert MatchWithDetails to legacy Match format for StraightBetEditorView
   const convertToLegacyMatch = (matchWithDetails: MatchWithDetails) => {
     if (matchWithDetails.eventType === 'basketball_nba') {
       return {
@@ -303,7 +303,7 @@ const MatchesPage: React.FC = () => {
       {/* Betting Modal */}
       {showBettingModal && selectedMatchForBetting && (
         <Modal isOpen={showBettingModal} onClose={handleCloseBettingModal}>
-          <MatchBettingForm 
+                          <StraightBetEditorView 
             match={convertToLegacyMatch(selectedMatchForBetting)!} 
             onClose={handleCloseBettingModal} 
           />
