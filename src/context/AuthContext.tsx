@@ -6,12 +6,14 @@ import {
   signOut, 
   getCurrentUser, 
   getCurrentSession,
+  isSupabaseConfigured
+} from '../services/authService';
+import { 
   getUserAccount,
   createUserAccount,
   insertRowsAfterSignupFromWallet,
-  linkWalletToUser,
-  isSupabaseConfigured
-} from '../services/supabaseService';
+  linkWalletToAccount
+} from '../services/userAccountsService';
 import { User } from '@supabase/supabase-js';
 
 interface AuthUser {
@@ -64,17 +66,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (supabaseUser) {
               const account = await getUserAccount(supabaseUser.id);
               
-              if (account) {
+              if (account && account.id) {
                 setUser({
                   accountId: account.id,  // Use user_accounts.id
                   userId: supabaseUser.id,  // Store auth.users.id separately
-                  email: supabaseUser.email,
+                  email: supabaseUser.email || undefined,
                   walletAddress: account.wallet_address,
-                  isAdmin: account.is_admin || false
+                  isAdmin: false  // is_admin field was removed, default to false
                 });
                 
-                // Update admin status
-                setIsAdmin(account.is_admin || false);
+                // Update admin status - always false since we removed admin functionality
+                setIsAdmin(false);
                 setAuthMethod('email');
               }
             }
@@ -181,17 +183,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (supabaseUser) {
           const account = await getUserAccount(supabaseUser.id);
           
-          if (account) {
+          if (account && account.id) {
             setUser({
               accountId: account.id,  // Use user_accounts.id
               userId: supabaseUser.id,  // Store auth.users.id separately
-              email: supabaseUser.email,
+              email: supabaseUser.email || undefined,
               walletAddress: account.wallet_address,
-              isAdmin: account.is_admin || false
+              isAdmin: false  // is_admin field was removed, default to false
             });
             
-            // Update admin status
-            setIsAdmin(account.is_admin || false);
+            // Update admin status - always false since we removed admin functionality
+            setIsAdmin(false);
             setAuthMethod('email');
           }
         }
@@ -252,7 +254,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (account) {
         if (isSupabaseAvailable && authMethod === 'email' && user) {
           // If user is already logged in via email, link the wallet to their account
-          await linkWalletToUser(user.accountId, account);
+          await linkWalletToAccount(user.accountId, account);
           
           // Update the user state
           setUser({
