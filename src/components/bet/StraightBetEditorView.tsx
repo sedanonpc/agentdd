@@ -9,12 +9,30 @@ import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { toast } from 'react-toastify';
 
-interface MatchBettingFormProps {
+/**
+ * Props for the StraightBetEditorView component
+ * Used for creating new straight bets on matches with $DARE points
+ */
+interface StraightBetEditorViewProps {
   match: Match;
   onClose: () => void;
 }
 
-const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) => {
+/**
+ * StraightBetEditorView - A modal form component for creating straight bets
+ * 
+ * This component allows authenticated users to:
+ * - Select a team/player to bet on from a match
+ * - Specify bet amount in $DARE points (free points only for now)
+ * - Add optional trash talk description
+ * - Submit the bet using the new points transaction system
+ * 
+ * The component integrates with:
+ * - StraightBetsContext for bet creation
+ * - PointsContext for balance checking
+ * - AuthContext for authentication validation
+ */
+const StraightBetEditorView: React.FC<StraightBetEditorViewProps> = ({ match, onClose }) => {
   const navigate = useNavigate();
   const { createStraightBet, isCreatingBet } = useStraightBets();
   const { isConnected } = useWeb3();
@@ -339,4 +357,4 @@ const MatchBettingForm: React.FC<MatchBettingFormProps> = ({ match, onClose }) =
   );
 };
 
-export default MatchBettingForm; 
+export default StraightBetEditorView; 

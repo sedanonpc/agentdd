@@ -22,7 +22,11 @@ BEGIN
     updated_at = NOW()  -- Always update both timestamps
   WHERE user_id = target_user_id;
 
-  RETURN QUERY SELECT new_free_points, new_reserved_points, calculated_total;
+  -- Return the updated values, letting PostgreSQL provide the calculated total_points
+  RETURN QUERY 
+  SELECT ua.free_points, ua.reserved_points, ua.total_points
+  FROM public.user_accounts ua
+  WHERE ua.user_id = target_user_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
