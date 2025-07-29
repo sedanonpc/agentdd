@@ -257,6 +257,32 @@ class StraightBetsService {
   }
 
   /**
+   * Get straight bets by status
+   * @param status - The bet status to filter by
+   * @param limit - Maximum number of bets to return (default: 100)
+   * @returns Promise<StraightBet[]> - Array of bets with the specified status
+   */
+  async getStraightBetsByStatus(status: StraightBetStatus, limit: number = 100): Promise<StraightBet[]> {
+    try {
+      const { data, error } = await supabase
+        .from('straight_bets')
+        .select('*')
+        .eq('status', status)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        throw new Error(`Failed to fetch bets with status ${status}: ${error.message}`);
+      }
+
+      return (data || []).map(bet => this.mapDatabaseBetToInterface(bet));
+    } catch (error) {
+      console.error('Error getting straight bets by status:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Map database record to TypeScript interface
    */
   private mapDatabaseBetToInterface(dbBet: any): StraightBet {
@@ -290,6 +316,7 @@ export const createStraightBet = straightBetsService.createStraightBet.bind(stra
 export const acceptStraightBet = straightBetsService.acceptStraightBet.bind(straightBetsService);
 export const getUserStraightBets = straightBetsService.getUserStraightBets.bind(straightBetsService);
 export const getOpenStraightBets = straightBetsService.getOpenStraightBets.bind(straightBetsService);
+export const getStraightBetsByStatus = straightBetsService.getStraightBetsByStatus.bind(straightBetsService);
 
 // Validation function for bet creation (used by components)
 export const createStraightBetWithValidation = async (

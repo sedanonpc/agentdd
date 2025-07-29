@@ -14,7 +14,7 @@ import { formatDecimalOdds, decimalToAmerican } from '../deprecated/utils/oddsUt
 import { Match } from '../types';
 import { MatchAnalysis } from '../types';
 
-const MatchDetailPage: React.FC = () => {
+const MatchDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   // const { createNewBet } = useBetting(); // REMOVED: Legacy context
@@ -291,4 +291,4 @@ const MatchDetailPage: React.FC = () => {
   );
 };
 
-export default MatchDetailPage;
+export default MatchDetailView;

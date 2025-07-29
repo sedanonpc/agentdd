@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { getOpenStraightBets } from '../services/straightBetsService';
-import StraightBetCard from '../components/bet/StraightBetCard';
+import { useNavigate } from 'react-router-dom';
+import { getOpenStraightBets, getStraightBetsByStatus, StraightBetStatus } from '../services/straightBetsService';
+import StraightBetListItemView from '../components/bet/StraightBetListItemView';
 import { MatchWithDetails } from '../types/match';
 import { getMatchWithDetailsById } from '../services/supabaseService';
 
@@ -25,10 +26,15 @@ const statusOptions = [
 
 interface BetWithMatch {
   bet: any;
-  matchWithDetails: MatchWithDetails | null;
+  matchWithDetails: {
+    id: string;
+    eventType: string;
+    details: any;
+  } | null;
 }
 
-const BetsPage: React.FC = () => {
+const BetListView: React.FC = () => {
+  const navigate = useNavigate();
   const [bets, setBets] = useState<BetWithMatch[]>([]);
   const [sportFilter, setSportFilter] = useState('all');
   const [sortBy, setSortBy] = useState('amount');
@@ -43,15 +49,34 @@ const BetsPage: React.FC = () => {
       if (status === 'open') {
         betsRaw = await getOpenStraightBets(100);
       } else {
-        const { getStraightBetsByStatus } = await import('../services/straightBetsService');
-        betsRaw = await getStraightBetsByStatus(status, 100);
+        betsRaw = await getStraightBetsByStatus(status as StraightBetStatus, 100);
       }
       
-      // Map the bets to include match details that are now part of the bet data
-      const betsWithMatch: BetWithMatch[] = betsRaw.map((bet: any) => ({
-        bet,
-        matchWithDetails: bet.matchWithDetails
-      }));
+      // Fetch match details for each bet
+      const betsWithMatch: BetWithMatch[] = await Promise.all(
+        betsRaw.map(async (bet: any) => {
+          try {
+            const matchWithDetails = await getMatchWithDetailsById(bet.matchId);
+            // Transform MatchWithDetails to the format expected by StraightBetListItemView
+            const transformedMatch = matchWithDetails ? {
+              id: matchWithDetails.match.id,
+              eventType: matchWithDetails.eventType,
+              details: matchWithDetails.details
+            } : null;
+            
+            return {
+              bet,
+              matchWithDetails: transformedMatch
+            };
+          } catch (error) {
+            console.error('Error fetching match details for bet:', bet.id, error);
+            return {
+              bet,
+              matchWithDetails: null
+            };
+          }
+        })
+      );
       
       setBets(betsWithMatch);
       setLoading(false);
@@ -68,6 +93,60 @@ const BetsPage: React.FC = () => {
     if (sortBy === 'date') cmp = new Date(b.bet.createdAt).getTime() - new Date(a.bet.createdAt).getTime();
     return sortAsc ? -cmp : cmp;
   });
+
+  // Callback functions for button actions
+  const handleViewDetails = (betId: string) => {
+    navigate(`/bet/${betId}`);
+  };
+
+  const handleShare = (betId: string) => {
+    navigate(`/share-bet/${betId}`);
+  };
+
+  const handleAcceptSuccess = () => {
+    // Refresh the bet list after successful acceptance
+    // Re-trigger the useEffect by toggling loading state or refetching
+    const refetchBets = async () => {
+      setLoading(true);
+      let betsRaw = [];
+      if (status === 'open') {
+        betsRaw = await getOpenStraightBets(100);
+      } else {
+        betsRaw = await getStraightBetsByStatus(status as StraightBetStatus, 100);
+      }
+      
+      // Fetch match details for each bet
+      const betsWithMatch: BetWithMatch[] = await Promise.all(
+        betsRaw.map(async (bet: any) => {
+          try {
+            const matchWithDetails = await getMatchWithDetailsById(bet.matchId);
+            // Transform MatchWithDetails to the format expected by StraightBetListItemView
+            const transformedMatch = matchWithDetails ? {
+              id: matchWithDetails.match.id,
+              eventType: matchWithDetails.eventType,
+              details: matchWithDetails.details
+            } : null;
+            
+            return {
+              bet,
+              matchWithDetails: transformedMatch
+            };
+          } catch (error) {
+            console.error('Error fetching match details for bet:', bet.id, error);
+            return {
+              bet,
+              matchWithDetails: null
+            };
+          }
+        })
+      );
+      
+      setBets(betsWithMatch);
+      setLoading(false);
+    };
+    
+    refetchBets();
+  };
 
   return (
     <div className="space-y-8">
@@ -155,7 +234,15 @@ const BetsPage: React.FC = () => {
         ) : (
           <div className="space-y-4">
             {filtered.map(({ bet, matchWithDetails }) => (
-              <StraightBetCard key={bet.id} bet={bet} matchWithDetails={matchWithDetails} status={status} />
+              <StraightBetListItemView 
+                key={bet.id} 
+                bet={bet} 
+                matchWithDetails={matchWithDetails} 
+                status={status}
+                onViewDetails={handleViewDetails}
+                onShare={handleShare}
+                onAcceptSuccess={handleAcceptSuccess}
+              />
             ))}
           </div>
         )}
@@ -164,4 +251,4 @@ const BetsPage: React.FC = () => {
   );
 };
 
-export default BetsPage; 
+export default BetListView; 

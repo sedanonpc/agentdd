@@ -11,7 +11,7 @@ import ChatPage from './pages/ChatPage';
 import LoginPage from './pages/LoginPage';
 import UserBetListPage from './pages/UserBetListPage';
 import ProfileView from './pages/ProfileView';
-import BetsPage from './pages/BetsPage';
+import BetListView from './pages/BetListView';
 import BetDetailView from './pages/BetDetailView';
 import ShareBetView from './pages/ShareBetView';
 import { Web3Provider } from './context/Web3Context';
@@ -152,7 +152,7 @@ function App() {
                               path="/bets" 
                               element={
                                 <ProtectedRoute>
-                                  <BetsPage />
+                                  <BetListView />
                                 </ProtectedRoute>
                               } 
                             />
