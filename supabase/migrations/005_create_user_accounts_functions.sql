@@ -80,7 +80,14 @@ BEGIN
   
   -- Get today's date in UTC
   today_date := CURRENT_DATE;
-  last_bonus_date := COALESCE(user_record.last_daily_bonus_awarded_at::DATE, '1970-01-01'::DATE);
+  
+  -- Fix: Use last_login_at as fallback when last_daily_bonus_awarded_at is NULL
+  -- If both are NULL (completely new user), use today's date to prevent bonus on first login
+  last_bonus_date := COALESCE(
+    user_record.last_daily_bonus_awarded_at::DATE, 
+    user_record.last_login_at::DATE,
+    today_date  -- No bonus for brand new users on same day
+  );
   
   -- Check if daily bonus should be awarded
   IF last_bonus_date < today_date THEN
@@ -179,7 +186,8 @@ BEGIN
     created_at,
     updated_points_at,
     updated_account_settings_at,
-    updated_at
+    updated_at,
+    last_login_at  -- Set login time during account creation
   ) VALUES (
     p_user_id,
     p_email,
@@ -190,7 +198,8 @@ BEGIN
     NOW(),
     NOW(),
     NOW(),
-    NOW()
+    NOW(),
+    NOW()  -- Initialize last_login_at to prevent immediate daily bonus
   );
   
   -- Record signup bonus transaction
