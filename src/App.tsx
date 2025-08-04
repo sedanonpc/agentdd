@@ -5,7 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import NavigationBar from './components/layout/NavigationBar';
 import MatchesPage from './pages/MatchesPage';
-import UserHomePage from './pages/UserHomePage';
+import DashboardView from './pages/DashboardView';
 import RootRouter from './components/common/RootRouter';
 import ChatPage from './pages/ChatPage';
 import LoginPage from './pages/LoginPage';
@@ -111,7 +111,7 @@ function App() {
                               path="/dashboard" 
                               element={
                                 <ProtectedRoute>
-                                  <UserHomePage />
+                                  <DashboardView />
                                 </ProtectedRoute>
                               } 
                             />

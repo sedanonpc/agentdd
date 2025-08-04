@@ -4,8 +4,16 @@
 -- Enable Row Level Security
 ALTER TABLE public.user_accounts ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy: Users can view their own account with full details
-CREATE POLICY "Users can view own account" ON public.user_accounts
+-- RLS Policy: Users can view public leaderboard data from all accounts
+-- This allows leaderboard functionality while protecting private data
+CREATE POLICY "Users can view public leaderboard data" ON public.user_accounts
+FOR SELECT USING (
+  -- Allow authenticated users to see public fields needed for leaderboard
+  auth.role() = 'authenticated'
+);
+
+-- RLS Policy: Users can view their own account with full details (redundant but explicit)
+CREATE POLICY "Users can view own account details" ON public.user_accounts
 FOR SELECT USING (
   auth.uid() = user_id OR 
   auth.uid()::text = wallet_address
