@@ -1,10 +1,18 @@
+/**
+ * DashboardView - Main dashboard page with leaderboard
+ * 
+ * Replaces UserHomePage with leaderboard functionality while maintaining
+ * the existing cyberpunk look-and-feel of the web app.
+ */
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Construction, MessageSquare, Code, Shield, Cpu } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { Code, Shield, Cpu, MessageSquare } from 'lucide-react';
+import LeaderboardSectionView from '../components/leaderboard/LeaderboardSectionView';
 import DareDevilChatModal from '../components/chat/DareDevilChatModal';
+import { useAuth } from '../context/AuthContext';
 
-const UserHomePage: React.FC = () => {
+const DashboardView: React.FC = () => {
   const [isDareDevilModalOpen, setIsDareDevilModalOpen] = useState<boolean>(false);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -33,6 +41,18 @@ const UserHomePage: React.FC = () => {
         </div>
       </section>
       
+      {/* NBA Banner - Optimized for transparency */}
+      <section className="w-full bg-transparent overflow-hidden px-2 sm:px-0">
+        {/* Full-width image container with transparent background */}
+        <div className="relative w-full flex justify-center max-w-6xl mx-auto">
+          <img 
+            src="https://i.ibb.co/rGh18fww/nba-banner-v3.png"
+            alt="Agent Daredevil - Wanna Bet?" 
+            className="w-full h-auto object-contain relative z-0"
+          />
+        </div>
+      </section>
+      
       {/* DareDevil Chat Button */}
       <div className="flex justify-center my-6 max-w-6xl mx-auto px-2 sm:px-0">
         <button
@@ -53,7 +73,7 @@ const UserHomePage: React.FC = () => {
             <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span>
           </div>
           
-          {/* Text - removed hover animation */}
+          {/* Text */}
           <span className="relative">
             CHAT WITH AGENT DAREDEVIL
           </span>
@@ -71,7 +91,7 @@ const UserHomePage: React.FC = () => {
         onClose={() => setIsDareDevilModalOpen(false)} 
       />
       
-      {/* Features Section */}
+      {/* System Features Section */}
       <section className="py-4 sm:py-6 max-w-6xl mx-auto px-2 sm:px-0">
         <div className="bg-console-black/80 backdrop-blur-xs border-1 border-console-blue shadow-terminal p-3 sm:p-4 mb-4 sm:mb-6 relative overflow-hidden">
           {/* Animated background scan effect */}
@@ -205,18 +225,12 @@ const UserHomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Work in progress content - at the bottom */}
-      <div className="bg-console-gray-terminal/60 backdrop-blur-xs border-1 border-console-blue shadow-terminal">
-        <div className="p-8 text-center">
-          <Construction className="h-16 w-16 text-console-blue-bright mx-auto mb-4" />
-          <h2 className="text-xl font-mono text-console-white mb-4">WORK IN PROGRESS</h2>
-          <p className="text-console-white-muted font-mono text-sm">
-            This page is currently under development. Please check back later.
-          </p>
-        </div>
+      {/* Leaderboard Section */}
+      <div className="max-w-6xl mx-auto px-2 sm:px-0">
+        <LeaderboardSectionView />
       </div>
     </div>
   );
 };
 
-export default UserHomePage; 
+export default DashboardView;
