@@ -27,12 +27,14 @@ BEGIN
     user_id, 
     email, 
     free_points, 
-    reserved_points
+    reserved_points,
+    last_login_at  -- Set login time during account creation
   ) VALUES (
     NEW.id, 
     NEW.email, 
     signup_bonus_amount,  -- Award signup bonus immediately
-    0
+    0,
+    NOW()  -- Initialize last_login_at to prevent immediate daily bonus
   );
 
   -- Create signup bonus transaction record
@@ -107,12 +109,14 @@ BEGIN
     user_id, 
     wallet_address,
     free_points, 
-    reserved_points
+    reserved_points,
+    last_login_at  -- Set login time during account creation
   ) VALUES (
     wallet_user_id::uuid, 
     insert_rows_after_signup_from_wallet.wallet_address,
     signup_bonus_amount,  -- Award signup bonus immediately
-    0
+    0,
+    NOW()  -- Initialize last_login_at to prevent immediate daily bonus
   ) RETURNING * INTO account_result;
 
   -- Create signup bonus transaction record

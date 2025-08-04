@@ -9,12 +9,12 @@ import { useStraightBets } from '../context/StraightBetsContext';
 import { Wallet, AlertTriangle, TrendingUp, ArrowUp, ArrowDown, Calendar, Clock, DollarSign } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import MatchAnalysisCard from '../components/match/MatchAnalysisCard';
-import MatchBettingForm from '../components/match/MatchBettingForm';
+
 import { formatDecimalOdds, decimalToAmerican } from '../deprecated/utils/oddsUtils';
 import { Match } from '../types';
 import { MatchAnalysis } from '../types';
 
-const MatchDetailPage: React.FC = () => {
+const MatchDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   // const { createNewBet } = useBetting(); // REMOVED: Legacy context
@@ -291,4 +291,4 @@ const MatchDetailPage: React.FC = () => {
   );
 };
 
-export default MatchDetailPage;
+export default MatchDetailView;

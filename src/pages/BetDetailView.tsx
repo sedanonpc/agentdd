@@ -340,7 +340,7 @@ const BetDetailView: React.FC = () => {
               Match Details
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-4">
                 <div>
                   <div className="text-console-white-dim font-mono text-sm mb-1">Matchup</div>
@@ -353,9 +353,9 @@ const BetDetailView: React.FC = () => {
                 </div>
                 
                 <div>
-                  <div className="text-console-white-dim font-mono text-sm mb-1">Your Pick</div>
-                  <div className="text-[#E5FF03] font-mono text-lg font-bold">
-                    {getPickName(isUserCreator ? bet.creatorsPickId : getAcceptorPickId())}
+                  <div className="text-console-white-dim font-mono text-sm mb-1">Sport</div>
+                  <div className="text-console-white font-mono">
+                    {matchWithDetails.eventType === 'basketball_nba' ? 'NBA Basketball' : 'Sandbox Metaverse'}
                   </div>
                 </div>
               </div>
@@ -379,14 +379,17 @@ const BetDetailView: React.FC = () => {
                     })()}
                   </div>
                 </div>
-                
-                <div>
-                  <div className="text-console-white-dim font-mono text-sm mb-1">Sport</div>
-                  <div className="text-console-white font-mono">
-                    {matchWithDetails.eventType === 'basketball_nba' ? 'NBA Basketball' : 'Sandbox Metaverse'}
-                  </div>
-                </div>
               </div>
+            </div>
+            
+            {/* View Match Button */}
+            <div className="border-t border-console-blue/30 pt-4">
+              <button
+                onClick={handleViewMatch}
+                className="w-full bg-console-blue/10 hover:bg-console-blue/20 text-console-blue border border-console-blue/30 py-3 px-6 rounded font-mono transition-colors"
+              >
+                View Match
+              </button>
             </div>
           </div>
         )}
@@ -412,6 +415,19 @@ const BetDetailView: React.FC = () => {
                 <div className="text-console-blue-bright font-mono text-lg">
                   {getPickName(bet.creatorsPickId)}
                 </div>
+              </div>
+              
+              {/* Your Pick section - shows for all users */}
+              <div>
+                <div className="text-console-white-dim font-mono text-sm mb-1">Your Pick</div>
+                <div className="text-[#E5FF03] font-mono text-lg font-bold">
+                  {getPickName(isUserCreator ? bet.creatorsPickId : getAcceptorPickId())}
+                </div>
+                {!isUserCreator && (
+                  <div className="text-console-white-dim font-mono text-xs italic mt-1">
+                    You will automatically pick the opposite team/player of what the creator picked.
+                  </div>
+                )}
               </div>
               
               {bet.acceptorUsername && (
@@ -473,13 +489,6 @@ const BetDetailView: React.FC = () => {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4 w-full">
-          <button
-            onClick={handleViewMatch}
-            className="flex-1 bg-console-blue/10 hover:bg-console-blue/20 text-console-blue border border-console-blue/30 py-3 px-6 rounded font-mono transition-colors"
-          >
-            View Match
-          </button>
-          
           {/* Accept button - only show if user can accept */}
           {(() => {
             const canAccept = user && !isUserCreator && bet.status === StraightBetStatus.OPEN && freePointsBalance >= bet.amount;

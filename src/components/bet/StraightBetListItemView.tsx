@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Share2 } from 'lucide-react';
 import { MatchWithDetails } from '../../types/match';
 import { useAuth } from '../../context/AuthContext';
@@ -16,6 +15,10 @@ interface StraightBetCardProps {
     details: any;
   } | null;
   status?: string;
+  // Callback props for button actions
+  onViewDetails?: (betId: string) => void;
+  onShare?: (betId: string) => void;
+  onAcceptSuccess?: () => void;
 }
 
 const SPORT_LABELS: Record<string, string> = {
@@ -24,8 +27,14 @@ const SPORT_LABELS: Record<string, string> = {
   // Add more as needed
 };
 
-const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails, status }) => {
-  const navigate = useNavigate();
+const StraightBetListItemView: React.FC<StraightBetCardProps> = ({ 
+  bet, 
+  matchWithDetails, 
+  status, 
+  onViewDetails,
+  onShare,
+  onAcceptSuccess: onAcceptSuccessCallback
+}) => {
   const { user } = useAuth();
   const { userBalance, freePointsBalance } = usePoints();
   const [showAcceptModal, setShowAcceptModal] = useState(false);
@@ -42,16 +51,13 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails
     detailsAvailable: !!matchWithDetails?.details
   });
 
-  // Handle card click to navigate to bet details
-  const handleCardClick = () => {
-    navigate(`/bet/${bet.id}`);
-  };
-  
   // Handle share button click
   const handleShareClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    navigate(`/share-bet/${bet.id}`);
+    if (onShare) {
+      onShare(bet.id);
+    }
   };
 
   // Determine if Accept button should be shown - use auth.users.id for comparison
@@ -157,7 +163,9 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails
 
   const handleAcceptSuccess = () => {
     setShowAcceptModal(false);
-    // Parent component will handle the success (refresh data, etc.)
+    if (onAcceptSuccessCallback) {
+      onAcceptSuccessCallback();
+    }
   };
 
   const matchInfo = getMatchDisplayInfo();
@@ -165,8 +173,7 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails
 
   return (
     <div 
-      className="bg-console-gray-terminal/80 border border-console-blue shadow-terminal rounded-lg p-4 flex flex-col gap-2 relative cursor-pointer hover:border-console-blue-bright hover:shadow-glow transition-all"
-      onClick={handleCardClick}
+      className="bg-console-gray-terminal/80 border border-console-blue shadow-terminal rounded-lg p-4 flex flex-col gap-2 relative hover:border-console-blue-bright hover:shadow-glow transition-all"
     >
       <div className="flex justify-between items-center mb-1">
         <span className="text-xs font-mono text-console-white-dim uppercase">
@@ -194,6 +201,20 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails
       
       {/* Action buttons */}
       <div className="mt-3 flex flex-col sm:flex-row gap-2 sm:justify-end">
+        {/* View details button - always visible */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (onViewDetails) {
+              onViewDetails(bet.id);
+            }
+          }}
+          className="flex items-center justify-center gap-1 px-3 py-2 bg-console-gray-terminal/60 hover:bg-console-gray-terminal/80 text-console-white border border-console-blue/50 rounded text-xs font-mono transition-colors"
+        >
+          View Details
+        </button>
+        
         {/* Share button - always visible */}
         <button
           onClick={handleShareClick}
@@ -241,4 +262,4 @@ const StraightBetCard: React.FC<StraightBetCardProps> = ({ bet, matchWithDetails
   );
 };
 
-export default StraightBetCard; 
+export default StraightBetListItemView; 

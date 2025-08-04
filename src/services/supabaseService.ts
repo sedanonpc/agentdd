@@ -579,7 +579,7 @@ export const getMatchWithDetailsById = async (id: string): Promise<MatchWithDeta
       return {
         match,
         details,
-        event_type: 'basketball_nba'
+        eventType: 'basketball_nba'
       };
     } else if (matchData.event_type === 'sandbox_metaverse') {
       const { data: sandboxData, error: sandboxError } = await supabaseClient
@@ -621,7 +621,7 @@ export const getMatchWithDetailsById = async (id: string): Promise<MatchWithDeta
       return {
         match,
         details,
-        event_type: 'sandbox_metaverse'
+        eventType: 'sandbox_metaverse'
       };
     }
 
