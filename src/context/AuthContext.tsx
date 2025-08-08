@@ -14,6 +14,7 @@ import {
   linkWalletToAccount
 } from '../services/userAccountsService';
 import { User } from '@supabase/supabase-js';
+import { supabase } from '../services/supabaseService';
 
 interface AuthUser {
   accountId: string;  // This is user_accounts.id
@@ -98,7 +99,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     checkSession();
-  }, [isConnected, account, isSupabaseAvailable]);
+  }, [isSupabaseAvailable]);
+
+  // Listen for Supabase auth state changes (ensures redirect after Privy-driven sign-in)
+  useEffect(() => {
+    if (!isSupabaseAvailable) return;
+
+    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      try {
+        if (session?.user) {
+          const supabaseUser = session.user as unknown as User;
+          const account = await getUserAccount(supabaseUser.id);
+          if (account && account.id) {
+            setUser({
+              accountId: account.id,
+              userId: supabaseUser.id,
+              email: supabaseUser.email || undefined,
+              walletAddress: account.wallet_address,
+              isAdmin: false,
+            });
+            setIsAdmin(false);
+            setAuthMethod('email');
+          }
+        } else {
+          setUser(null);
+          setAuthMethod(null);
+        }
+      } catch (err) {
+        console.error('Auth state change handling failed:', err);
+      }
+    });
+
+    return () => {
+      subscription.subscription.unsubscribe();
+    };
+  }, [isSupabaseAvailable]);
 
   // Wallet connection effects removed
 

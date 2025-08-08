@@ -33,14 +33,9 @@ const LoginPage: React.FC = () => {
   // Auto-redirect if authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      // Check if there's a redirect destination stored
       const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-      if (redirectPath) {
-        sessionStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath);
-      } else {
-        navigate('/matches');
-      }
+      sessionStorage.removeItem('redirectAfterLogin');
+      navigate(redirectPath || '/matches', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 

@@ -3,46 +3,37 @@ ALTER TABLE public.user_accounts
   ADD COLUMN IF NOT EXISTS privy_id TEXT UNIQUE;
 
 -- Create or replace sync function called from client after Privy login
+-- This function does NOT create rows (creation handled by auth trigger on signup).
+-- It only updates the current authenticated user's profile with privy_id and wallet.
 CREATE OR REPLACE FUNCTION public.sync_privy_user(
   p_privy_id TEXT,
   p_email TEXT,
   p_wallet TEXT
 )
 RETURNS VOID AS $$
-DECLARE
-  existing_user RECORD;
 BEGIN
-  -- Try to find existing account by privy_id or email
-  SELECT * INTO existing_user
-  FROM public.user_accounts
-  WHERE privy_id = p_privy_id OR (p_email IS NOT NULL AND email = p_email)
-  LIMIT 1;
-
-  IF existing_user IS NULL THEN
-    -- Create a new auth user (email/password with dummy password = privy_id)
-    -- Note: Supabase client on the frontend should sign in; here we only upsert profile
-    INSERT INTO public.user_accounts (
-      user_id, email, privy_id, wallet_address, username, free_points, reserved_points, created_at, updated_at, last_login_at
-    ) VALUES (
-      gen_random_uuid(),
-      p_email,
-      p_privy_id,
-      p_wallet,
-      generate_unique_username(),
-      500, -- signup bonus on first sync
-      0,
-      NOW(), NOW(), NOW()
-    )
-    ON CONFLICT (privy_id) DO NOTHING;
-  ELSE
-    -- Update existing with latest email/wallet and bump last_login
+  -- Update by authenticated user_id when available
+  IF auth.uid() IS NOT NULL THEN
     UPDATE public.user_accounts
     SET 
+      privy_id = COALESCE(p_privy_id, privy_id),
       email = COALESCE(p_email, email),
       wallet_address = COALESCE(p_wallet, wallet_address),
       updated_at = NOW(),
       last_login_at = NOW()
-    WHERE id = existing_user.id;
+    WHERE user_id = auth.uid();
+    RETURN;
+  END IF;
+
+  -- Fallback: update by email if user_id not present (edge case)
+  IF p_email IS NOT NULL THEN
+    UPDATE public.user_accounts
+    SET 
+      privy_id = COALESCE(p_privy_id, privy_id),
+      wallet_address = COALESCE(p_wallet, wallet_address),
+      updated_at = NOW(),
+      last_login_at = NOW()
+    WHERE email = p_email;
   END IF;
 
   RETURN;
