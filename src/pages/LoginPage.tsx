@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Mail, Wallet, AlertTriangle, Smartphone } from 'lucide-react';
+import { supabase } from '../services/supabaseService';
 import LoginButton from '../components/LoginButton';
 import useSyncPrivyToSupabase from '../hooks/useSyncPrivyToSupabase';
-import { supabase } from '../services/supabaseService';
 import { toast } from 'react-toastify';
 
 const LoginPage: React.FC = () => {
@@ -19,7 +19,6 @@ const LoginPage: React.FC = () => {
   
   const { loginWithEmail, registerWithEmail, loginWithWallet, isSupabaseAvailable, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-
   useSyncPrivyToSupabase();
 
   // Check if user is on mobile device
