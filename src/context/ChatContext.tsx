@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 // Remove actual socket.io import and use a mock implementation
 // import { io, Socket } from 'socket.io-client';
-import { useWeb3 } from './Web3Context';
+// Wallet context removed for Privy prep
 import { Message } from '../types';
 import { getMessagesForBet, getMessagesForMatch, getGlobalMessages, saveGlobalMessage } from '../services/chatService';
 import { shouldDareDevilRespond, generateDareDevilResponse, getDareDevilResponseDelay } from '../services/dareDevilService';
@@ -46,7 +46,7 @@ interface MockSocket {
 }
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { account } = useWeb3();
+  const account: string | null = null;
   const [socket, setSocket] = useState<MockSocket | null>(null);
   
   // Bet chat state
@@ -69,7 +69,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Create a mock socket instead of real connection
   useEffect(() => {
-    if (account) {
+    if (false) {
       console.log('Creating mock socket instead of real connection');
       
       // Create a mock socket that just logs events
@@ -94,11 +94,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         mockSocket.disconnect();
       };
     }
-  }, [account]);
+  }, []);
 
   // Bet chat methods
   const joinChat = async (betId: string) => {
-    if (!account) return;
+    // Wallet requirement removed
     
     setCurrentChatId(betId);
     
@@ -146,12 +146,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const sendMessage = (content: string) => {
-    if (!currentChatId || !account || !content.trim()) return;
+    if (!currentChatId || !content.trim()) return;
     
     const newMessage: Message = {
       id: Date.now().toString(),
       betId: currentChatId,
-      sender: account,
+      sender: 'ANON_USER',
       content,
       timestamp: new Date().toISOString()
     };
@@ -184,7 +184,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Match chat methods
   const joinMatchChat = async (matchId: string) => {
-    if (!account) return;
+    // Wallet requirement removed
     
     setCurrentMatchId(matchId);
     
@@ -232,12 +232,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const sendMatchMessage = (content: string) => {
-    if (!currentMatchId || !account || !content.trim()) return;
+    if (!currentMatchId || !content.trim()) return;
     
     const newMessage: Message = {
       id: Date.now().toString(),
       matchId: currentMatchId,
-      sender: account,
+      sender: 'ANON_USER',
       content,
       timestamp: new Date().toISOString()
     };
@@ -270,7 +270,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Global chat methods
   const joinGlobalChat = async () => {
-    if (!account) return;
+    // Wallet requirement removed
     
     setIsGlobalChatActive(true);
     
@@ -321,12 +321,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
   
   const sendGlobalMessage = (content: string) => {
-    if (!account || !content.trim() || !isGlobalChatActive) return;
+    if (!content.trim() || !isGlobalChatActive) return;
     
     const newMessage: Message = {
       id: Date.now().toString(),
       global: true,
-      sender: account,
+      sender: 'ANON_USER',
       content,
       timestamp: new Date().toISOString()
     };

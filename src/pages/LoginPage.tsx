@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useWeb3 } from '../context/Web3Context';
 import { Lock, Mail, Wallet, AlertTriangle, Smartphone } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
 import { toast } from 'react-toastify';
@@ -17,7 +16,6 @@ const LoginPage: React.FC = () => {
   const [checkingConnection, setCheckingConnection] = useState(false);
   
   const { loginWithEmail, registerWithEmail, loginWithWallet, isSupabaseAvailable, isAuthenticated } = useAuth();
-  const { account, isConnected } = useWeb3();
   const navigate = useNavigate();
 
   // Check if user is on mobile device
@@ -43,46 +41,9 @@ const LoginPage: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Continuously check for wallet connection
-  useEffect(() => {
-    if (isMobile && localStorage.getItem('pendingMobileConnection') === 'true') {
-      setCheckingConnection(true);
-      
-      // Poll for authentication status
-      const checkConnectionInterval = setInterval(() => {
-        // If connected and authenticated, navigate to matches page
-        if (isConnected && account) {
-          console.log("MetaMask connection detected, redirecting...");
-          const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-          if (redirectPath) {
-            sessionStorage.removeItem('redirectAfterLogin');
-            navigate(redirectPath);
-          } else {
-            navigate('/matches');
-          }
-          clearInterval(checkConnectionInterval);
-        }
-      }, 1000);
-      
-      return () => {
-        clearInterval(checkConnectionInterval);
-      };
-    }
-  }, [isMobile, isConnected, account, navigate]);
+  // Wallet connection polling removed
 
-  // Check if connected when component mounts
-  useEffect(() => {
-    if (isConnected && account) {
-      console.log("Already connected to wallet, redirecting...");
-      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-      if (redirectPath) {
-        sessionStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath);
-      } else {
-        navigate('/matches');
-      }
-    }
-  }, [isConnected, account, navigate]);
+  // Wallet auto-redirect removed
   
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,34 +161,7 @@ const LoginPage: React.FC = () => {
   };
   
   const handleWalletLogin = async () => {
-    setError('');
-    setIsLoading(true);
-    
-    try {
-      await loginWithWallet();
-      
-      if (isMobile) {
-        // For mobile, we'll let the polling mechanism handle redirection
-        setCheckingConnection(true);
-      } else {
-        // For desktop, navigate immediately on success
-        const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-        if (redirectPath) {
-          sessionStorage.removeItem('redirectAfterLogin');
-          navigate(redirectPath);
-        } else {
-          navigate('/matches');
-        }
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message || 'Wallet connection failed');
-      } else {
-        setError('Wallet connection failed');
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    setError('Wallet login is temporarily disabled while we integrate Privy.');
   };
   
   return (
@@ -270,7 +204,7 @@ const LoginPage: React.FC = () => {
           >
             <Wallet className="mr-2 h-5 w-5" />
             <span className="mr-1">&gt;</span> 
-            {checkingConnection ? "CONNECTING..." : (isMobile ? "OPEN_METAMASK" : "CONNECT_WALLET")}
+            {checkingConnection ? "CONNECTING..." : (isMobile ? "WALLET_DISABLED" : "WALLET_DISABLED")}
           </button>
           
           <div className="flex items-center my-4">

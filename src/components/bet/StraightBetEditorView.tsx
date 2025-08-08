@@ -3,7 +3,6 @@ import { DollarSign, ChevronRight, X, Zap, Trophy, AlertCircle } from 'lucide-re
 import { useNavigate } from 'react-router-dom';
 import { Match } from '../../types';
 import { useStraightBets } from '../../context/StraightBetsContext';
-import { useWeb3 } from '../../context/Web3Context';
 import { usePoints } from '../../context/PointsContext';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../common/LoadingSpinner';
@@ -35,14 +34,13 @@ interface StraightBetEditorViewProps {
 const StraightBetEditorView: React.FC<StraightBetEditorViewProps> = ({ match, onClose }) => {
   const navigate = useNavigate();
   const { createStraightBet, isCreatingBet } = useStraightBets();
-  const { isConnected } = useWeb3();
   const { isAuthenticated, authMethod } = useAuth();
   const { freePointsBalance } = usePoints();
 
   console.log('=== BETTING FORM: Component rendered ===', {
     isAuthenticated,
     authMethod,
-    isConnected,
+    // wallet removed,
     matchId: match?.id,
     freePointsBalance
   });

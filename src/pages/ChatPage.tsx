@@ -4,7 +4,6 @@ import { Send, ArrowLeft, MessageSquare, Users, Terminal, Loader2 } from 'lucide
 import { useChat } from '../context/ChatContext';
 // import { useBetting } from '../context/BettingContext'; // REMOVED: Legacy context
 import { useAuth } from '../context/AuthContext';
-import { useWeb3 } from '../context/Web3Context';
 import { Message } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import WalletAddress from '../components/common/WalletAddress';
@@ -30,7 +29,7 @@ const ChatPage: React.FC = () => {
     isDareDevilTyping
   } = useChat();
   // const { getBetById } = useBetting(); // REMOVED: Legacy context
-  const { account, isConnected } = useWeb3();
+  // Wallet usage removed for Privy prep
   const [newMessage, setNewMessage] = useState('');
   const [showGlobalChat, setShowGlobalChat] = useState(!betId);
   
@@ -82,7 +81,7 @@ const ChatPage: React.FC = () => {
   };
   
   const isOwnMessage = (sender: string) => {
-    return sender === account;
+    return false;
   };
   
   const isDareDevilMessage = (sender: string) => {
@@ -158,20 +157,7 @@ const ChatPage: React.FC = () => {
     const currentMessages = showGlobalChat ? globalMessages : chatMessages;
     const isLoading = showGlobalChat ? isLoadingGlobalMessages : isLoadingMessages;
     
-    if (!isConnected) {
-  return (
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="bg-console-blue/20 backdrop-blur-xs border-1 border-console-blue p-4 text-center max-w-md">
-            <p className="text-console-white-dim font-mono mb-2">
-              WALLET CONNECTION REQUIRED TO PARTICIPATE IN CHAT
-            </p>
-            <p className="text-console-white-muted font-mono text-sm">
-              CONNECT WALLET TO CONTINUE
-          </p>
-        </div>
-      </div>
-      );
-    }
+    // Wallet requirement removed
       
     if (isLoading) {
       return (

@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 // import { useBetting } from '../context/BettingContext'; // REMOVED: Legacy context
 import { useMatches } from '../context/MatchesContext';
 import { useAuth } from '../context/AuthContext';
-import { useWeb3 } from '../context/Web3Context';
 import { usePoints } from '../context/PointsContext';
 import { useStraightBets } from '../context/StraightBetsContext';
 import { Wallet, AlertTriangle, TrendingUp, ArrowUp, ArrowDown, Calendar, Clock, DollarSign } from 'lucide-react';
@@ -21,7 +20,6 @@ const MatchDetailView: React.FC = () => {
   const { createStraightBet } = useStraightBets(); // Use new betting context
   const { matches, loading: loadingMatches } = useMatches();
   const { isAuthenticated, loginWithEmail } = useAuth();
-  const { account, connectWallet } = useWeb3();
   const { userBalance } = usePoints();
   
   const [match, setMatch] = useState<Match | null>(null);
@@ -99,10 +97,7 @@ const MatchDetailView: React.FC = () => {
   };
   
   const handleCreateBet = async () => {
-    if (!account) {
-      alert('Please connect your wallet first');
-      return;
-    }
+    // Wallet requirement removed
     
     if (!match || !selectedTeam || !betAmount) {
       return;

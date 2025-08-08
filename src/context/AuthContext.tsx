@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useWeb3 } from './Web3Context';
 import { 
   signUpWithEmail, 
   signInWithEmail, 
@@ -40,7 +39,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { account, connectWallet, disconnectWallet, isConnected } = useWeb3();
+  // Wallet login removed; preparing for Privy integration
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authMethod, setAuthMethod] = useState<'email' | 'wallet' | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -80,14 +79,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setAuthMethod('email');
               }
             }
-          } else if (isConnected && account) {
-            // User is connected via wallet
-            setUser({
-              accountId: account,
-              userId: account, // For wallet users, the wallet address is both the id and authId
-              walletAddress: account
-            });
-            setAuthMethod('wallet');
           }
         } else {
           // Fallback to localStorage if Supabase is not configured
@@ -97,14 +88,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (savedUser && savedAuthMethod === 'email') {
             setUser(JSON.parse(savedUser));
             setAuthMethod('email');
-          } else if (isConnected && account) {
-            // User is connected via wallet
-            setUser({
-              accountId: account,
-              userId: account, // For wallet users, the wallet address is both the id and authId
-              walletAddress: account
-            });
-            setAuthMethod('wallet');
           }
         }
       } catch (error) {
@@ -117,61 +100,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     checkSession();
   }, [isConnected, account, isSupabaseAvailable]);
 
-  // Update user when wallet connection changes
-  useEffect(() => {
-    const handleWalletConnectionChange = async () => {
-      if (isConnected && account) {
-        // User connected their wallet
-        if (authMethod === 'wallet' || authMethod === null) {
-          // Check if this is a first-time wallet user and insert rows if needed
-          if (isSupabaseAvailable) {
-            try {
-              const existingAccount = await getUserAccount(account);
-              
-              if (!existingAccount) {
-                // First time wallet user - insert rows after signup
-                console.log('First-time wallet user detected, inserting rows after signup:', account);
-                
-                try {
-                  const result = await insertRowsAfterSignupFromWallet(account, account);
-                  if (result.success) {
-                    console.log('Rows inserted after wallet signup, bonus awarded:', result.signup_bonus_awarded, 'points');
-                  }
-                } catch (accountError) {
-                  console.error('Error inserting rows after wallet signup:', accountError);
-                  // Continue with login even if account creation fails
-                }
-              }
-            } catch (error) {
-              console.error('Error checking for existing wallet account:', error);
-              // Continue with login even if database check fails
-            }
-          }
-          
-          // Set or update the user with wallet info
-          setUser({
-            accountId: account,
-            userId: account, // For wallet users, the wallet address is both the id and authId
-            walletAddress: account
-          });
-          setAuthMethod('wallet');
-        } else if (authMethod === 'email' && user) {
-          // User already logged in with email, update their wallet address
-          setUser({
-            ...user,
-            walletAddress: account,
-            userId: user.accountId // Keep the existing authId
-          });
-        }
-      } else if (authMethod === 'wallet' && !isConnected) {
-        // Wallet disconnected
-        setUser(null);
-        setAuthMethod(null);
-      }
-    };
-    
-    handleWalletConnectionChange();
-  }, [isConnected, account, authMethod, isSupabaseAvailable]);
+  // Wallet connection effects removed
 
   const loginWithEmail = async (email: string, password: string) => {
     try {
@@ -247,71 +176,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const loginWithWallet = async () => {
-    try {
-      setIsLoading(true);
-      await connectWallet();
-      
-      if (account) {
-        if (isSupabaseAvailable && authMethod === 'email' && user) {
-          // If user is already logged in via email, link the wallet to their account
-          await linkWalletToAccount(user.accountId, account);
-          
-          // Update the user state
-          setUser({
-            ...user,
-            walletAddress: account,
-            userId: user.accountId // Keep the existing authId
-          });
-        } else {
-          // Check if this wallet user exists in the database
-          if (isSupabaseAvailable) {
-            try {
-              // Look for existing account with this wallet address
-              const existingAccount = await getUserAccount(account);
-              
-              if (!existingAccount) {
-                // First time wallet user - insert rows after signup
-                console.log('First-time wallet user detected, inserting rows after signup:', account);
-                
-                try {
-                  const result = await insertRowsAfterSignupFromWallet(account, account);
-                  if (result.success) {
-                    console.log('Rows inserted after wallet signup, bonus awarded:', result.signup_bonus_awarded, 'points');
-                  }
-                } catch (accountError) {
-                  console.error('Error inserting rows after wallet signup:', accountError);
-                  // Continue with login even if account creation fails
-                }
-              }
-            } catch (error) {
-              console.error('Error checking for existing wallet account:', error);
-              // Continue with login even if database check fails
-            }
-          }
-          
-          // Set user state
-          setUser({
-            accountId: account,
-            userId: account, // For wallet users, the wallet address is both the id and authId
-            walletAddress: account
-          });
-          setAuthMethod('wallet');
-        }
-      }
-    } catch (error) {
-      console.error('Wallet login failed:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+    throw new Error('Wallet login is temporarily disabled for Privy integration prep');
   };
 
   const logout = async () => {
     try {
-      if (authMethod === 'wallet') {
-        disconnectWallet();
-      }
-      
       if (isSupabaseAvailable && authMethod === 'email') {
         await signOut();
       }
