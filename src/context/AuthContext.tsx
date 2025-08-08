@@ -109,6 +109,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         if (session?.user) {
           const supabaseUser = session.user as unknown as User;
+          // Optimistically set authenticated; then hydrate account fields
+          setAuthMethod('email');
+          setIsAdmin(false);
+          setUser(prev => ({
+            accountId: prev?.accountId || '',
+            userId: supabaseUser.id,
+            email: supabaseUser.email || undefined,
+            walletAddress: prev?.walletAddress,
+            isAdmin: false,
+          }));
+          // Load account
           const account = await getUserAccount(supabaseUser.id);
           if (account && account.id) {
             setUser({
@@ -118,8 +129,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               walletAddress: account.wallet_address,
               isAdmin: false,
             });
-            setIsAdmin(false);
-            setAuthMethod('email');
           }
         } else {
           setUser(null);
