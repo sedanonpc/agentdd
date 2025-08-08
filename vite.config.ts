@@ -18,7 +18,7 @@ export default defineConfig({
       'react',
       'react-dom',
       'react-router-dom',
-      'ethers',
+
       'react-toastify',
       'lucide-react'
     ]
@@ -31,7 +31,7 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ui-vendor': ['react-toastify', 'lucide-react'],
-          'web3-vendor': ['ethers']
+          'solana-vendor': ['@solana/web3.js', '@solana/wallet-adapter-base']
         }
       }
     }

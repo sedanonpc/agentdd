@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Actual Functions</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Test Actual Functions Used by React App</h1>
+    <div id="results"></div>
+    <button onclick="testActualFunctions()">Test Functions Used by React App</button>
+
+    <script>
+        // Supabase configuration
+        const supabaseUrl = 'https://qiasnpjpkzhretlyymgh.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpYXNucGpwa3pocmV0bHl5bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMzI5MDksImV4cCI6MjA2NDgwODkwOX0.BEOkmjVpGHo37omVsWEgvsCnXB0FIVqZQvDNCuy3qYo';
+
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+        async function testActualFunctions() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h2>Testing Functions Used by React App...</h2>';
+
+            try {
+                // Test 1: Check if get_wallet_user function exists (used by React app)
+                console.log('Testing get_wallet_user function...');
+                const testWalletAddress = 'test_wallet_' + Date.now();
+                
+                const { data: getData, error: getError } = await supabase.rpc('get_wallet_user', {
+                    input_wallet_address: testWalletAddress
+                });
+
+                if (getError) {
+                    results.innerHTML += `<p style="color: red;">❌ get_wallet_user function error: ${getError.message}</p>`;
+                    console.error('get_wallet_user error:', getError);
+                } else {
+                    results.innerHTML += `<p style="color: green;">✅ get_wallet_user function works</p>`;
+                    console.log('get_wallet_user result:', getData);
+                }
+
+                // Test 2: Check if register_wallet_user_simple function exists (used by React app)
+                console.log('Testing register_wallet_user_simple function...');
+                
+                const { data: createData, error: createError } = await supabase.rpc('register_wallet_user_simple', {
+                    input_wallet_address: testWalletAddress
+                });
+
+                if (createError) {
+                    results.innerHTML += `<p style="color: red;">❌ register_wallet_user_simple function error: ${createError.message}</p>`;
+                    console.error('register_wallet_user_simple error:', createError);
+                } else {
+                    results.innerHTML += `<p style="color: green;">✅ register_wallet_user_simple function works</p>`;
+                    console.log('register_wallet_user_simple result:', createData);
+                }
+
+                // Test 3: Check if we can access user_accounts table
+                console.log('Testing user_accounts access...');
+                const { data: accountsData, error: accountsError } = await supabase
+                    .from('user_accounts')
+                    .select('*')
+                    .eq('wallet_address', testWalletAddress)
+                    .limit(1);
+
+                if (accountsError) {
+                    results.innerHTML += `<p style="color: red;">❌ user_accounts access error: ${accountsError.message}</p>`;
+                    console.error('user_accounts access error:', accountsError);
+                } else {
+                    results.innerHTML += `<p style="color: green;">✅ user_accounts access works</p>`;
+                    console.log('user_accounts result:', accountsData);
+                }
+
+            } catch (error) {
+                results.innerHTML += `<p style="color: red;">❌ General error: ${error.message}</p>`;
+                console.error('General error:', error);
+            }
+        }
+    </script>
+</body>
+</html> 

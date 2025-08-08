@@ -14,7 +14,7 @@ import ProfileView from './pages/ProfileView';
 import BetListView from './pages/BetListView';
 import BetDetailView from './pages/BetDetailView';
 import ShareBetView from './pages/ShareBetView';
-import { Web3Provider } from './context/Web3Context';
+import { SolanaWalletProvider } from './context/SolanaWalletContext';
 import { AuthProvider } from './context/AuthContext';
 import { UserAccountProvider } from './context/UserAccountContext';
 import { MatchesProvider } from './context/MatchesContext';
@@ -79,7 +79,7 @@ function App() {
   }, []);
 
   return (
-    <Web3Provider>
+    <SolanaWalletProvider>
       <AuthProvider>
         <UserAccountProvider>
           <PointsProvider>
@@ -194,7 +194,7 @@ function App() {
           </PointsProvider>
         </UserAccountProvider>
       </AuthProvider>
-    </Web3Provider>
+    </SolanaWalletProvider>
   );
 }
 

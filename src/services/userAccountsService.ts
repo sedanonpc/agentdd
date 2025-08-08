@@ -131,6 +131,27 @@ export const getUserAccount = async (userId: string): Promise<UserAccount | null
 };
 
 /**
+ * Get user account by wallet address
+ * 
+ * @param walletAddress - The wallet address to look up
+ * @returns Promise<UserAccount | null> - The user account or null if not found
+ * @throws Error if query fails
+ */
+export const getUserAccountByWallet = async (walletAddress: string): Promise<UserAccount | null> => {
+  const { data, error } = await supabase
+    .from('user_accounts')
+    .select('*')
+    .eq('wallet_address', walletAddress)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') { // PGRST116 is the error for no rows returned
+    throw error;
+  }
+  
+  return data;
+};
+
+/**
  * Update user account
  * 
  * @param userId - The auth.users.id of the account to update

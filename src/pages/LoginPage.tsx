@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useWeb3 } from '../context/Web3Context';
-import { Lock, Mail, Wallet, AlertTriangle, Smartphone } from 'lucide-react';
+import { useSolanaWallet } from '../context/SolanaWalletContext';
+import { Lock, Mail, Wallet, AlertTriangle, Smartphone, Monitor } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
 import { toast } from 'react-toastify';
+
 
 const LoginPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
@@ -17,7 +18,7 @@ const LoginPage: React.FC = () => {
   const [checkingConnection, setCheckingConnection] = useState(false);
   
   const { loginWithEmail, registerWithEmail, loginWithWallet, isSupabaseAvailable, isAuthenticated } = useAuth();
-  const { account, isConnected } = useWeb3();
+  const { walletAddress, connected } = useSolanaWallet();
   const navigate = useNavigate();
 
   // Check if user is on mobile device
@@ -51,8 +52,8 @@ const LoginPage: React.FC = () => {
       // Poll for authentication status
       const checkConnectionInterval = setInterval(() => {
         // If connected and authenticated, navigate to matches page
-        if (isConnected && account) {
-          console.log("MetaMask connection detected, redirecting...");
+        if (connected && walletAddress) {
+          console.log("Solana wallet connection detected, redirecting...");
           const redirectPath = sessionStorage.getItem('redirectAfterLogin');
           if (redirectPath) {
             sessionStorage.removeItem('redirectAfterLogin');
@@ -68,21 +69,14 @@ const LoginPage: React.FC = () => {
         clearInterval(checkConnectionInterval);
       };
     }
-  }, [isMobile, isConnected, account, navigate]);
+  }, [isMobile, connected, walletAddress, navigate]);
 
   // Check if connected when component mounts
   useEffect(() => {
-    if (isConnected && account) {
-      console.log("Already connected to wallet, redirecting...");
-      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-      if (redirectPath) {
-        sessionStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath);
-      } else {
-        navigate('/matches');
-      }
-    }
-  }, [isConnected, account, navigate]);
+    // Don't auto-redirect - require explicit user action
+    // This ensures the user sees the sign-in prompt
+    console.log("Wallet connection status:", { connected, walletAddress });
+  }, [connected, walletAddress]);
   
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,6 +198,7 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
     
     try {
+      console.log('Initiating Solana wallet login...');
       await loginWithWallet();
       
       if (isMobile) {
@@ -220,10 +215,21 @@ const LoginPage: React.FC = () => {
         }
       }
     } catch (error) {
+      console.error('Wallet login error:', error);
       if (error instanceof Error) {
-        setError(error.message || 'Wallet connection failed');
+        if (error.message.includes('Phantom mobile wallet not installed')) {
+          setError('Please install Phantom mobile wallet from your app store to connect.');
+        } else if (error.message.includes('Phantom browser extension not installed')) {
+          setError('Please install Phantom browser extension from https://phantom.app to connect.');
+        } else if (error.message.includes('User rejected')) {
+          setError('Wallet connection was cancelled by user.');
+        } else if (error.message.includes('Failed to connect to Phantom wallet')) {
+          setError('Failed to connect to Phantom wallet. Please try again.');
+        } else {
+          setError(error.message || 'Wallet connection failed');
+        }
       } else {
-        setError('Wallet connection failed');
+        setError('Wallet connection failed. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -253,10 +259,21 @@ const LoginPage: React.FC = () => {
             <Smartphone className="h-5 w-5 text-console-blue mr-2 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-console-white-dim">
               <p className="font-bold text-console-blue-bright mb-1">MOBILE WALLET CONNECTION</p>
-              <p>You'll be redirected to the MetaMask app. After connecting, return here to complete login.</p>
+              <p>Your Solana mobile wallet (like Phantom) will prompt for connection. Make sure you have a Solana wallet installed.</p>
               {checkingConnection && (
                 <p className="text-green-400 mt-2 animate-pulse">Checking for wallet connection...</p>
               )}
+            </div>
+          </div>
+        )}
+        
+        {/* Desktop wallet info message */}
+        {!isMobile && (
+          <div className="mb-6 bg-blue-900/30 border border-console-blue p-3 flex items-start">
+            <Monitor className="h-5 w-5 text-console-blue mr-2 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-console-white-dim">
+              <p className="font-bold text-console-blue-bright mb-1">DESKTOP WALLET CONNECTION</p>
+              <p>You'll see a QR code to scan with your mobile Solana wallet, or use a browser extension wallet.</p>
             </div>
           </div>
         )}
@@ -270,7 +287,7 @@ const LoginPage: React.FC = () => {
           >
             <Wallet className="mr-2 h-5 w-5" />
             <span className="mr-1">&gt;</span> 
-            {checkingConnection ? "CONNECTING..." : (isMobile ? "OPEN_METAMASK" : "CONNECT_WALLET")}
+            {checkingConnection ? "CONNECTING..." : (isMobile ? "USE_INSTALLED_WALLET" : "CONNECT_SOLANA_WALLET")}
           </button>
           
           <div className="flex items-center my-4">
@@ -434,6 +451,8 @@ const LoginPage: React.FC = () => {
           </form>
         )}
       </div>
+      
+
     </div>
   );
 };

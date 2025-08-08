@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useWeb3 } from './Web3Context';
+import { useSolanaWallet } from './SolanaWalletContext';
 import { 
   signUpWithEmail, 
   signInWithEmail, 
@@ -9,18 +9,24 @@ import {
   isSupabaseConfigured
 } from '../services/authService';
 import { 
-  getUserAccount,
   createUserAccount,
-  insertRowsAfterSignupFromWallet,
-  linkWalletToAccount
+  getUserAccount,
+  supabase
 } from '../services/userAccountsService';
+import { 
+  registerWalletUser, 
+  getWalletUser, 
+  walletUserExists,
+  WalletUser
+} from '../services/walletService';
 import { User } from '@supabase/supabase-js';
 
 interface AuthUser {
   accountId: string;  // This is user_accounts.id
-  userId: string;  // This is auth.users.id
+  userId: string;  // This is auth.users.id for email users, wallet address for wallet users
   email?: string;
   walletAddress?: string;
+  username?: string;
   isAdmin?: boolean;
 }
 
@@ -40,7 +46,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { account, connectWallet, disconnectWallet, isConnected } = useWeb3();
+  const { walletAddress, connect, disconnect, connected, checkConnection } = useSolanaWallet();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authMethod, setAuthMethod] = useState<'email' | 'wallet' | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -61,50 +67,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const session = await getCurrentSession();
           
           if (session) {
-            // User is logged in via Supabase
+            // User is logged in via Supabase (email authentication)
             const supabaseUser = await getCurrentUser();
             if (supabaseUser) {
               const account = await getUserAccount(supabaseUser.id);
               
               if (account && account.id) {
                 setUser({
-                  accountId: account.id,  // Use user_accounts.id
-                  userId: supabaseUser.id,  // Store auth.users.id separately
+                  accountId: account.id,
+                  userId: supabaseUser.id,
                   email: supabaseUser.email || undefined,
                   walletAddress: account.wallet_address,
-                  isAdmin: false  // is_admin field was removed, default to false
+                  username: account.username,
+                  isAdmin: false
                 });
-                
-                // Update admin status - always false since we removed admin functionality
                 setIsAdmin(false);
                 setAuthMethod('email');
               }
             }
-          } else if (isConnected && account) {
-            // User is connected via wallet
-            setUser({
-              accountId: account,
-              userId: account, // For wallet users, the wallet address is both the id and authId
-              walletAddress: account
-            });
-            setAuthMethod('wallet');
-          }
-        } else {
-          // Fallback to localStorage if Supabase is not configured
-          const savedUser = localStorage.getItem('user');
-          const savedAuthMethod = localStorage.getItem('authMethod');
-          
-          if (savedUser && savedAuthMethod === 'email') {
-            setUser(JSON.parse(savedUser));
-            setAuthMethod('email');
-          } else if (isConnected && account) {
-            // User is connected via wallet
-            setUser({
-              accountId: account,
-              userId: account, // For wallet users, the wallet address is both the id and authId
-              walletAddress: account
-            });
-            setAuthMethod('wallet');
           }
         }
       } catch (error) {
@@ -113,133 +93,117 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsLoading(false);
       }
     };
-    
-    checkSession();
-  }, [isConnected, account, isSupabaseAvailable]);
 
-  // Update user when wallet connection changes
+    checkSession();
+  }, [isSupabaseAvailable]);
+
+  // Handle wallet connection changes
   useEffect(() => {
     const handleWalletConnectionChange = async () => {
-      if (isConnected && account) {
-        // User connected their wallet
-        if (authMethod === 'wallet' || authMethod === null) {
-          // Check if this is a first-time wallet user and insert rows if needed
-          if (isSupabaseAvailable) {
-            try {
-              const existingAccount = await getUserAccount(account);
-              
-              if (!existingAccount) {
-                // First time wallet user - insert rows after signup
-                console.log('First-time wallet user detected, inserting rows after signup:', account);
-                
-                try {
-                  const result = await insertRowsAfterSignupFromWallet(account, account);
-                  if (result.success) {
-                    console.log('Rows inserted after wallet signup, bonus awarded:', result.signup_bonus_awarded, 'points');
-                  }
-                } catch (accountError) {
-                  console.error('Error inserting rows after wallet signup:', accountError);
-                  // Continue with login even if account creation fails
-                }
+      if (connected && walletAddress && !user) {
+        // User connected wallet but not logged in yet
+        console.log('Wallet connected, checking if user exists...');
+        
+        if (isSupabaseAvailable) {
+          try {
+            // Check if wallet user exists
+            const exists = await walletUserExists(walletAddress);
+            
+            if (exists) {
+              // Existing wallet user - get their account
+              const walletUser = await getWalletUser(walletAddress);
+              if (walletUser) {
+                setUser({
+                  accountId: walletUser.id,
+                  userId: walletUser.wallet_address,
+                  walletAddress: walletUser.wallet_address,
+                  username: walletUser.username,
+                  isAdmin: false
+                });
+                setAuthMethod('wallet');
+                console.log('Existing wallet user logged in:', walletUser.username);
               }
-            } catch (error) {
-              console.error('Error checking for existing wallet account:', error);
-              // Continue with login even if database check fails
             }
+            // If user doesn't exist, they need to explicitly login to register
+          } catch (error) {
+            console.error('Error checking wallet user:', error);
           }
-          
-          // Set or update the user with wallet info
-          setUser({
-            accountId: account,
-            userId: account, // For wallet users, the wallet address is both the id and authId
-            walletAddress: account
-          });
-          setAuthMethod('wallet');
-        } else if (authMethod === 'email' && user) {
-          // User already logged in with email, update their wallet address
-          setUser({
-            ...user,
-            walletAddress: account,
-            userId: user.accountId // Keep the existing authId
-          });
         }
-      } else if (authMethod === 'wallet' && !isConnected) {
-        // Wallet disconnected
+      } else if (!connected && authMethod === 'wallet') {
+        // Wallet disconnected - log out wallet user
         setUser(null);
         setAuthMethod(null);
+        console.log('Wallet disconnected, user logged out');
       }
     };
-    
+
     handleWalletConnectionChange();
-  }, [isConnected, account, authMethod, isSupabaseAvailable]);
+  }, [connected, walletAddress, user, authMethod, isSupabaseAvailable]);
 
   const loginWithEmail = async (email: string, password: string) => {
     try {
       setIsLoading(true);
       
-      if (isSupabaseAvailable) {
-        // Use Supabase authentication
-        const { user: supabaseUser } = await signInWithEmail(email, password);
-        if (supabaseUser) {
-          const account = await getUserAccount(supabaseUser.id);
-          
-          if (account && account.id) {
-            setUser({
-              accountId: account.id,  // Use user_accounts.id
-              userId: supabaseUser.id,  // Store auth.users.id separately
-              email: supabaseUser.email || undefined,
-              walletAddress: account.wallet_address,
-              isAdmin: false  // is_admin field was removed, default to false
-            });
-            
-            // Update admin status - always false since we removed admin functionality
-            setIsAdmin(false);
-            setAuthMethod('email');
-          }
+      if (!isSupabaseAvailable) {
+        throw new Error('Supabase is not configured');
+      }
+
+      const { user: supabaseUser } = await signInWithEmail(email, password);
+      if (supabaseUser) {
+        const account = await getUserAccount(supabaseUser.id);
+        
+        if (account && account.id) {
+          setUser({
+            accountId: account.id,
+            userId: supabaseUser.id,
+            email: supabaseUser.email || undefined,
+            walletAddress: account.wallet_address,
+            username: account.username,
+            isAdmin: false
+          });
+          setAuthMethod('email');
+          setIsAdmin(false);
+        } else {
+          throw new Error('User account not found');
         }
-      } else {
-        // Fallback to mock authentication
-        const mockUser = {
-          accountId: `user_${Date.now()}`,
-          userId: `user_${Date.now()}`, // For mock users, use the same generated ID
-          email: email
-        };
-        
-        // Save to localStorage
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        localStorage.setItem('authMethod', 'email');
-        
-        setUser(mockUser);
-        setAuthMethod('email');
       }
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Email login failed:', error);
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const registerWithEmail = async (email: string, password: string) => {
     try {
       setIsLoading(true);
       
-      if (isSupabaseAvailable) {
-        // Use Supabase authentication - database trigger inserts rows after signup
-        const { user: supabaseUser } = await signUpWithEmail(email, password);
-        if (supabaseUser) {
+      if (!isSupabaseAvailable) {
+        throw new Error('Supabase is not configured');
+      }
+
+      const { user: supabaseUser } = await signUpWithEmail(email, password);
+      if (supabaseUser) {
+        const account = await getUserAccount(supabaseUser.id);
+        
+        if (account && account.id) {
           setUser({
-            accountId: supabaseUser.id,
+            accountId: account.id,
             userId: supabaseUser.id,
-            email: supabaseUser.email
+            email: supabaseUser.email || undefined,
+            walletAddress: account.wallet_address,
+            username: account.username,
+            isAdmin: false
           });
           setAuthMethod('email');
+          setIsAdmin(false);
+        } else {
+          throw new Error('User account not found');
         }
-      } else {
-        throw new Error('Database connection required for user registration');
       }
     } catch (error) {
-      console.error('Registration failed:', error);
+      console.error('Email registration failed:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -249,55 +213,68 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const loginWithWallet = async () => {
     try {
       setIsLoading(true);
-      await connectWallet();
       
-      if (account) {
-        if (isSupabaseAvailable && authMethod === 'email' && user) {
-          // If user is already logged in via email, link the wallet to their account
-          await linkWalletToAccount(user.accountId, account);
-          
-          // Update the user state
+      if (!isSupabaseAvailable) {
+        throw new Error('Supabase is not configured');
+      }
+
+      // First, check if wallet is already connected
+      const isConnected = await checkConnection();
+      
+      let connectedWalletAddress: string;
+      
+      if (isConnected && walletAddress) {
+        // Wallet is already connected, use the current address
+        console.log('Wallet already connected, using current address:', walletAddress);
+        connectedWalletAddress = walletAddress;
+      } else {
+        // Wallet is not connected or connection is stale, force new connection
+        console.log('Wallet not connected or connection stale, requesting new connection...');
+        const newWalletAddress = await connect();
+        
+        if (!newWalletAddress) {
+          throw new Error('Failed to connect wallet');
+        }
+        connectedWalletAddress = newWalletAddress;
+      }
+
+      console.log('Wallet connected successfully:', connectedWalletAddress);
+
+      // Check if wallet user exists
+      const exists = await walletUserExists(connectedWalletAddress);
+      
+      if (exists) {
+        // Existing wallet user - get their account
+        const walletUser = await getWalletUser(connectedWalletAddress);
+        if (walletUser) {
           setUser({
-            ...user,
-            walletAddress: account,
-            userId: user.accountId // Keep the existing authId
-          });
-        } else {
-          // Check if this wallet user exists in the database
-          if (isSupabaseAvailable) {
-            try {
-              // Look for existing account with this wallet address
-              const existingAccount = await getUserAccount(account);
-              
-              if (!existingAccount) {
-                // First time wallet user - insert rows after signup
-                console.log('First-time wallet user detected, inserting rows after signup:', account);
-                
-                try {
-                  const result = await insertRowsAfterSignupFromWallet(account, account);
-                  if (result.success) {
-                    console.log('Rows inserted after wallet signup, bonus awarded:', result.signup_bonus_awarded, 'points');
-                  }
-                } catch (accountError) {
-                  console.error('Error inserting rows after wallet signup:', accountError);
-                  // Continue with login even if account creation fails
-                }
-              }
-            } catch (error) {
-              console.error('Error checking for existing wallet account:', error);
-              // Continue with login even if database check fails
-            }
-          }
-          
-          // Set user state
-          setUser({
-            accountId: account,
-            userId: account, // For wallet users, the wallet address is both the id and authId
-            walletAddress: account
+            accountId: walletUser.id,
+            userId: walletUser.wallet_address,
+            walletAddress: walletUser.wallet_address,
+            username: walletUser.username,
+            isAdmin: false
           });
           setAuthMethod('wallet');
+          setIsAdmin(false);
+          console.log('Existing wallet user logged in:', walletUser.username);
         }
+      } else {
+        // New wallet user - register them
+        console.log('New wallet user, registering account...');
+        const walletUser = await registerWalletUser(connectedWalletAddress);
+        
+        setUser({
+          accountId: walletUser.id,
+          userId: walletUser.wallet_address,
+          walletAddress: walletUser.wallet_address,
+          username: walletUser.username,
+          isAdmin: false
+        });
+        setAuthMethod('wallet');
+        setIsAdmin(false);
+        console.log('New wallet user registered and logged in:', walletUser.username);
       }
+      
     } catch (error) {
       console.error('Wallet login failed:', error);
       throw error;
@@ -309,19 +286,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = async () => {
     try {
       if (authMethod === 'wallet') {
-        disconnectWallet();
+        await disconnect();
       }
       
       if (isSupabaseAvailable && authMethod === 'email') {
         await signOut();
       }
       
-      // Clear localStorage
-      localStorage.removeItem('user');
-      localStorage.removeItem('authMethod');
-      
       setUser(null);
       setAuthMethod(null);
+      setIsAdmin(false);
     } catch (error) {
       console.error('Logout failed:', error);
     }

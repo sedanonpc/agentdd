@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useWeb3 } from '../../context/Web3Context';
+import { useSolanaWallet } from '../../context/SolanaWalletContext';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
-  const { isConnected, account } = useWeb3();
+  const { connected, walletAddress } = useSolanaWallet();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [checkingMobileConnection, setCheckingMobileConnection] = useState(false);
   
@@ -26,7 +26,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         setCheckingMobileConnection(true);
         
         // If we already have a wallet connection, consider authenticated
-        if (isConnected && account) {
+        if (connected && walletAddress) {
           setCheckingMobileConnection(false);
           return;
         }
@@ -45,7 +45,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         setIsRedirecting(true);
       }
     }
-  }, [isAuthenticated, isLoading, hasPendingMobileConnection, isMobile, isConnected, account]);
+  }, [isAuthenticated, isLoading, hasPendingMobileConnection, isMobile, connected, walletAddress]);
 
   // Show loading state while checking authentication
   if (isLoading || checkingMobileConnection) {
@@ -67,7 +67,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   // Check for immediate wallet connection (from mobile)
-  if (isConnected && account) {
+  if (connected && walletAddress) {
     return <>{children}</>;
   }
 

@@ -4,7 +4,7 @@ import { Send, ArrowLeft, MessageSquare, Users, Terminal, Loader2 } from 'lucide
 import { useChat } from '../context/ChatContext';
 // import { useBetting } from '../context/BettingContext'; // REMOVED: Legacy context
 import { useAuth } from '../context/AuthContext';
-import { useWeb3 } from '../context/Web3Context';
+import { useSolanaWallet } from '../context/SolanaWalletContext';
 import { Message } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import WalletAddress from '../components/common/WalletAddress';
@@ -30,7 +30,7 @@ const ChatPage: React.FC = () => {
     isDareDevilTyping
   } = useChat();
   // const { getBetById } = useBetting(); // REMOVED: Legacy context
-  const { account, isConnected } = useWeb3();
+  const { walletAddress, connected } = useSolanaWallet();
   const [newMessage, setNewMessage] = useState('');
   const [showGlobalChat, setShowGlobalChat] = useState(!betId);
   
@@ -82,7 +82,7 @@ const ChatPage: React.FC = () => {
   };
   
   const isOwnMessage = (sender: string) => {
-    return sender === account;
+    return sender === walletAddress;
   };
   
   const isDareDevilMessage = (sender: string) => {
@@ -158,7 +158,7 @@ const ChatPage: React.FC = () => {
     const currentMessages = showGlobalChat ? globalMessages : chatMessages;
     const isLoading = showGlobalChat ? isLoadingGlobalMessages : isLoadingMessages;
     
-    if (!isConnected) {
+    if (!connected) {
   return (
         <div className="flex flex-col items-center justify-center h-full">
           <div className="bg-console-blue/20 backdrop-blur-xs border-1 border-console-blue p-4 text-center max-w-md">
@@ -325,12 +325,12 @@ const ChatPage: React.FC = () => {
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="TYPE_MESSAGE..."
-              disabled={!isConnected}
+              disabled={!connected}
               className="flex-grow bg-console-black/70 backdrop-blur-xs border-1 border-console-blue px-3 py-2 text-console-white font-mono focus:outline-none focus:shadow-button disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <button
               type="submit"
-              disabled={!newMessage.trim() || !isConnected}
+              disabled={!newMessage.trim() || !connected}
               className="bg-console-blue/90 backdrop-blur-xs border-1 border-console-blue text-console-white font-mono px-4 py-2 hover:shadow-button transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Send className="h-5 w-5" />

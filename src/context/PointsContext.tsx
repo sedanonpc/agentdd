@@ -46,7 +46,7 @@ import {
   deductBetPoints,
   addBetWinPoints,
   awardPoints
-} from '../deprecated/services/pointsService';
+} from '../services/pointsService';
 
 // Define the context type
 interface PointsContextType {

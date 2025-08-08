@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Login Test</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Wallet Login Test</h1>
+    <div id="results"></div>
+    <button onclick="testWalletFunctions()">Test Wallet Functions</button>
+
+    <script>
+        // Supabase configuration
+        const supabaseUrl = 'https://qiasnpjpkzhretlyymgh.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpYXNucGpwa3pocmV0bHl5bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMzI5MDksImV4cCI6MjA2NDgwODkwOX0.BEOkmjVpGHo37omVsWEgvsCnXB0FIVqZQvDNCuy3qYo';
+
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+        async function testWalletFunctions() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h2>Testing Wallet Functions...</h2>';
+
+            try {
+                // Test 1: Check if register_wallet_user function exists
+                console.log('Testing register_wallet_user function...');
+                const testWalletAddress = 'test_wallet_' + Date.now();
+                
+                const { data: createData, error: createError } = await supabase.rpc('register_wallet_user', {
+                    wallet_address: testWalletAddress
+                });
+
+                if (createError) {
+                    results.innerHTML += `<p style="color: red;">❌ register_wallet_user function error: ${createError.message}</p>`;
+                    console.error('register_wallet_user error:', createError);
+                } else {
+                    results.innerHTML += `<p style="color: green;">✅ register_wallet_user function works</p>`;
+                    console.log('register_wallet_user result:', createData);
+                }
+
+                // Test 2: Check if get_wallet_user function exists
+                console.log('Testing get_wallet_user function...');
+                const { data: getData, error: getError } = await supabase.rpc('get_wallet_user', {
+                    wallet_address: testWalletAddress
+                });
+
+                if (getError) {
+                    results.innerHTML += `<p style="color: red;">❌ get_wallet_user function error: ${getError.message}</p>`;
+                    console.error('get_wallet_user error:', getError);
+                } else {
+                    results.innerHTML += `<p style="color: green;">✅ get_wallet_user function works</p>`;
+                    console.log('get_wallet_user result:', getData);
+                }
+
+                // Test 3: Check if we can access user_accounts table
+                console.log('Testing user_accounts access...');
+                const { data: accountsData, error: accountsError } = await supabase
+                    .from('user_accounts')
+                    .select('*')
+                    .eq('wallet_address', testWalletAddress)
+                    .limit(1);
+
+                if (accountsError) {
+                    results.innerHTML += `<p style="color: red;">❌ user_accounts access error: ${accountsError.message}</p>`;
+                    console.error('user_accounts access error:', accountsError);
+                } else {
+                    results.innerHTML += `<p style="color: green;">✅ user_accounts access works</p>`;
+                    console.log('user_accounts result:', accountsData);
+                }
+
+                // Test 4: Check if we can access point_transactions table
+                console.log('Testing point_transactions access...');
+                const { data: transactionsData, error: transactionsError } = await supabase
+                    .from('point_transactions')
+                    .select('*')
+                    .limit(1);
+
+                if (transactionsError) {
+                    results.innerHTML += `<p style="color: red;">❌ point_transactions access error: ${transactionsError.message}</p>`;
+                    console.error('point_transactions access error:', transactionsError);
+                } else {
+                    results.innerHTML += `<p style="color: green;">✅ point_transactions access works</p>`;
+                    console.log('point_transactions result:', transactionsData);
+                }
+
+            } catch (error) {
+                results.innerHTML += `<p style="color: red;">❌ General error: ${error.message}</p>`;
+                console.error('General error:', error);
+            }
+        }
+    </script>
+</body>
+</html> 

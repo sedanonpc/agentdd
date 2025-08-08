@@ -3,14 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 // import { useBetting } from '../context/BettingContext'; // REMOVED: Legacy context
 import { useMatches } from '../context/MatchesContext';
 import { useAuth } from '../context/AuthContext';
-import { useWeb3 } from '../context/Web3Context';
+import { useSolanaWallet } from '../context/SolanaWalletContext';
 import { usePoints } from '../context/PointsContext';
 import { useStraightBets } from '../context/StraightBetsContext';
 import { Wallet, AlertTriangle, TrendingUp, ArrowUp, ArrowDown, Calendar, Clock, DollarSign } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import MatchAnalysisCard from '../components/match/MatchAnalysisCard';
 
-import { formatDecimalOdds, decimalToAmerican } from '../deprecated/utils/oddsUtils';
+import { formatDecimalOdds, decimalToAmerican } from '../utils/oddsUtils';
 import { Match } from '../types';
 import { MatchAnalysis } from '../types';
 
@@ -21,7 +21,7 @@ const MatchDetailView: React.FC = () => {
   const { createStraightBet } = useStraightBets(); // Use new betting context
   const { matches, loading: loadingMatches } = useMatches();
   const { isAuthenticated, loginWithEmail } = useAuth();
-  const { account, connectWallet } = useWeb3();
+  const { walletAddress, connect } = useSolanaWallet();
   const { userBalance } = usePoints();
   
   const [match, setMatch] = useState<Match | null>(null);
@@ -99,7 +99,7 @@ const MatchDetailView: React.FC = () => {
   };
   
   const handleCreateBet = async () => {
-    if (!account) {
+    if (!walletAddress) {
       alert('Please connect your wallet first');
       return;
     }

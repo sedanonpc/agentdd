@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 // Remove actual socket.io import and use a mock implementation
 // import { io, Socket } from 'socket.io-client';
-import { useWeb3 } from './Web3Context';
+import { useSolanaWallet } from './SolanaWalletContext';
 import { Message } from '../types';
 import { getMessagesForBet, getMessagesForMatch, getGlobalMessages, saveGlobalMessage } from '../services/chatService';
 import { shouldDareDevilRespond, generateDareDevilResponse, getDareDevilResponseDelay } from '../services/dareDevilService';
@@ -46,7 +46,7 @@ interface MockSocket {
 }
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { account } = useWeb3();
+  const { walletAddress } = useSolanaWallet();
   const [socket, setSocket] = useState<MockSocket | null>(null);
   
   // Bet chat state
@@ -69,7 +69,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Create a mock socket instead of real connection
   useEffect(() => {
-    if (account) {
+    if (walletAddress) {
       console.log('Creating mock socket instead of real connection');
       
       // Create a mock socket that just logs events
@@ -94,7 +94,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         mockSocket.disconnect();
       };
     }
-  }, [account]);
+  }, [walletAddress]);
 
   // Bet chat methods
   const joinChat = async (betId: string) => {
