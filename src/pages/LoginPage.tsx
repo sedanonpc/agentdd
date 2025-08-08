@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Mail, Wallet, AlertTriangle, Smartphone } from 'lucide-react';
+import LoginButton from '../components/LoginButton';
+import useSyncPrivyToSupabase from '../hooks/useSyncPrivyToSupabase';
 import { supabase } from '../services/supabaseService';
 import { toast } from 'react-toastify';
 
@@ -17,6 +19,8 @@ const LoginPage: React.FC = () => {
   
   const { loginWithEmail, registerWithEmail, loginWithWallet, isSupabaseAvailable, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  useSyncPrivyToSupabase();
 
   // Check if user is on mobile device
   useEffect(() => {
@@ -197,15 +201,7 @@ const LoginPage: React.FC = () => {
         
         {/* Auth Method Selection */}
         <div className="flex flex-col space-y-4 mb-8">
-          <button
-            onClick={handleWalletLogin}
-            disabled={isLoading || checkingConnection}
-            className="bg-console-blue/90 backdrop-blur-xs text-console-white font-mono uppercase tracking-wider px-4 py-3 shadow-button hover:shadow-glow transition-all duration-300 flex items-center justify-center"
-          >
-            <Wallet className="mr-2 h-5 w-5" />
-            <span className="mr-1">&gt;</span> 
-            {checkingConnection ? "CONNECTING..." : (isMobile ? "WALLET_DISABLED" : "WALLET_DISABLED")}
-          </button>
+          <LoginButton />
           
           <div className="flex items-center my-4">
             <div className="flex-grow h-px bg-console-blue-dim"></div>
