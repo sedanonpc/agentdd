@@ -6,8 +6,14 @@ export default function useSyncPrivyToSupabase() {
   const { user, authenticated, ready, logout } = usePrivy();
 
   useEffect(() => {
-    if (!ready) return;
-    if (!authenticated || !user) return;
+    if (!ready) {
+      console.log('[PrivySync] not ready');
+      return;
+    }
+    if (!authenticated || !user) {
+      console.log('[PrivySync] no authenticated Privy user');
+      return;
+    }
 
     (async () => {
       try {
@@ -46,7 +52,10 @@ export default function useSyncPrivyToSupabase() {
         // Re-check that session exists; if not, force Privy logout to allow re-login
         const { data: postSyncSession } = await supabase.auth.getSession();
         if (!postSyncSession?.session) {
+          console.warn('[PrivySync] No Supabase session after sync. Forcing Privy logout.');
           await logout();
+        } else {
+          console.log('[PrivySync] Supabase session established');
         }
       } catch (e) {
         console.error('Failed to sync Privy user to Supabase:', e);

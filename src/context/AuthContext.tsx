@@ -147,6 +147,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
             setAuthMethod('email');
             setIsAdmin(false);
+            // Navigate hook not available here; LoginPage redirects when isAuthenticated flips
           } else {
             // Could not hydrate account; consider user not authenticated
             setUser(null);
