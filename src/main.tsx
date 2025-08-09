@@ -13,7 +13,7 @@ createRoot(document.getElementById('root')!).render(
         config={{
           loginMethods: ['email'],
           embeddedWallets: { createOnLogin: 'all-users' },
-          walletLoginFirst: false, // avoid Privy warning; we are not enabling wallets on free tier
+          // Do not enable any wallet-first flags; free-tier email only
         }}
       >
         <App />
