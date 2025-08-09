@@ -36,6 +36,9 @@ const LoginPage: React.FC = () => {
       const redirectPath = sessionStorage.getItem('redirectAfterLogin');
       sessionStorage.removeItem('redirectAfterLogin');
       navigate(redirectPath || '/matches', { replace: true });
+    } else {
+      // If not authenticated and stuck, ensure Sign In is accessible
+      // no-op here; the LoginButton now handles retry
     }
   }, [isAuthenticated, navigate]);
 

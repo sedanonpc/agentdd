@@ -52,6 +52,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsSupabaseAvailable(isSupabaseConfigured());
   }, []);
 
+  // Emergency: allow force logout via query param ?forceLogout=1
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('forceLogout') === '1') {
+      (async () => {
+        try {
+          await signOut();
+        } finally {
+          // Clear any local markers and clean URL
+          localStorage.removeItem('user');
+          localStorage.removeItem('authMethod');
+          window.history.replaceState({}, document.title, window.location.pathname);
+          window.location.reload();
+        }
+      })();
+    }
+  }, []);
+
   // Check for existing session on load
   useEffect(() => {
     const checkSession = async () => {
@@ -109,18 +127,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         if (session?.user) {
           const supabaseUser = session.user as unknown as User;
-          // Optimistically set authenticated; then hydrate account fields
-          setAuthMethod('email');
-          setIsAdmin(false);
-          setUser(prev => ({
-            accountId: prev?.accountId || '',
-            userId: supabaseUser.id,
-            email: supabaseUser.email || undefined,
-            walletAddress: prev?.walletAddress,
-            isAdmin: false,
-          }));
-          // Load account
-          const account = await getUserAccount(supabaseUser.id);
+          // Load account with polling to wait for signup trigger
+          setIsLoading(true);
+          const maxAttempts = 20;
+          const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+          let account = await getUserAccount(supabaseUser.id);
+          for (let i = 0; (!account || !account.id) && i < maxAttempts; i++) {
+            await delay(250);
+            account = await getUserAccount(supabaseUser.id);
+          }
+
           if (account && account.id) {
             setUser({
               accountId: account.id,
@@ -129,13 +145,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               walletAddress: account.wallet_address,
               isAdmin: false,
             });
+            setAuthMethod('email');
+            setIsAdmin(false);
+          } else {
+            // Could not hydrate account; consider user not authenticated
+            setUser(null);
+            setAuthMethod(null);
           }
+          setIsLoading(false);
         } else {
           setUser(null);
           setAuthMethod(null);
         }
       } catch (err) {
         console.error('Auth state change handling failed:', err);
+        setUser(null);
+        setAuthMethod(null);
+        setIsLoading(false);
       }
     });
 
