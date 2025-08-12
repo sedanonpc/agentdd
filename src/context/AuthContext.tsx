@@ -9,12 +9,10 @@ import {
 } from '../services/authService';
 import { 
   getUserAccount,
-  createUserAccount,
-  insertRowsAfterSignupFromWallet,
-  linkWalletToAccount
+  ensureWalletAccount
 } from '../services/userAccountsService';
+import { usePrivy } from '@privy-io/react-auth';
 import { User } from '@supabase/supabase-js';
-import { supabase } from '../services/supabaseService';
 
 interface AuthUser {
   accountId: string;  // This is user_accounts.id
@@ -40,8 +38,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Wallet login removed; preparing for Privy integration
+  // Preparing for Privy integration
   const [user, setUser] = useState<AuthUser | null>(null);
+  const { user: privyUser, authenticated: privyAuthenticated } = usePrivy();
   const [authMethod, setAuthMethod] = useState<'email' | 'wallet' | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSupabaseAvailable, setIsSupabaseAvailable] = useState<boolean>(false);
@@ -50,24 +49,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Check Supabase configuration on load
   useEffect(() => {
     setIsSupabaseAvailable(isSupabaseConfigured());
-  }, []);
-
-  // Emergency: allow force logout via query param ?forceLogout=1
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('forceLogout') === '1') {
-      (async () => {
-        try {
-          await signOut();
-        } finally {
-          // Clear any local markers and clean URL
-          localStorage.removeItem('user');
-          localStorage.removeItem('authMethod');
-          window.history.replaceState({}, document.title, window.location.pathname);
-          window.location.reload();
-        }
-      })();
-    }
   }, []);
 
   // Check for existing session on load
@@ -117,58 +98,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     checkSession();
-  }, [isSupabaseAvailable]);
-
-  // Listen for Supabase auth state changes (ensures redirect after Privy-driven sign-in)
-  useEffect(() => {
-    if (!isSupabaseAvailable) return;
-
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      try {
-        if (session?.user) {
-          const supabaseUser = session.user as unknown as User;
-          // Load account with polling to wait for signup trigger
-          setIsLoading(true);
-          const maxAttempts = 20;
-          const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
-          let account = await getUserAccount(supabaseUser.id);
-          for (let i = 0; (!account || !account.id) && i < maxAttempts; i++) {
-            await delay(250);
-            account = await getUserAccount(supabaseUser.id);
-          }
-
-          if (account && account.id) {
-            setUser({
-              accountId: account.id,
-              userId: supabaseUser.id,
-              email: supabaseUser.email || undefined,
-              walletAddress: account.wallet_address,
-              isAdmin: false,
-            });
-            setAuthMethod('email');
-            setIsAdmin(false);
-            // Navigate hook not available here; LoginPage redirects when isAuthenticated flips
-          } else {
-            // Could not hydrate account; consider user not authenticated
-            setUser(null);
-            setAuthMethod(null);
-          }
-          setIsLoading(false);
-        } else {
-          setUser(null);
-          setAuthMethod(null);
-        }
-      } catch (err) {
-        console.error('Auth state change handling failed:', err);
-        setUser(null);
-        setAuthMethod(null);
-        setIsLoading(false);
-      }
-    });
-
-    return () => {
-      subscription.subscription.unsubscribe();
-    };
   }, [isSupabaseAvailable]);
 
   // Wallet connection effects removed
@@ -247,7 +176,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const loginWithWallet = async () => {
-    throw new Error('Wallet login is temporarily disabled for Privy integration prep');
+    if (!privyAuthenticated || !privyUser) throw new Error('Privy not authenticated');
+    const walletAddress = (privyUser as any)?.wallet?.address || (privyUser as any)?.linkedAccounts?.[0]?.address;
+    if (!walletAddress) throw new Error('No wallet address from Privy');
+
+    const account = await ensureWalletAccount(walletAddress, 500);
+    setUser({
+      accountId: account.id!,
+      userId: walletAddress,
+      walletAddress: walletAddress,
+      isAdmin: false
+    });
+    setAuthMethod('wallet');
   };
 
   const logout = async () => {

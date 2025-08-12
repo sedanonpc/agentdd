@@ -23,6 +23,7 @@ import { StraightBetsProvider } from './context/StraightBetsContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { isSupabaseConfigured } from './services/supabaseService';
 import { ConsoleThemeProvider } from './theme/muiTheme';
+import { PrivyProvider } from '@privy-io/react-auth';
 
 // Load custom fonts
 const loadFonts = () => {
@@ -78,7 +79,8 @@ function App() {
   }, []);
 
   return (
-    <AuthProvider>
+    <PrivyProvider appId={import.meta.env.VITE_PRIVY_APP_ID || ''}>
+      <AuthProvider>
         <UserAccountProvider>
           <PointsProvider>
             <MatchesProvider>
@@ -192,6 +194,7 @@ function App() {
           </PointsProvider>
         </UserAccountProvider>
       </AuthProvider>
+    </PrivyProvider>
   );
 }
 

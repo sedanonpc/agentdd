@@ -61,6 +61,48 @@ export interface UserAccount {
 }
 
 /**
+ * Get user account by wallet address
+ */
+export const getUserAccountByWallet = async (walletAddress: string): Promise<UserAccount | null> => {
+  const { data, error } = await supabase
+    .from('user_accounts')
+    .select('*')
+    .eq('wallet_address', walletAddress)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    throw error;
+  }
+  return data;
+};
+
+/**
+ * Ensure a wallet account exists. If missing, create it (optionally with a signup bonus)
+ */
+export const ensureWalletAccount = async (
+  walletAddress: string,
+  signupBonusPoints: number = 0
+): Promise<UserAccount> => {
+  // Check if exists
+  const existing = await getUserAccountByWallet(walletAddress);
+  if (existing) return existing;
+
+  // Insert minimal record. username has DB default via generate_unique_username()
+  const { data, error } = await supabase
+    .from('user_accounts')
+    .insert({
+      wallet_address: walletAddress,
+      free_points: signupBonusPoints,
+      reserved_points: 0,
+    })
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return data as UserAccount;
+};
+
+/**
  * Interface for account update operations
  */
 export interface AccountUpdates {

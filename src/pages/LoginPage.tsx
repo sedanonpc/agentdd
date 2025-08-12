@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Mail, Wallet, AlertTriangle, Smartphone } from 'lucide-react';
-import { supabase } from '../services/supabaseService';
-import LoginButton from '../components/LoginButton';
-import useSyncPrivyToSupabase from '../hooks/useSyncPrivyToSupabase';
+import { usePrivy } from '@privy-io/react-auth';
+// supabase imported elsewhere where needed
 import { toast } from 'react-toastify';
 
 const LoginPage: React.FC = () => {
@@ -15,11 +14,11 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [checkingConnection, setCheckingConnection] = useState(false);
+  const [checkingConnection] = useState(false);
   
-  const { loginWithEmail, registerWithEmail, loginWithWallet, isSupabaseAvailable, isAuthenticated } = useAuth();
+  const { loginWithEmail, registerWithEmail, isSupabaseAvailable, isAuthenticated } = useAuth();
+  const { login, ready } = usePrivy();
   const navigate = useNavigate();
-  useSyncPrivyToSupabase();
 
   // Check if user is on mobile device
   useEffect(() => {
@@ -33,12 +32,14 @@ const LoginPage: React.FC = () => {
   // Auto-redirect if authenticated
   useEffect(() => {
     if (isAuthenticated) {
+      // Check if there's a redirect destination stored
       const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-      sessionStorage.removeItem('redirectAfterLogin');
-      navigate(redirectPath || '/matches', { replace: true });
-    } else {
-      // If not authenticated and stuck, ensure Sign In is accessible
-      // no-op here; the LoginButton now handles retry
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+      } else {
+        navigate('/matches');
+      }
     }
   }, [isAuthenticated, navigate]);
 
@@ -162,7 +163,13 @@ const LoginPage: React.FC = () => {
   };
   
   const handleWalletLogin = async () => {
-    setError('Wallet login is temporarily disabled while we integrate Privy.');
+    setError('');
+    try {
+      if (!ready) return;
+      await login();
+    } catch (e:any) {
+      setError(e?.message || 'Failed to start wallet login');
+    }
   };
   
   return (
@@ -198,7 +205,15 @@ const LoginPage: React.FC = () => {
         
         {/* Auth Method Selection */}
         <div className="flex flex-col space-y-4 mb-8">
-          <LoginButton />
+          <button
+            onClick={handleWalletLogin}
+            disabled={isLoading || checkingConnection}
+            className="bg-console-blue/90 backdrop-blur-xs text-console-white font-mono uppercase tracking-wider px-4 py-3 shadow-button hover:shadow-glow transition-all duration-300 flex items-center justify-center"
+          >
+            <Wallet className="mr-2 h-5 w-5" />
+            <span className="mr-1">&gt;</span> 
+            {checkingConnection ? "CONNECTING..." : (isMobile ? "LOGIN_WITH_WALLET" : "LOGIN_WITH_WALLET")}
+          </button>
           
           <div className="flex items-center my-4">
             <div className="flex-grow h-px bg-console-blue-dim"></div>

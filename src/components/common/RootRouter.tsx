@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import HomePage from '../../deprecated/pages/HomePage';
 import LoadingSpinner from './LoadingSpinner';
 
 const RootRouter: React.FC = () => {
@@ -9,9 +8,11 @@ const RootRouter: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Only redirect if we're not loading and user is authenticated
-    if (!isLoading && isAuthenticated) {
-      navigate('/dashboard');
+    if (isLoading) return;
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    } else {
+      navigate('/login', { replace: true });
     }
   }, [isAuthenticated, isLoading, navigate]);
 
@@ -24,13 +25,7 @@ const RootRouter: React.FC = () => {
     );
   }
 
-  // If user is not authenticated, show the legacy HomePage (landing page)
-  if (!isAuthenticated) {
-    return <HomePage />;
-  }
-
-  // If user is authenticated, the useEffect will redirect to /dashboard
-  // But we return null here to avoid flash of content
+  // After redirects above, render nothing
   return null;
 };
 
