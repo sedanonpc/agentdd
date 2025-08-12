@@ -27,6 +27,9 @@ import {
   acceptStraightBet
 } from '../services/straightBetsService';
 import { getUserAccount } from '../services/supabaseService';
+import { useWeb3 } from './Web3Context';
+import { uploadBetMetadataAndGetUri } from '../services/betNftService';
+import { mintReceiptNft } from '../services/coreNftService';
 
 interface StraightBetsContextType {
   // Bet creation
@@ -51,6 +54,7 @@ const StraightBetsContext = createContext<StraightBetsContextType | undefined>(u
 export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
   const { userBalance } = usePoints();
+  const { isConnected, account, provider, signer, chainId, connectWallet } = useWeb3();
   
   // Bet creation state
   const [isCreatingBet, setIsCreatingBet] = useState(false);
@@ -238,6 +242,33 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.log('=== STRAIGHT BETS CONTEXT: Bet created successfully ===', createdBet);
 
       toast.success(`Bet placed successfully! Wagered ${amount} DARE points.`);
+
+      // Mint on Core Testnet2 for lifecycle 'created' (creator pays)
+      try {
+        if (!isConnected || !provider || !signer || !account) {
+          throw new Error('Core wallet not connected');
+        }
+        const metadataUri = await uploadBetMetadataAndGetUri({
+          betId: createdBet.id,
+          lifecycle: 'created',
+          payload: {
+            matchId,
+            creatorsPickId: teamId,
+            amount,
+            creatorUserId: user.userId,
+          },
+        });
+        await mintReceiptNft({
+          provider,
+          signer,
+          destinationAddress: account,
+          metadataUri,
+        });
+        toast.success('On-chain receipt minted (created)');
+      } catch (e) {
+        console.error('Mint failed (created lifecycle):', e);
+        toast.warn('Bet created; on-chain receipt mint failed. You can retry later.');
+      }
       
       // Refresh user bets to include the new bet
       await refreshUserBets();
