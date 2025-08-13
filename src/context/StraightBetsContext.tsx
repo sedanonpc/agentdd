@@ -54,7 +54,7 @@ const StraightBetsContext = createContext<StraightBetsContextType | undefined>(u
 export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAuthenticated, authMethod } = useAuth();
   const { userBalance } = usePoints();
-  const { isConnected, account, provider, signer, chainId, connectWallet } = useWeb3();
+  const { isConnected, account, provider, signer, chainId, redirectToMetamaskLogin } = useWeb3();
   
   // Bet creation state
   const [isCreatingBet, setIsCreatingBet] = useState(false);
@@ -195,9 +195,7 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // If wallet isn't connected, prompt user to connect before proceeding (for minting)
     if (!isConnected || !provider || !signer || !account) {
       toast.info('Please connect your MetaMask wallet to mint the bet receipt on Core Testnet2.');
-      try {
-        await connectWallet();
-      } catch (e) {}
+      await redirectToMetamaskLogin();
       if (!isConnected || !provider || !signer || !account) {
         toast.error('Wallet connection required to proceed.');
         return null;

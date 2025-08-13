@@ -16,10 +16,13 @@ export async function uploadBetMetadataAndGetUri(params: {
     attributes: Object.entries(params.payload).map(([trait_type, value]) => ({ trait_type, value })),
   });
   const bytes = new Blob([json], { type: 'application/json' });
-  const path = `nft-metadata/${params.betId}/${params.lifecycle}.json`;
-  const { error } = await supabase.storage.from('public').upload(path, bytes, { upsert: true, contentType: 'application/json' });
+  // Use dedicated public bucket 'nft-metadata'
+  const path = `${params.betId}/${params.lifecycle}.json`;
+  const { error } = await supabase.storage
+    .from('nft-metadata')
+    .upload(path, bytes, { upsert: true, contentType: 'application/json' });
   if (error) throw error;
-  const { data } = supabase.storage.from('public').getPublicUrl(path);
+  const { data } = supabase.storage.from('nft-metadata').getPublicUrl(path);
   return data.publicUrl;
 }
 
