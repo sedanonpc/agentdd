@@ -157,10 +157,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setAuthMethod('wallet');
         } else if (authMethod === 'email' && user) {
           // User already logged in with email, update their wallet address
+          // Link wallet to the existing Supabase user and preserve auth.users.id
           setUser({
             ...user,
             walletAddress: account,
-            userId: user.accountId // Keep the existing authId
+            userId: user.userId
           });
         }
       } else if (authMethod === 'wallet' && !isConnected) {
@@ -253,14 +254,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (account) {
         if (isSupabaseAvailable && authMethod === 'email' && user) {
-          // If user is already logged in via email, link the wallet to their account
-          await linkWalletToAccount(user.accountId, account);
+          // If user is already logged in via email, link the wallet to their Supabase auth.user.id
+          await linkWalletToAccount(user.userId, account);
           
           // Update the user state
+          // Preserve Supabase auth.users.id and only attach the walletAddress
           setUser({
             ...user,
             walletAddress: account,
-            userId: user.accountId // Keep the existing authId
+            userId: user.userId
           });
         } else {
           // Check if this wallet user exists in the database

@@ -52,7 +52,7 @@ interface StraightBetsContextType {
 const StraightBetsContext = createContext<StraightBetsContextType | undefined>(undefined);
 
 export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, authMethod } = useAuth();
   const { userBalance } = usePoints();
   const { isConnected, account, provider, signer, chainId, connectWallet } = useWeb3();
   
@@ -190,6 +190,18 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.log('=== STRAIGHT BETS CONTEXT: Bet creation failed - not authenticated ===');
       toast.error('Please sign in to place bets');
       return null;
+    }
+
+    // If wallet isn't connected, prompt user to connect before proceeding (for minting)
+    if (!isConnected || !provider || !signer || !account) {
+      toast.info('Please connect your MetaMask wallet to mint the bet receipt on Core Testnet2.');
+      try {
+        await connectWallet();
+      } catch (e) {}
+      if (!isConnected || !provider || !signer || !account) {
+        toast.error('Wallet connection required to proceed.');
+        return null;
+      }
     }
 
     if (amount <= 0) {
