@@ -11,11 +11,27 @@
  * All operations are atomic - either all succeed or all fail.
  */
 
-import { supabase } from './supabaseService';
+import { createClient } from '@supabase/supabase-js';
 import { pointModifiableActionConfigurationsService } from './pointModifiableActionConfigurationsService';
 import { v4 as uuidv4 } from 'uuid';
 
-// Use shared Supabase client to avoid multiple auth instances
+// Initialize Supabase client with connection pooling
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL!,
+  import.meta.env.VITE_SUPABASE_ANON_KEY!,
+  {
+    db: {
+      schema: 'public',
+    },
+    global: {
+      headers: { 'x-app-name': 'agentdd-web' },
+    },
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  }
+);
 
 // Point transaction types from our new enum
 export type PointTransactionType = 

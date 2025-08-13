@@ -17,6 +17,7 @@ import { toast } from 'react-toastify';
 import {
   UserAccount,
   getUserAccount,
+  getUserAccountByWallet,
   updateAccountUsername,
   updateAccountImage,
   getFreePoints,
@@ -75,10 +76,21 @@ export const UserAccountProvider: React.FC<{ children: ReactNode }> = ({ childre
   /**
    * Load user account data from the database
    */
+  const isUuid = (val: string | undefined | null): boolean => {
+    if (!val) return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
+  };
+
   const loadAccount = async (userId: string) => {
     setIsLoading(true);
     try {
-      const accountData = await getUserAccount(userId);
+      let accountData: UserAccount | null = null;
+      // Wallet-auth users have non-UUID ids; fetch by wallet address instead
+      if (!isUuid(userId) && user?.walletAddress) {
+        accountData = await getUserAccountByWallet(user.walletAddress);
+      } else {
+        accountData = await getUserAccount(userId);
+      }
       setAccount(accountData);
     } catch (error) {
       console.error('UserAccountContext: Error loading account:', error);

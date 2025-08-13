@@ -40,7 +40,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Preparing for Privy integration
   const [user, setUser] = useState<AuthUser | null>(null);
-  const { user: privyUser, authenticated: privyAuthenticated } = usePrivy();
+  const { user: privyUser, authenticated: privyAuthenticated, logout: privyLogout } = usePrivy();
   const [authMethod, setAuthMethod] = useState<'email' | 'wallet' | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSupabaseAvailable, setIsSupabaseAvailable] = useState<boolean>(false);
@@ -100,6 +100,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     checkSession();
   }, [isSupabaseAvailable]);
 
+  // If Privy is authenticated, hydrate app user from wallet (no webhooks)
+  useEffect(() => {
+    const syncPrivyToSupabase = async () => {
+      try {
+        if (!privyAuthenticated || !privyUser) return;
+        const walletAddress = (privyUser as any)?.wallet?.address || (privyUser as any)?.linkedAccounts?.[0]?.address;
+        if (!walletAddress) return;
+        const account = await ensureWalletAccount(walletAddress, 500);
+        setUser({
+          accountId: account.id!,
+          userId: walletAddress,
+          walletAddress: walletAddress,
+          isAdmin: false
+        });
+        setAuthMethod('wallet');
+      } catch (e) {
+        console.error('Failed to sync Privy user to Supabase:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    syncPrivyToSupabase();
+  }, [privyAuthenticated, privyUser]);
+
   // Wallet connection effects removed
 
   const loginWithEmail = async (email: string, password: string) => {
@@ -110,8 +134,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Use Supabase authentication
         const { user: supabaseUser } = await signInWithEmail(email, password);
         if (supabaseUser) {
-          const account = await getUserAccount(supabaseUser.id);
-          
+          // Try to load existing user account
+          let account = await getUserAccount(supabaseUser.id);
+          // Poll briefly in case DB trigger is delayed
+          if (!account) {
+            for (let i = 0; i < 12 && !account; i++) {
+              await new Promise(r => setTimeout(r, 250));
+              account = await getUserAccount(supabaseUser.id);
+            }
+          }
+          // If still no account, create a minimal one to prevent login dead-ends
+          if (!account) {
+            try {
+              account = await createUserAccount(supabaseUser.id, {
+                email: supabaseUser.email || undefined,
+                free_points: 0,
+                reserved_points: 0,
+              });
+            } catch (e) {
+              console.error('Failed to create fallback user account after email login:', e);
+            }
+          }
+
           if (account && account.id) {
             setUser({
               accountId: account.id,  // Use user_accounts.id
@@ -120,10 +164,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               walletAddress: account.wallet_address,
               isAdmin: false  // is_admin field was removed, default to false
             });
-            
-            // Update admin status - always false since we removed admin functionality
             setIsAdmin(false);
             setAuthMethod('email');
+          } else {
+            throw new Error('User account not found after login');
           }
         }
       } else {
@@ -179,7 +223,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!privyAuthenticated || !privyUser) throw new Error('Privy not authenticated');
     const walletAddress = (privyUser as any)?.wallet?.address || (privyUser as any)?.linkedAccounts?.[0]?.address;
     if (!walletAddress) throw new Error('No wallet address from Privy');
-
     const account = await ensureWalletAccount(walletAddress, 500);
     setUser({
       accountId: account.id!,
@@ -192,6 +235,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
+      // If logged in with Privy, also clear the Privy session so next login prompts correctly
+      if (privyAuthenticated || authMethod === 'wallet') {
+        try { await privyLogout(); } catch {}
+      }
+
       if (isSupabaseAvailable && authMethod === 'email') {
         await signOut();
       }

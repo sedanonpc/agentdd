@@ -34,19 +34,17 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useAuth } from './AuthContext';
 import { toast } from 'react-toastify';
 import {
-  Transaction,
-  DEFAULT_POINTS,
-  getTotalUserPoints,
-  getUserFreePoints,
-  getUserReservedPoints,
+  Transaction
+} from '../services/pointsService';
+import {
+  getPoints as getTotalUserPoints,
+  getFreePoints as getUserFreePoints,
+  getReservedPoints as getUserReservedPoints,
   reservePoints,
   freePoints,
-  recordTransaction,
-  getUserTransactions,
-  deductBetPoints,
-  addBetWinPoints,
-  awardPoints
-} from '../deprecated/services/pointsService';
+  updatePoints
+} from '../services/userAccountsService';
+import { getUserTransactions } from '../services/pointsService';
 
 // Define the context type
 interface PointsContextType {
@@ -105,7 +103,6 @@ export const PointsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const loadUserData = async (userId: string) => {
     setLoadingBalance(true);
     try {
-      // Get user balance from service
       const totalBalance = await getTotalUserPoints(userId);
       const freePoints = await getUserFreePoints(userId);
       const reservedPoints = await getUserReservedPoints(userId);
@@ -155,33 +152,13 @@ export const PointsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
 
     try {
-      let success;
-      if (type === 'BET_WON') {
-        success = await addBetWinPoints(user.userId, amount, betId!);
-      } else {
-        success = await awardPoints(user.userId, amount, description);
-      }
-      
-      if (success) {
-        // Update local state
-        setUserBalance(prev => prev + amount);
-        setFreePointsBalance(prev => prev + amount);
-        
-        // Add to transaction history
-        const newTransaction: Transaction = {
-          id: `${Date.now()}`,
-          userId: user.userId,
-          amount: amount,
-          type,
-          description,
-          betId,
-          timestamp: Date.now()
-        };
-        setTransactions(prev => [newTransaction, ...prev]);
-        
-        return true;
-      }
-      return false;
+      const currentFree = await getUserFreePoints(user.userId);
+      await updatePoints(user.userId, currentFree + amount);
+      setUserBalance(prev => prev + amount);
+      setFreePointsBalance(prev => prev + amount);
+      const refreshed = await getUserTransactions(user.userId);
+      setTransactions(refreshed);
+      return true;
     } catch (error) {
       console.error('Error adding points:', error);
       toast.error('Failed to add points');

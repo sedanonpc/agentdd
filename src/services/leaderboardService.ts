@@ -5,10 +5,38 @@
  * Provides fresh database queries without caching for real-time accuracy.
  */
 
-import { supabase } from './supabaseService';
+import { createClient } from '@supabase/supabase-js';
 
-// Use shared Supabase client to avoid multiple GoTrueClient instances
-console.log('LeaderboardService: using shared Supabase client');
+// Supabase configuration (using same pattern as userAccountsService)
+const fixedSupabaseUrl = 'https://qiasnpjpkzhretlyymgh.supabase.co';
+const fixedSupabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpYXNucGpwa3pocmV0bHl5bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMzI5MDksImV4cCI6MjA2NDgwODkwOX0.BEOkmjVpGHo37omVsWEgvsCnXB0FIVqZQvDNCuy3qYo';
+
+let supabaseUrl = '';
+try {
+  supabaseUrl = import.meta.env.VITE_SUPABASE_URL || fixedSupabaseUrl;
+  if (supabaseUrl && !supabaseUrl.startsWith('https://')) {
+    console.error('Invalid Supabase URL format:', supabaseUrl);
+    supabaseUrl = fixedSupabaseUrl;
+  }
+} catch (error) {
+  console.error('Error accessing Supabase URL:', error);
+  supabaseUrl = fixedSupabaseUrl;
+}
+
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || fixedSupabaseAnonKey;
+
+// Initialize the Supabase client
+let supabase = createClient(fixedSupabaseUrl, fixedSupabaseAnonKey);
+try {
+  if (supabaseUrl && supabaseAnonKey) {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('LeaderboardService: Supabase client initialized successfully');
+  }
+} catch (error) {
+  console.error('LeaderboardService: Failed to initialize Supabase client:', error);
+}
+
+export { supabase };
 
 /**
  * Interface for leaderboard entry

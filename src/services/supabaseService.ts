@@ -47,15 +47,18 @@ console.log('Supabase URL:', supabaseUrl ? (shouldUseDummyClient ? 'USING DUMMY 
 console.log('Supabase Anon Key present:', !!supabaseAnonKey && !shouldUseDummyClient);
 console.log('Using dummy client:', shouldUseDummyClient);
 
-// Initialize a SINGLE shared Supabase client for the entire app
-export const supabase = createClient(supabaseUrl || fixedSupabaseUrl, supabaseAnonKey || fixedSupabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
+// Initialize the Supabase client
+let supabase = createClient(fixedSupabaseUrl, fixedSupabaseAnonKey); // Default initialization
+try {
+  if (supabaseUrl && supabaseAnonKey) {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('Supabase client initialized successfully');
   }
-});
-console.log('Supabase client initialized (shared)');
+} catch (error) {
+  console.error('Failed to initialize Supabase client:', error);
+  // Already using the default client
+}
+export { supabase };
 
 // Create a dummy Supabase client for offline/development mode
 const createDummyClient = () => {

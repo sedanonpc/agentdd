@@ -79,7 +79,15 @@ function App() {
   }, []);
 
   return (
-    <PrivyProvider appId={import.meta.env.VITE_PRIVY_APP_ID || ''}>
+    <PrivyProvider
+      appId={import.meta.env.VITE_PRIVY_APP_ID || ''}
+      config={{
+        // Disable Solana warnings until we wire connectors (we're using EVM-only for now)
+        externalWallets: {
+          solana: { enabled: false } as any,
+        },
+      }}
+    >
       <AuthProvider>
         <UserAccountProvider>
           <PointsProvider>

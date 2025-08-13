@@ -17,7 +17,7 @@ const LoginPage: React.FC = () => {
   const [checkingConnection] = useState(false);
   
   const { loginWithEmail, registerWithEmail, isSupabaseAvailable, isAuthenticated } = useAuth();
-  const { login, ready } = usePrivy();
+  const { login, ready, authenticated, linkWallet } = usePrivy();
   const navigate = useNavigate();
 
   // Check if user is on mobile device
@@ -88,6 +88,13 @@ const LoginPage: React.FC = () => {
     }
   };
   
+  // If Privy indicates already logged in, prompt to link or logout
+  useEffect(() => {
+    if (authenticated) {
+      toast.info('You are already logged in with Privy');
+    }
+  }, [authenticated]);
+
   const handleEmailRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -166,7 +173,12 @@ const LoginPage: React.FC = () => {
     setError('');
     try {
       if (!ready) return;
-      await login();
+      if (authenticated) {
+        // If already authenticated in Privy, link a wallet (prompts selector)
+        await linkWallet?.();
+      } else {
+        await login();
+      }
     } catch (e:any) {
       setError(e?.message || 'Failed to start wallet login');
     }

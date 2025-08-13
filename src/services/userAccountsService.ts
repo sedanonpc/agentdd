@@ -76,6 +76,20 @@ export const getUserAccountByWallet = async (walletAddress: string): Promise<Use
   return data;
 };
 
+/** Get user account by account UUID (user_accounts.id) */
+export const getUserAccountById = async (accountId: string): Promise<UserAccount | null> => {
+  const { data, error } = await supabase
+    .from('user_accounts')
+    .select('*')
+    .eq('id', accountId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    throw error;
+  }
+  return data;
+};
+
 /**
  * Ensure a wallet account exists. If missing, create it (optionally with a signup bonus)
  */
