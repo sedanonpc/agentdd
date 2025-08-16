@@ -5,6 +5,7 @@ A modern NBA betting platform with a cyberpunk terminal aesthetic, featuring DAR
 ## Features
 
 - **NBA Betting System** with real-time odds and match data
+- **F1 Sports Companion** custom MCP client (Sportradar.com)
 - **DARE Points Economy** with automatic signup bonuses and configurable rewards
 - **Dual Authentication** - Email and Web3 wallet support
 - **Chat System** with match-specific and global channels
