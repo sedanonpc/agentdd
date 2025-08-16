@@ -1,5 +1,5 @@
-# AgentDD - Hypergamified Prediction Playground
-An AI powered prediction for sports and esports, featuring DARE points, real-time odds, autonomous match arbitration and resolution, and an integrated chat system.
+# AgentDD - Hypergamified Prediction dApp
+An AI powered prediction dApp for sports and esports, featuring DARE points, real-time odds, autonomous match arbitration and resolution, and an integrated chat system.
 
 ## Features
 
