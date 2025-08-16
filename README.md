@@ -1,6 +1,5 @@
-# AgentDD - NBA Betting Platform
-
-A modern NBA betting platform with a cyberpunk terminal aesthetic, featuring DARE points, real-time odds, and an integrated chat system.
+# AgentDD - Hypergamified Prediction Playground
+An AI powered prediction for sports and esports, featuring DARE points, real-time odds, autonomous match arbitration and resolution, and an integrated chat system.
 
 ## Features
 
