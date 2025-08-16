@@ -12,6 +12,16 @@ A modern NBA betting platform with a cyberpunk terminal aesthetic, featuring DAR
 - **Real-time Updates** via Supabase
 - **Responsive Design** for all devices
 
+## CORE INTEGRATION
+- Login with $CORE 🟢
+- Stake $CORE to access the dApp (AI Companion, Wagering, Prediction Leaderboards) 🟡
+- Prof-of-Wager smart contract (escrow service) 🟢
+- Wager with $CORE 🟡
+- Liquid Wager smart contract (lst-BTC) 🟡
+- Multi-sport companion accesss 🟡
+- Pay-per-compute Wager calculator 🟡
+- $DARE + $COR staking rewards 🟡
+
 ## Quick Start
 
 ### Prerequisites
