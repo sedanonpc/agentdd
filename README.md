@@ -23,12 +23,14 @@ An AI powered prediction dApp for sports and esports, featuring DARE points, rea
 - $DARE + $COR staking rewards 🟡
 
 ## LIQUID WAGER SMART CONTRACT (CORE)
-**[LST Reward System](docs/LST_STAKING_CONTRACT.md)** - Liquid Staking and Automated $DARE buyback
+**[LST Reward System](docs/LST_WAGERING_CONTRACT_README.md)** - Liquid Staking and Automated $DARE buyback
 
-forge create --rpc-url $CORE_RPC \
-             --private-key $PRIVATE \
+forge create   
+
+            --rpc-url $CORE_RPC \
+            --private-key $PRIVATE \
              src/CoreBet.sol:CoreBet \
-             --constructor-args $ORACLE_EOA $TREASURY_EOA
+            --constructor-args $ORACLE_EOA $TREASURY_EOA
 
 ## Quick Start
 
