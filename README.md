@@ -12,7 +12,7 @@ An AI powered prediction dApp for sports and esports, featuring DARE points, rea
 - **Real-time Updates** via Supabase
 - **Responsive Design** for all devices
 
-## CORE INTEGRATION **[LST_Wager_Contract](agentdd/blob/add-core-chain-integration/lst_wager_contract.sol)**
+## CORE INTEGRATION **[LST_Wager_Contract](../lst_wager_contract.sol)**
 - Login with $CORE 🟢
 - Stake $CORE to access the dApp (AI Companion, Wagering, Prediction Leaderboards) 🟡
 - Prof-of-Wager smart contract (escrow service) 🟢
