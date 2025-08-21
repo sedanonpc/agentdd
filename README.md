@@ -12,7 +12,7 @@ An AI powered prediction dApp for sports and esports, featuring DARE points, rea
 - **Real-time Updates** via Supabase
 - **Responsive Design** for all devices
 
-## CORE INTEGRATION
+## CORE INTEGRATION (../lst_wager_contract.sol)
 - Login with $CORE 🟢
 - Stake $CORE to access the dApp (AI Companion, Wagering, Prediction Leaderboards) 🟡
 - Prof-of-Wager smart contract (escrow service) 🟢
@@ -20,7 +20,7 @@ An AI powered prediction dApp for sports and esports, featuring DARE points, rea
 - Liquid Wager smart contract (lst-BTC) 🟡
 - Multi-sport companion accesss 🟡
 - Pay-per-compute Wager calculator 🟡
-- $DARE + $COR staking rewards 🟡
+- $DARE + $CORE staking rewards 🟡
 
 ## LIQUID WAGER SMART CONTRACT (CORE)
 **[LST Reward System](docs/LST_WAGERING_CONTRACT_README.md)** - Liquid Staking and Automated $DARE buyback
