@@ -17,6 +17,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { ethers } from 'ethers';
 import { useAuth } from './AuthContext';
 import { usePoints } from './PointsContext';
 import { 
@@ -192,11 +193,41 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return null;
     }
 
-    // If wallet isn't connected, prompt user to connect before proceeding (for minting)
-    if (!isConnected || !provider || !signer || !account) {
+    // Check wallet connection more robustly to handle race conditions
+    const checkWalletConnection = async () => {
+      // First, try to use the Web3Context state if it's available
+      if (isConnected && provider && signer && account) {
+        return { isConnected: true, account, provider, signer };
+      }
+      
+      // If Web3Context state isn't ready, check MetaMask directly
+      if (window.ethereum) {
+        try {
+          const browserProvider = new ethers.BrowserProvider(window.ethereum);
+          const accounts = await browserProvider.listAccounts();
+          
+          if (accounts.length > 0) {
+            const account = accounts[0].address;
+            const signer = await browserProvider.getSigner();
+            return { isConnected: true, account, provider: browserProvider, signer };
+          }
+        } catch (error) {
+          console.error('Error checking MetaMask connection directly:', error);
+        }
+      }
+      
+      return { isConnected: false, account: null, provider: null, signer: null };
+    };
+
+    const walletCheck = await checkWalletConnection();
+    
+    if (!walletCheck.isConnected) {
       toast.info('Please connect your MetaMask wallet to mint the bet receipt on Core Testnet2.');
       await redirectToMetamaskLogin();
-      if (!isConnected || !provider || !signer || !account) {
+      
+      // Re-check after redirect attempt
+      const recheckWallet = await checkWalletConnection();
+      if (!recheckWallet.isConnected) {
         toast.error('Wallet connection required to proceed.');
         return null;
       }
@@ -255,7 +286,9 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       // Mint on Core Testnet2 for lifecycle 'created' (creator pays)
       try {
-        if (!isConnected || !provider || !signer || !account) {
+        // Use the wallet connection from our robust check
+        const finalWalletCheck = await checkWalletConnection();
+        if (!finalWalletCheck.isConnected || !finalWalletCheck.provider || !finalWalletCheck.signer || !finalWalletCheck.account) {
           throw new Error('Core wallet not connected');
         }
         const metadataUri = await uploadBetMetadataAndGetUri({
@@ -269,9 +302,9 @@ export const StraightBetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
           },
         });
         await mintReceiptNft({
-          provider,
-          signer,
-          destinationAddress: account,
+          provider: finalWalletCheck.provider,
+          signer: finalWalletCheck.signer,
+          destinationAddress: finalWalletCheck.account,
           metadataUri,
         });
         toast.success('On-chain receipt minted (created)');
